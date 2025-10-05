@@ -118,9 +118,11 @@ app.post('/admin/import/calendar', async (c) => {
 })
 
 // ============ API: WALLBOARD DATA ============
-app.get('/wallboard.html', () => new Response(await Deno.readTextFile('public/wallboard.html'), {
-  headers: { 'content-type': 'text/html; charset=utf-8' }
-}));
-
+app.get('/wallboard.html', async () => {
+  const html = await Deno.readTextFile('public/wallboard.html')
+  return new Response(html, {
+    headers: { 'content-type': 'text/html; charset=utf-8' }
+  })
+})
 
 export default app
