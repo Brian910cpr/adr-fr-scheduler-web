@@ -1,22 +1,81 @@
-<!doctype html><meta charset="utf-8">
-<title>ADR FR — Wallboard</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ADR-FR Wallboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body{font:16px system-ui;margin:2rem;max-width:1000px}
-table{border-collapse:collapse;width:100%} td,th{border:1px solid #ddd;padding:.5rem}
-.badge{padding:.1rem .4rem;border-radius:.4rem}
-.green{background:#d5f5d6}.yellow{background:#fff8cc}.red{background:#ffd6d6}.grey{background:#eee}
+body { margin:0; font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  background:#0b1220; color:#e6edf3; }
+h1 { padding:16px; margin:0; background:#121a2b; border-bottom:1px solid #24304c; }
+#info { padding:10px 16px; color:#a3afd1; font-size:14px; }
+pre { background:#121a2b; color:#86d18f; margin:16px; padding:16px; border-radius:8px;
+  overflow:auto; white-space:pre-wrap; word-break:break-all; }
+table { border-collapse:collapse; width:100%; color:#e6edf3; margin:16px 0; }
+th,td { border:1px solid #24304c; padding:6px 10px; text-align:center; }
+th { background:#121a2b; position:sticky; top:0; }
+.locked { background:#131a2a; color:#888; }
+.today { background:#20325a; }
+.green { background:#1b4734; }
+.amber { background:#4a3c1e; }
+.red { background:#3a1616; }
 </style>
-<h1>Wallboard</h1>
-<table id="t"><thead><tr><th>Date</th><th>Block</th><th>Unit</th><th>Seat</th><th>Member #</th><th>Status</th></tr></thead><tbody></tbody></table>
+</head>
+<body>
+<h1>ADR-FR Wallboard</h1>
+<div id="info">Loading…</div>
+<div id="board"></div>
+
 <script>
-(async ()=>{
-  const res = await fetch('/api/wallboard');
-  const data = await res.json();
-  const tb = document.querySelector('#t tbody');
-  (data.rows||[]).forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.service_date}</td><td>${r.block}</td><td>${r.unit_id}</td><td>${r.seat_role}</td><td>${r.assignee_member_number||''}</td><td><span class="badge ${r.quality}">${r.quality}</span></td>`;
-    tb.appendChild(tr);
-  });
-})();
+async function loadBoard() {
+  const url = '/api/wallboard?month=' + new Date().toISOString().slice(0,7)
+  const res = await fetch(url)
+  if (!res.ok) {
+    document.getElementById('info').textContent = 'Failed to load wallboard (' + res.status + ')'
+    return
+  }
+  const data = await res.json()
+  renderBoard(data)
+}
+
+function renderBoard(d) {
+  const info = document.getElementById('info')
+  info.textContent = 'Today: ' + d.today + ' | Cutoff: ' + d.cutoff + ' | ' + d.trucks.length + ' units'
+
+  const table = document.createElement('table')
+  const head = document.createElement('tr')
+  head.innerHTML = '<th>Date</th>' + d.trucks.map(t => '<th>' + t + ' Day</th><th>' + t + ' Night</th>').join('')
+  table.appendChild(head)
+
+  for (let i=1; i<=d.days; i++) {
+    const date = d.month + '-' + String(i).padStart(2,'0')
+    const tr = document.createElement('tr')
+    if (date < d.cutoff) tr.classList.add('locked')
+    if (date === d.today) tr.classList.add('today')
+    const day = document.createElement('td')
+    day.textContent = date
+    tr.appendChild(day)
+    for (const t of d.trucks) {
+      const dayKey = `${date}|${t}|Day`
+      const nightKey = `${date}|${t}|Night`
+      const dayVal = d.assignments[dayKey]?.member_name ?? '—'
+      const nightVal = d.assignments[nightKey]?.member_name ?? '—'
+      const td1 = document.createElement('td')
+      const td2 = document.createElement('td')
+      td1.textContent = dayVal
+      td2.textContent = nightVal
+      tr.appendChild(td1)
+      tr.appendChild(td2)
+    }
+    table.appendChild(tr)
+  }
+
+  const board = document.getElementById('board')
+  board.innerHTML = ''
+  board.appendChild(table)
+}
+
+loadBoard()
 </script>
+</body>
+</html>
