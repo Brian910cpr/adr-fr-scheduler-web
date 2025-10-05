@@ -168,94 +168,7 @@ app.post('/admin/import/calendar', async (c) => {
 })
 
 // ---------- API: Wallboard data ----------
-app.get('/api/wallboard', async (c) => {
-  try {
-    const month = assertMonth(c.req.query('month'))
-    const start = `${month}-01`
-    const dcount = daysInMonth(month)
-    const end = isoDay(month, dcount)
-    const cutoff = commitmentStartISO()
-
-    // Truck assignments (pre-cutoff read-only)
-    let rows: Array<{ shift_date: string; unit_code: string; shift_name: string; member_name: string | null }> = []
-    try {
-      const q = `
-        SELECT s.shift_date, s.unit_code, s.shift_name, m.name AS member_name
-        FROM shifts s
-        LEFT JOIN members m ON m.id = s.member_id
-        WHERE s.shift_date >= ? AND s.shift_date <= ?
-          AND s.unit_code IN ('120','121','131')
-          AND s.shift_name IN ('Day','Night')
-      `
-      const r = await c.env.DB.prepare(q).bind(start, end).all<typeof rows[0]>()
-      rows = r.results ?? []
-    } catch {
-      const q2 = `
-        SELECT shift_date, unit_code, shift_name, NULL AS member_name
-        FROM shifts
-        WHERE shift_date >= ? AND shift_date <= ?
-          AND unit_code IN ('120','121','131')
-          AND shift_name IN ('Day','Night')
-      `
-      const r2 = await c.env.DB.prepare(q2).bind(start, end).all<typeof rows[0]>()
-      rows = r2.results ?? []
-    }
-    const assignments: Record<string, { member_name: string | null }> = {}
-    for (const r of rows) assignments[`${r.shift_date}|${r.unit_code}|${r.shift_name}`] = { member_name: r.member_name }
-
-    // AM/PM intents (post-cutoff editable)
-    const ires = await c.env.DB.prepare(`
-      SELECT shift_date, shift_name, intent
-      FROM shifts
-      WHERE shift_date >= ? AND shift_date <= ?
-        AND unit_code = ?
-        AND shift_name IN ('AM','PM')
-    `).bind(start, end, SENTINEL_UNIT).all<{ shift_date: string; shift_name: string; intent: string }>()
-    const intents: Record<string, Intent> = {}
-    for (const r of ires.results ?? []) intents[`${r.shift_date}|${r.shift_name}`] = (r.intent as Intent) ?? '-'
-
-    return c.json({
-      month, days: dcount, cutoff, today: todayISO(),
-      trucks: UNITS, truckShifts: TRUCK_SHIFTS, ampmShifts: AMPM_SHIFTS,
-      assignments, intents
-    })
-  } catch (err: any) {
-    return c.json({ ok: false, error: String(err?.message ?? err) }, 500)
-  }
-})
-
-// ---------- API: Save intent ----------
-app.post('/api/intent', async (c) => {
-  try {
-    const body = await c.req.json().catch(() => ({}))
-    const key = String((body as any).key || '')
-    const value = String((body as any).value || '')
-    const user = (body as any).user ? String((body as any).user) : null
-
-    if (!/^\d{4}-\d{2}-\d{2}\|(AM|PM)$/.test(key)) return c.json({ ok: false, error: 'Bad key' }, 400)
-    if (!['-', 'P', 'A', 'S'].includes(value)) return c.json({ ok: false, error: 'Bad value' }, 400)
-
-    const [shift_date, shift_name] = key.split('|')
-    const cutoff = commitmentStartISO()
-    if (shift_date < cutoff) return c.json({ ok: false, error: `Locked until ${cutoff}` }, 403)
-
-    await c.env.DB.prepare(`
-      INSERT INTO shifts (shift_date, unit_code, shift_name, intent, updated_by, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
-      ON CONFLICT(shift_date, unit_code, shift_name)
-      DO UPDATE SET intent=excluded.intent,
-                    updated_by=excluded.updated_by,
-                    updated_at=datetime('now')
-    `).bind(shift_date, SENTINEL_UNIT, shift_name, value, user).run()
-
-    return c.json({ ok: true })
-  } catch (e: any) {
-    return c.json({ ok: false, error: String(e?.message ?? e) }, 500)
-  }
-})
-
-// ---------- HTML UI ----------
-app.get('/', (c) => c.redirect('/wallboard.html', 302))
+// ---------- HTML UI (robust, with diagnostics + editable-only AM/PM) ----------
 app.get('/wallboard.html', (c) => {
   const html = `<!doctype html>
 <html lang="en"><head>
@@ -264,98 +177,136 @@ app.get('/wallboard.html', (c) => {
 <style>
 body{margin:0;background:#0b1220;color:#e6edf3;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
 header{padding:14px 16px;background:#121a2b;border-bottom:1px solid #24304c}
-h1{margin:0;font-size:22px} #meta{padding:10px 16px;color:#a3afd1;font-size:14px}
-.grid{padding:0 16px 16px} table{border-collapse:collapse;width:100%;font-size:14px}
+h1{margin:0;font-size:22px}
+#meta{padding:10px 16px;color:#a3afd1;font-size:14px}
+.grid{padding:0 16px 16px}
+table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{border:1px solid #24304c;padding:6px 8px;text-align:center}
 th{background:#121a2b;position:sticky;top:0;z-index:1}
-.locked{background:#131a2a;color:#8892b0} .today{background:#20325a}
+.locked{background:#131a2a;color:#8892b0}
+.today{background:#20325a}
 .btn{background:#121a2b;color:#e6edf3;border:1px solid #24304c;border-radius:8px;padding:4px 8px;cursor:pointer}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+#err{margin:10px 16px;color:#f39b9b}
+#raw{display:none;margin:12px 16px 0;background:#121a2b;color:#86d18f;padding:10px;border-radius:8px;white-space:pre;overflow:auto;max-height:35vh}
+.controls{padding:0 16px 12px;display:flex;gap:8px;align-items:center}
+button.small{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #24304c;background:#1b2440;color:#e6edf3;cursor:pointer}
 </style></head>
 <body>
 <header><h1>ADR-FR Wallboard</h1></header>
 <div id="meta">Loading…</div>
+<div id="err"></div>
+<div class="controls">
+  <button id="reload" class="small">Reload</button>
+  <button id="toggleRaw" class="small">Show raw data</button>
+</div>
+<pre id="raw"></pre>
 <div class="grid"><h3>Truck Assignments (read-only before cutoff)</h3><table id="truck"></table></div>
-<div class="grid"><h3>AM / PM Intents (editable on/after cutoff)</h3><table id="ampm"></table></div>
+<div class="grid"><h3>AM / PM Intents (editable dates only)</h3><table id="ampm"></table></div>
+
 <script>
-(async function(){
-  const ym = new Date().toISOString().slice(0,7)
-  const res = await fetch('/api/wallboard?month='+ym, {cache:'no-store'})
-  if(!res.ok){ document.getElementById('meta').textContent='Failed to load wallboard ('+res.status+')'; return }
-  const d = await res.json()
-  document.getElementById('meta').textContent = 'Month '+d.month+'  |  Today '+d.today+'  |  Cutoff '+d.cutoff
+(async function boot(){
+  const meta = document.getElementById('meta');
+  const err = document.getElementById('err');
+  const raw = document.getElementById('raw');
+  const btnReload = document.getElementById('reload');
+  const btnRaw = document.getElementById('toggleRaw');
 
-  // --- trucks table ---
-  const T=document.getElementById('truck')
-  const head=document.createElement('tr'); head.innerHTML='<th>Date</th>'+d.trucks.map(u=>'<th>'+u+' Day</th><th>'+u+' Night</th>').join(''); T.appendChild(head)
-  for(let i=1;i<=d.days;i++){
-    const iso=d.month+'-'+String(i).padStart(2,'0')
-    const tr=document.createElement('tr'); if(iso===d.today) tr.classList.add('today'); if(iso<d.cutoff) tr.classList.add('locked')
-    tr.innerHTML='<td>'+iso+'</td>'
-      + d.trucks.map(u=>{
-          const k1=iso+'|'+u+'|Day', k2=iso+'|'+u+'|Night'
-          const v1=(d.assignments[k1]&&d.assignments[k1].member_name)||'—'
-          const v2=(d.assignments[k2]&&d.assignments[k2].member_name)||'—'
-          return '<td>'+v1+'</td><td>'+v2+'</td>'
-        }).join('')
-    T.appendChild(tr)
-  }
+  btnReload.onclick = () => location.reload();
+  btnRaw.onclick = () => { raw.style.display = raw.style.display==='none'?'block':'none'; btnRaw.textContent = (raw.style.display==='none'?'Show':'Hide')+' raw data' };
 
-// --- am/pm table (editable dates ONLY) ---
-const cycle = v => v==='-' ? 'P' : v==='P' ? 'A' : v==='A' ? 'S' : '-'
-const A = document.getElementById('ampm')
-
-// determine first editable day in this month
-const cutoffMonth = d.cutoff.slice(0,7)
-let startDay = 1
-if (d.month === cutoffMonth) {
-  startDay = parseInt(d.cutoff.slice(8,10), 10)   // cutoff day number
-} else if (d.month < cutoffMonth) {
-  startDay = d.days + 1                            // nothing editable this month
-} else {
-  startDay = 1                                     // entire month is editable
-}
-
-// header
-if (startDay > d.days) {
-  const msg = document.createElement('tr')
-  msg.innerHTML = '<td style="padding:10px;color:#a3afd1">No editable dates in this month.</td>'
-  A.appendChild(msg)
-} else {
-  const h2 = document.createElement('tr')
-  h2.innerHTML = '<th>Shift</th>' +
-    Array.from({length: d.days - startDay + 1}, (_,i)=>'<th>'+String(startDay + i).padStart(2,'0')+'</th>').join('')
-  A.appendChild(h2)
-
-  for (const s of (d.ampmShifts || ['AM','PM'])) {
-    const tr = document.createElement('tr')
-    tr.innerHTML = '<th>'+s+'</th>'
-    for (let i = startDay; i <= d.days; i++) {
-      const iso = d.month + '-' + String(i).padStart(2,'0')
-      const td = document.createElement('td')
-      if (iso === d.today) td.classList.add('today') // (won’t be < cutoff here)
-      const key = iso + '|' + s
-      const btn = document.createElement('button')
-      btn.className = 'btn'
-      btn.textContent = d.intents[key] || '-'
-      btn.onclick = async () => {
-        const next = cycle(btn.textContent); btn.textContent = next
-        try {
-          await fetch('/api/intent', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ key, value: next })
-          })
-        } catch (_) {}
-      }
-      td.appendChild(btn); tr.appendChild(td)
+  try {
+    const ym = new Date().toISOString().slice(0,7);
+    const url = '/api/wallboard?month='+ym;
+    const res = await fetch(url, { cache:'no-store' });
+    if (!res.ok) {
+      meta.textContent = '';
+      err.textContent = 'Failed to load wallboard ('+res.status+').';
+      return;
     }
-    A.appendChild(tr)
+    const d = await res.json();
+    raw.textContent = JSON.stringify(d, null, 2);
+    meta.textContent = 'Month '+d.month+'  |  Today '+d.today+'  |  Cutoff '+d.cutoff;
+
+    // ---- TRUCKS (read-only) ----
+    const T=document.getElementById('truck');
+    T.innerHTML='';
+    const thead=document.createElement('tr');
+    thead.innerHTML='<th>Date</th>'+d.trucks.map(u=>'<th>'+u+' Day</th><th>'+u+' Night</th>').join('');
+    T.appendChild(thead);
+
+    for(let i=1;i<=d.days;i++){
+      const iso=d.month+'-'+String(i).padStart(2,'0');
+      const tr=document.createElement('tr');
+      if(iso===d.today) tr.classList.add('today');
+      if(iso<d.cutoff) tr.classList.add('locked');
+      tr.innerHTML='<td>'+iso+'</td>' + d.trucks.map(u=>{
+        const k1=iso+'|'+u+'|Day', k2=iso+'|'+u+'|Night';
+        const v1=(d.assignments[k1]&&d.assignments[k1].member_name)||'—';
+        const v2=(d.assignments[k2]&&d.assignments[k2].member_name)||'—';
+        return '<td>'+v1+'</td><td>'+v2+'</td>';
+      }).join('');
+      T.appendChild(tr);
+    }
+
+    // ---- AM/PM (editable-only columns) ----
+    const A=document.getElementById('ampm');
+    A.innerHTML='';
+    const cycle=v=>v==='-'?'P':v==='P'?'A':v==='A'?'S':'-';
+
+    // find first editable day for this month
+    const cutoffMonth=d.cutoff.slice(0,7);
+    let startDay=1;
+    if (d.month===cutoffMonth) startDay=parseInt(d.cutoff.slice(8,10),10);
+    else if (d.month<cutoffMonth) startDay=d.days+1; // nothing editable
+    else startDay=1;
+
+    if (startDay>d.days) {
+      const msg=document.createElement('tr');
+      msg.innerHTML='<td style="padding:10px;color:#a3afd1">No editable dates in this month.</td>';
+      A.appendChild(msg);
+      return;
+    }
+
+    const h2=document.createElement('tr');
+    h2.innerHTML='<th>Shift</th>'+Array.from({length:d.days-startDay+1},(_,i)=>'<th>'+String(startDay+i).padStart(2,'0')+'</th>').join('');
+    A.appendChild(h2);
+
+    for (const s of (d.ampmShifts||['AM','PM'])) {
+      const tr=document.createElement('tr'); tr.innerHTML='<th>'+s+'</th>';
+      for(let i=startDay;i<=d.days;i++){
+        const iso=d.month+'-'+String(i).padStart(2,'0');
+        const td=document.createElement('td');
+        if(iso===d.today) td.classList.add('today'); // pre-cutoff excluded by startDay
+
+        const key=iso+'|'+s;
+        const btn=document.createElement('button');
+        btn.className='btn'; btn.textContent=d.intents[key]||'-';
+
+        btn.onclick=async ()=>{
+          const next=cycle(btn.textContent); btn.textContent=next;
+          try {
+            await fetch('/api/intent', {
+              method:'POST',
+              headers:{'content-type':'application/json'},
+              body: JSON.stringify({ key, value: next })
+            });
+          } catch (_) {}
+        };
+
+        td.appendChild(btn); tr.appendChild(td);
+      }
+      A.appendChild(tr);
+    }
+  } catch (e) {
+    document.getElementById('meta').textContent='';
+    document.getElementById('err').textContent='Script error: '+(e&&e.message?e.message:String(e));
   }
-}
+})();
 </script>
-</body></html>`
+</body></html>`;
   return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store, max-age=0' } })
 })
+
 
 export default app
