@@ -118,72 +118,9 @@ app.post('/admin/import/calendar', async (c) => {
 })
 
 // ============ API: WALLBOARD DATA ============
-app.get('/wallboard.html', (c) => {
-  const html = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>ADR FR — Live Wallboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body{background:#0b1220;color:#e6edf3;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:20px}
-h1{margin:0 0 10px 0}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{border:1px solid #24304c;padding:6px;text-align:center;min-width:60px}
-th{background:#121a2b;position:sticky;top:0}
-.locked{background:#131a2a}
-.today{background:#20325a}
-.P{background:#1fbf6a;color:#000}
-.A{background:#86d18f;color:#000}
-.S{background:#f0b44c;color:#000}
-.-{background:#d14b4b;color:#fff}
-.bubble{width:12px;height:12px;border-radius:50%;border:1px solid #aaa;display:inline-block;margin-left:4px}
-.filled{background:#86d18f;border-color:#86d18f}
-</style>
-</head>
-<body>
-<h1>ADR-FR Wallboard</h1>
-<div id="meta"></div>
-<table id="grid"></table>
-<script>
-async function load(){
-  const r=await fetch('/api/wallboard?month=${new Date().toISOString().slice(0,7)}');
-  const j=await r.json();
-  document.getElementById('meta').textContent='Month '+j.month+' | Today '+j.today+' | Cutoff '+j.cutoff;
-  const t=document.getElementById('grid');
-  const header=['Shift'].concat(Array.from({length:j.days},(_,i)=>String(i+1).padStart(2,'0')));
-  const trh=document.createElement('tr');
-  for(const h of header){const th=document.createElement('th');th.textContent=h;trh.appendChild(th)}
-  t.appendChild(trh);
-  const shifts=j.ampmShifts;
-  for(const s of shifts){
-    const tr=document.createElement('tr');
-    const th=document.createElement('th');th.textContent=s;tr.appendChild(th);
-    for(let d=1;d<=j.days;d++){
-      const iso=j.month+'-'+String(d).padStart(2,'0');
-      const td=document.createElement('td');
-      if(iso===j.today)td.classList.add('today');
-      if(iso<j.cutoff)td.classList.add('locked');
-      const btn=document.createElement('button');
-      btn.textContent=j.intents[iso+'|'+s]||'-';
-      btn.className=btn.textContent;
-      const bubble=document.createElement('span');bubble.className='bubble'+(btn.textContent!=='-'?' filled':'');
-      btn.onclick=()=>{
-        if(iso<j.cutoff)return;
-        const order=['-','P','A','S'];let idx=order.indexOf(btn.textContent);btn.textContent=order[(idx+1)%4];
-        btn.className=btn.textContent;
-        fetch('/api/intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:iso+'|'+s,value:btn.textContent})});
-        if(btn.textContent==='-')bubble.classList.remove('filled');else bubble.classList.add('filled');
-      };
-      td.appendChild(btn);td.appendChild(bubble);tr.appendChild(td);
-    }
-    t.appendChild(tr);
-  }
-}
-load();
-</script>
-</body></html>`;
-  return new Response(html,{headers:{'content-type':'text/html; charset=utf-8'}});
-});
+app.get('/wallboard.html', () => new Response(await Deno.readTextFile('public/wallboard.html'), {
+  headers: { 'content-type': 'text/html; charset=utf-8' }
+}));
+
 
 export default app
