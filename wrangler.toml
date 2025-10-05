@@ -6,3 +6,6 @@ compatibility_date = "2024-09-23"
 binding = "DB"
 database_name = "adr_fr"
 database_id = "eedd9a67-410c-4bc9-b428-5bf7c3f12773"
+
+[vars]
+BUILD_TAG = "wallboard-v11-hybrid"

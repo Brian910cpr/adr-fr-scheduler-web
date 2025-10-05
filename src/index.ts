@@ -58,6 +58,42 @@ const SENTINEL_UNIT = 'ALL' // where we store AM/PM intents
 
 const app = new Hono<{ Bindings: Env }>()
 
+// --- Simple guard (token in wrangler.toml [vars]) ---
+function requireToken(c: any) {
+  const token = c.req.query('token') || c.req.header('x-import-token')
+  const ok = token && token === (c.env as any).IMPORT_TOKEN
+  return ok
+}
+
+// --- Tiny CSV parser: handles quoted values and commas ---
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = []
+  let i = 0, field = '', row: string[] = [], inQuotes = false
+  const pushField = () => { row.push(field); field = '' }
+  const pushRow = () => { rows.push(row); row = [] }
+  while (i < text.length) {
+    const ch = text[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue } // escaped quote
+        inQuotes = false; i++; continue
+      }
+      field += ch; i++; continue
+    } else {
+      if (ch === '"') { inQuotes = true; i++; continue }
+      if (ch === ',') { pushField(); i++; continue }
+      if (ch === '\r') { i++; continue }
+      if (ch === '\n') { pushField(); pushRow(); i++; continue }
+      field += ch; i++; continue
+    }
+  }
+  pushField(); if (row.length) pushRow()
+  // trim BOM / whitespace
+  if (rows.length && rows[0].length) rows[0][0] = rows[0][0].replace(/^\uFEFF/, '')
+  return rows
+}
+
+
 // Root → new wallboard
 app.get('/', (c) => c.redirect('/wallboard.html', 302))
 
