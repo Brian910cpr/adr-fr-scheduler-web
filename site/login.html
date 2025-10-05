@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ADR FR — Sign In</title>
+<style>
+  body{font:16px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:0;background:#0b0f1a;color:#e6eeff}
+  .wrap{max-width:420px;margin:10vh auto;padding:24px;background:#101a2ee6;border:1px solid #263b66;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  h1{margin:0 0 6px}
+  p{margin:8px 0 16px;color:#9fb0d1}
+  input,button{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #28406e;background:#0f172a;color:#e6eeff;font:inherit}
+  button{background:linear-gradient(180deg,#3b82f6,#2155c8);border-color:transparent;cursor:pointer}
+  .row{margin:10px 0}
+  .hidden{display:none}
+  .note{font-size:13px;color:#a7b8d6}
+  .ok{color:#11d28c}
+  .err{color:#ff6b6b}
+</style>
+<div class="wrap">
+  <h1>Sign in</h1>
+  <p>Enter your <b>member #</b> or <b>name</b>. We’ll text a 6‑digit code to the phone on file.</p>
+  <div id="step1">
+    <div class="row"><input id="ident" placeholder="e.g., 1002 or Chris Smith"></div>
+    <div class="row"><button id="send">Send code</button></div>
+    <div class="row note" id="mask"></div>
+  </div>
+  <div id="step2" class="hidden">
+    <div class="row"><input id="code" placeholder="6-digit code"></div>
+    <div class="row"><button id="verify">Verify</button></div>
+  </div>
+  <div id="msg" class="note"></div>
+</div>
+<script src="auth.js"></script>

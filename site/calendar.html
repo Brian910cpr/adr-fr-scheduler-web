@@ -1,0 +1,161 @@
+<!doctype html><meta charset="utf-8">
+<title>ADR FR — Month Calendar (chips)</title>
+<link rel="stylesheet" href="style.css">
+<h1>ADR FR — Month Calendar (chips)</h1>
+
+<div class="controls">
+  <label>Member # or Name <input id="member" placeholder="e.g., 1002 or Chris Smith"></label>
+  <button id="loadMe">Load Me</button>
+  <span id="me" class="small"></span>
+</div>
+<div class="controls">
+  <label>Month <input type="month" id="month"></label>
+  <button id="loadMonth">Load Month</button>
+  <label class="small"><input type="checkbox" id="showInactive"> Show inactive (admin)</label>
+</div>
+
+<div class="calendar" id="cal"></div>
+
+<script>
+const api = '/api';
+let CURRENT_MEMBER = null;
+const UNITS=['120','121','123'];
+const BLOCKS=['day','night'];
+
+document.getElementById('month').value = new Date().toISOString().slice(0,7);
+
+document.getElementById('loadMe').onclick = async () => {
+  const id = document.getElementById('member').value.trim();
+  if(!id){ alert('Enter member number or name'); return; }
+  const r = await fetch(`${api}/me?member=${encodeURIComponent(id)}`);
+  const d = await r.json();
+  if(!d.ok){ alert('Member not found'); return; }
+  CURRENT_MEMBER = d.member;
+  document.getElementById('me').textContent =
+    `${CURRENT_MEMBER.full_name} (${CURRENT_MEMBER.member_number}) — ${CURRENT_MEMBER.cert_level}`;
+  await loadMonth();
+};
+document.getElementById('loadMonth').onclick = loadMonth;
+document.getElementById('showInactive').onchange = loadMonth;
+
+function monthRange(ym){
+  const [y,m] = ym.split('-').map(Number);
+  const first = new Date(y, m-1, 1);
+  const last = new Date(y, m, 0);
+  return { from: first.toISOString().slice(0,10), to: last.toISOString().slice(0,10), first, last };
+}
+
+async function loadMonth(){
+  const ym = document.getElementById('month').value;
+  const {from,to,first,last} = monthRange(ym);
+  const showInactive = document.getElementById('showInactive').checked;
+
+  const [wb, ua, fc] = await Promise.all([
+    fetch(`${api}/wallboard?from=${from}&to=${to}`).then(r=>r.json()),
+    fetch(`${api}/units-active?from=${from}&to=${to}`).then(r=>r.json()),
+    fetch(`${api}/forecast?from=${from}&to=${to}`).then(r=>r.json())
+  ]);
+  const wall = wb.rows||[];
+  const active = new Map(); (ua.rows||[]).forEach(r => active.set(`${r.service_date}|${r.unit_id}`, {am:r.am_active, pm:r.pm_active}));
+  const forecast = new Map(); (fc.rows||[]).forEach(r => forecast.set(`${r.service_date}|${r.unit_id}|${r.block}`, r));
+
+  const byDate = new Map();
+  wall.forEach(r => {
+    if(!byDate.has(r.service_date)) byDate.set(r.service_date, []);
+    byDate.get(r.service_date).push(r);
+  });
+
+  const cal = document.getElementById('cal'); cal.innerHTML='';
+  const start = new Date(first); start.setDate(start.getDate() - start.getDay());
+  for(let i=0;i<42;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const iso = d.toISOString().slice(0,10);
+    const inMonth = d.getMonth()===first.getMonth();
+    const dayRows = (byDate.get(iso)||[]);
+
+    let dayColor = null;
+    let any = false, anyYellow=false, anyRed=false, anySlow=false;
+    for (const u of UNITS){
+      const act = active.get(`${iso}|${u}`);
+      const amOn = act ? !!act.am_active : true;
+      const pmOn = act ? !!act.pm_active : true;
+      for (const b of BLOCKS){
+        const on = (b==='day')? amOn : pmOn;
+        if (!on && !showInactive) continue;
+        const f = forecast.get(`${iso}|${u}|${b}`);
+        if (!f) continue;
+        any = true;
+        if (f.forecast_quality==='yellow') anyYellow=true;
+        else if (f.forecast_quality==='red') anyRed=true;
+        else if (f.forecast_quality==='slow-flashing-red') anySlow=true;
+      }
+    }
+    if (any){
+      if (!anyYellow && !anyRed && !anySlow) dayColor='green';
+      else if (anyRed || anySlow) dayColor='red';
+      else dayColor='yellow';
+    }
+
+    const day = document.createElement('div');
+    day.className='day';
+    if (!inMonth) day.style.opacity = 0.45;
+    if (dayColor) day.style.background = dayColor==='green'?'#f0fff0':dayColor==='yellow'?'#fffbe6':'#ffecec';
+    const head = document.createElement('div'); head.className='dayHeader';
+    head.innerHTML = `<span>${iso}</span>`;
+    day.appendChild(head);
+
+    UNITS.forEach(u => {
+      const a = active.get(`${iso}|${u}`);
+      const amOn = a ? !!a.am_active : true;
+      const pmOn = a ? !!a.pm_active : true;
+
+      const unitRow = document.createElement('div'); unitRow.className='unit';
+      ['day','night'].forEach(b => {
+        const on = (b==='day')? amOn : pmOn;
+        if (!on && !showInactive) return;
+        const f = forecast.get(`${iso}|${u}|${b}`);
+        if (!f) return;
+
+        const sh = document.createElement('div');
+        sh.className='shift';
+        const badgeClass = f.forecast_quality;
+        sh.innerHTML = `<div class="row"><span class="badge ${badgeClass}">${b.toUpperCase()}</span><b>${u}</b></div>
+                        <div class="small">${f.need ? ('Need: '+f.need) : ''}</div>`;
+
+        ['Attendant','Driver'].forEach(seat => {
+          const row = document.createElement('div'); row.className='row';
+          row.innerHTML = `<span>${seat}:</span>`;
+          const sel = document.createElement('select');
+          ['preferred','available','standby'].forEach(v=>{
+            const o = document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+          });
+          const btn = document.createElement('button'); btn.textContent='Submit';
+          btn.onclick = async () => {
+            if (!CURRENT_MEMBER){ alert('Load your member first'); return; }
+            const resWB = dayRows.find(x => x.block===b && x.unit_id===u);
+            const prepublish = resWB ? resWB.prepublish : true;
+            if (prepublish){
+              const payload = { member_number: CURRENT_MEMBER.member_number, service_date: iso, block: b, unit_id: u, seat_role: seat, intent: sel.value };
+              const r = await fetch(`${api}/request`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+              const j = await r.json(); alert(j.message || 'Saved');
+            } else {
+              const payload = { member_identifier: CURRENT_MEMBER.member_number, service_date: iso, block: b, role: seat, unit_id: u, intent: sel.value };
+              const r = await fetch(`${api}/claim`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+              const j = await r.json(); alert(j.message || 'Saved');
+            }
+            await loadMonth();
+          };
+          row.appendChild(sel); row.appendChild(btn);
+          sh.appendChild(row);
+        });
+
+        unitRow.appendChild(sh);
+      });
+      if (unitRow.children.length) day.appendChild(unitRow);
+    });
+
+    cal.appendChild(day);
+  }
+}
+loadMonth();
+</script>

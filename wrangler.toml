@@ -1,8 +1,11 @@
 name = "adr-fr-api"
 main = "workers/api/index.ts"
-compatibility_date = "2025-10-02"
+compatibility_date = "2024-10-01"
+
+[assets]
+directory = "site"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "adr_fr"
-database_id = "eedd9a67-410c-4bc9-b428-5bf7c3f12773"
+database_id = "REPLACE_WITH_YOUR_D1_UUID"

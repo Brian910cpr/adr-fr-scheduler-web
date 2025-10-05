@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8"/>
+<title>ADR FR — Month Calendar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="style.css"/>
+<div class="container">
+  <h1>ADR FR — Month Calendar</h1>
+  <p class="sub">Day = worst shift • Shift = worst unit • Click a shift to set <b>preferred / available / standby</b>.</p>
+  <div class="controls">
+    <label>Member <input id="member" placeholder="(optional) 1002 or name"></label>
+    <label>Month <input type="month" id="month"></label>
+    <button id="prev">◀</button>
+    <button id="next">▶</button>
+    <button id="reload" class="btn">Reload</button>
+  </div>
+  <div id="monthTitle" class="monthTitle"></div>
+  <div id="grid" class="grid"></div>
+</div>
+<script src="ui.js"></script>

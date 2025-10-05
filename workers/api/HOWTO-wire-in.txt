@@ -1,0 +1,9 @@
+
+// In your workers/api/index.ts add these imports and routes:
+
+// import { startAuth, verifyAuth } from './auth/routes';
+
+// if (p === '/api/auth/start'  && req.method === 'POST') return startAuth(req, env);
+// if (p === '/api/auth/verify' && req.method === 'POST') return verifyAuth(req, env);
+
+// That's it. Keep your existing handlers as-is.

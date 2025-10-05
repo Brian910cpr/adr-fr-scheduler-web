@@ -1,0 +1,1 @@
+Demo-ready calendar UI. If API Base is blank, a full fake month renders so you can see the layout.

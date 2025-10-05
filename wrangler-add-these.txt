@@ -1,0 +1,10 @@
+# Add these to your wrangler.toml (or set as secrets)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "adr_fr"
+# database_id = "<your-d1-uuid>"
+
+# Secrets to set:
+# wrangler secrets put TWILIO_SID
+# wrangler secrets put TWILIO_TOKEN
+# wrangler secrets put TWILIO_FROM   # E.164, e.g. +19105551234

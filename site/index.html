@@ -1,26 +1,16 @@
-<!doctype html><meta charset="utf-8">
-<title>ADR FR — Shift Captain</title>
-<style>
-body{font:16px system-ui;margin:2rem;max-width:720px}
-#log div{margin:.4rem 0} #msg{width:100%;padding:.6rem;font-size:1rem}
-</style>
-<h1>ADR FR — Shift Captain</h1>
-<div id="log"></div>
-<input id="msg" placeholder="Type here…" autofocus />
-<script>
-const api = "http://127.0.0.1:8787/api";
-const log = m => document.getElementById('log').insertAdjacentHTML('beforeend', `<div>${m}</div>`);
-let s={step:0,payload:{}};
-log("Shift Captain: Yeah—who's this? Member # or name.");
-document.getElementById('msg').addEventListener('keydown', async e=>{
-  if(e.key!=='Enter') return; const v=e.target.value.trim(); e.target.value=''; if(!v) return;
-  log(`<b>You:</b> ${v}`);
-  if(s.step===0){ s.payload.member_identifier=v; log("Date and block? (YYYY-MM-DD night/day)"); s.step=1; return; }
-  if(s.step===1){ const [d,b='day']=v.split(' '); s.payload.service_date=d; s.payload.block=b; log("Attendant or Driver?"); s.step=2; return; }
-  if(s.step===2){
-    s.payload.role=/att/i.test(v)?'Attendant':'Driver';
-    const r=await fetch(`${api}/claim`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(s.payload)});
-    const d=await r.json(); log(`✅ ${d.message}`); log("Anything else?"); s={step:0,payload:{}};
-  }
-});
-</script>
+<!doctype html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ADR FR — Scheduler</title>
+<link rel="stylesheet" href="style.css">
+<div class="top">
+  <div class="brand">ADR FR</div>
+  <nav>
+    <a href="login.html">Sign In</a>
+  </nav>
+</div>
+<div class="wrap">
+  <h1>Scheduler (demo)</h1>
+  <p>This is a placeholder home. Your month grid UI will live here.</p>
+  <p><a href="login.html">Sign in</a> to try the OTP flow.</p>
+</div>
