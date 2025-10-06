@@ -1,8 +1,7 @@
 // src/index.ts — ADR-FR Wallboard API + UI (Cloudflare Workers + Hono + D1)
-
 import { Hono } from 'hono'
 
-type Env = { DB: D1Database }
+type Env = { DB: D1Database; IMPORT_TOKEN?: string }
 
 // ===== Time helpers (America/New_York) =====
 const TZ = 'America/New_York'
@@ -17,20 +16,18 @@ function addDaysISO(iso: string, days: number) {
   const dt = new Date(Date.UTC(Y, M - 1, D + days))
   return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt)
 }
-// weekday in Eastern time (0=Sun..6=Sat)
 function weekdayEST(iso: string) {
   const [Y, M, D] = iso.split('-').map(Number)
   const utc = new Date(Date.UTC(Y, M - 1, D))
-  const localMs = new Date(utc.toLocaleString('en-US', { timeZone: TZ })).getTime()
-  const offset = utc.getTime() - localMs
-  return new Date(utc.getTime() - offset).getDay()
+  const local = new Date(utc.toLocaleString('en-US', { timeZone: TZ }))
+  return local.getDay() // 0..6 (Sun..Sat)
 }
 function nextWeekdayISO(iso: string, targetDow: number) {
   let cur = iso
   for (let i = 0; i < 7; i++) { if (weekdayEST(cur) === targetDow) return cur; cur = addDaysISO(cur, 1) }
   return cur
 }
-// cutoff: 3 weeks from today, snapped to next Thursday (Sun=0 → Thu=4)
+// cutoff: today + 21 days, snapped to next Thursday (Sun=0 → Thu=4)
 function commitmentStartISO() { return nextWeekdayISO(addDaysISO(todayISO(), 21), 4) }
 function assertMonth(ym?: string | null) {
   const re = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -47,9 +44,9 @@ const UNITS = ['120', '121', '131'] as const
 const TRUCK_SHIFTS = ['Day', 'Night'] as const
 const AMPM_SHIFTS = ['AM', 'PM'] as const
 const SENTINEL_UNIT = 'ALL'
-const TYPE3_UNITS = new Set(['121', '131'])
-const isType3Unit = (u: string) => TYPE3_UNITS.has(u)
+const isType3 = (u: string) => u === '121' || u === '131'
 
+// ===== App =====
 const app = new Hono<{ Bindings: Env }>()
 
 // ===== Probes =====
@@ -91,114 +88,121 @@ function parseCSV(text: string): string[][] {
 }
 const tokenOK = (c: any) => {
   const t = c.req.query('token') || c.req.header('x-import-token')
-  return t && t === (c.env as any).IMPORT_TOKEN
+  return t && t === (c.env.IMPORT_TOKEN || '')
 }
 
-// ===== IMPORT: Members (role, can_drive_type3, prefer_24h, is_admin) =====
+// ===== IMPORT: Members =====
 app.post('/admin/import/members', async (c) => {
   if (!tokenOK(c)) return c.json({ ok: false, error: 'unauthorized' }, 401)
-  const csv = await c.req.text()
-  const rows = parseCSV(csv)
-  const [h, ...data] = rows
-  const headIndex = (aliases: string[]) => (h || []).findIndex(x => aliases.some(a => (x || '').trim().toLowerCase() === a))
-  const asBool = (v: any) => ['1', 'true', 't', 'yes', 'y'].includes(String(v ?? '').trim().toLowerCase()) ? 1 : 0
-  const normRole = (v: string | null) => {
-    const s = String(v || '').trim().toUpperCase()
-    return (['MR', 'NMD', 'EMT', 'AEMT'] as const).includes(s as any) ? (s as Role) : null
+  try {
+    const csv = await c.req.text()
+    const rows = parseCSV(csv)
+    const [h, ...data] = rows
+    const headIndex = (aliases: string[]) => (h || []).findIndex(x => aliases.some(a => (x || '').trim().toLowerCase() === a))
+    const asBool = (v: any) => ['1', 'true', 't', 'yes', 'y'].includes(String(v ?? '').trim().toLowerCase()) ? 1 : 0
+    const normRole = (v: string | null) => {
+      const s = String(v || '').trim().toUpperCase()
+      return (['MR', 'NMD', 'EMT', 'AEMT'] as const).includes(s as any) ? (s as Role) : null
+    }
+
+    const iName = headIndex(['name', 'full_name', 'full name'])
+    if (iName < 0) return c.json({ ok: false, error: 'CSV must include header "name" (or full_name)' }, 400)
+    const iRole = headIndex(['role', 'cert_level', 'cert level'])
+    const iEmail = headIndex(['email', 'e-mail'])
+    const iPhone = headIndex(['phone', 'tel', 'telephone'])
+    const iExt = headIndex(['external_id', 'external id', 'member_number', 'member number'])
+    const iAdmin = headIndex(['is_admin', 'admin'])
+    const iT3 = headIndex(['can_drive_type3', 'type3_driver', 'type 3 driver'])
+    const iP24 = headIndex(['prefer_24h', 'prefer24', 'prefer 24h'])
+
+    let upserted = 0, skipped = 0
+    for (const r of data) {
+      const name = (r[iName] || '').trim(); if (!name) { skipped++; continue }
+      const role = iRole >= 0 ? normRole(r[iRole] || null) : null
+      const email = iEmail >= 0 ? (r[iEmail] || '').trim() : null
+      const phone = iPhone >= 0 ? (r[iPhone] || '').trim() : null
+      const extId = iExt >= 0 ? (r[iExt] || '').trim() : null
+      const is_admin = iAdmin >= 0 ? asBool(r[iAdmin]) : 0
+      const can_drive_type3 = iT3 >= 0 ? asBool(r[iT3]) : 0
+      const prefer_24h = iP24 >= 0 ? asBool(r[iP24]) : 0
+
+      await c.env.DB.prepare(`
+        INSERT INTO members (name, role, email, phone, external_id, is_admin, can_drive_type3, prefer_24h, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(name) DO UPDATE SET
+          role=COALESCE(excluded.role, role),
+          email=COALESCE(excluded.email, email),
+          phone=COALESCE(excluded.phone, phone),
+          external_id=COALESCE(excluded.external_id, external_id),
+          is_admin=excluded.is_admin,
+          can_drive_type3=excluded.can_drive_type3,
+          prefer_24h=excluded.prefer_24h,
+          updated_at=datetime('now')
+      `).bind(name, role, email, phone, extId, is_admin, can_drive_type3, prefer_24h).run()
+      upserted++
+    }
+    return c.json({ ok: true, upserted, skipped })
+  } catch (e: any) {
+    return c.json({ ok: false, error: String(e?.message ?? e) }, 500)
   }
-
-  const iName = headIndex(['name'])
-  const iRole = headIndex(['role'])
-  const iEmail = headIndex(['email', 'e-mail'])
-  const iPhone = headIndex(['phone', 'tel', 'telephone'])
-  const iExt = headIndex(['external_id', 'external id', 'ext_id', 'ext id'])
-  const iAdmin = headIndex(['is_admin', 'admin'])
-  const iT3 = headIndex(['can_drive_type3', 'type3', 'type iii', 'type_iii'])
-  const iP24 = headIndex(['prefer_24h', 'prefer24', 'prefer-24h'])
-
-  if (iName < 0) return c.json({ ok: false, error: 'CSV must include header "name"' }, 400)
-
-  let upserted = 0, skipped = 0
-  for (const r of data) {
-    const name = (r[iName] || '').trim(); if (!name) { skipped++; continue }
-    const role = iRole >= 0 ? normRole(r[iRole] || null) : null
-    const email = iEmail >= 0 ? (r[iEmail] || '').trim() : null
-    const phone = iPhone >= 0 ? (r[iPhone] || '').trim() : null
-    const extId = iExt >= 0 ? (r[iExt] || '').trim() : null
-    const is_admin = iAdmin >= 0 ? asBool(r[iAdmin]) : 0
-    const can_drive_type3 = iT3 >= 0 ? asBool(r[iT3]) : 0
-    const prefer_24h = iP24 >= 0 ? asBool(r[iP24]) : 0
-
-    await c.env.DB.prepare(`
-      INSERT INTO members (name, role, email, phone, external_id, is_admin, can_drive_type3, prefer_24h, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      ON CONFLICT(name) DO UPDATE SET
-        role=COALESCE(excluded.role, role),
-        email=COALESCE(excluded.email, email),
-        phone=COALESCE(excluded.phone, phone),
-        external_id=COALESCE(excluded.external_id, external_id),
-        is_admin=excluded.is_admin,
-        can_drive_type3=excluded.can_drive_type3,
-        prefer_24h=excluded.prefer_24h,
-        updated_at=datetime('now')
-    `).bind(name, role, email, phone, extId, is_admin, can_drive_type3, prefer_24h).run()
-    upserted++
-  }
-  return c.json({ ok: true, upserted, skipped })
 })
 
 // ===== IMPORT: Calendar (assignments Day/Night + intents AM/PM) =====
 app.post('/admin/import/calendar', async (c) => {
   if (!tokenOK(c)) return c.json({ ok: false, error: 'unauthorized' }, 401)
-  const csv = await c.req.text()
-  const rows = parseCSV(csv)
-  const [h, ...data] = rows
-  const headIndex = (aliases: string[]) => (h || []).findIndex(x => aliases.some(a => (x || '').trim().toLowerCase() === a))
+  try {
+    const csv = await c.req.text()
+    const rows = parseCSV(csv)
+    const [h, ...data] = rows
+    const headIndex = (aliases: string[]) => (h || []).findIndex(x => aliases.some(a => (x || '').trim().toLowerCase() === a))
 
-  const iDate = headIndex(['shift_date', 'date'])
-  const iUnit = headIndex(['unit_code', 'unit', 'truck'])
-  const iShift = headIndex(['shift_name', 'shift'])
-  const iMName = headIndex(['member_name', 'assigned', 'staff', 'name'])
-  const iMid = headIndex(['member_id', 'member id', 'id'])
-  const iIntent = headIndex(['intent', 'status'])
+    const iDate = headIndex(['shift_date', 'date'])
+    const iUnit = headIndex(['unit_code', 'unit', 'truck'])
+    const iShift = headIndex(['shift_name', 'shift'])
+    const iMName = headIndex(['member_name', 'assigned', 'staff', 'name'])
+    const iMid = headIndex(['member_id', 'member id', 'id'])
+    const iIntent = headIndex(['intent', 'status'])
 
-  if (iDate < 0 || iUnit < 0 || iShift < 0)
-    return c.json({ ok: false, error: 'CSV needs shift_date, unit_code, shift_name' }, 400)
+    if (iDate < 0 || iUnit < 0 || iShift < 0)
+      return c.json({ ok: false, error: 'CSV needs shift_date, unit_code, shift_name' }, 400)
 
-  const resolveMember = async (name: string | null) => {
-    if (!name) return null
-    const q = await c.env.DB.prepare(
-      `SELECT id FROM members WHERE lower(trim(name)) = lower(trim(?))`
-    ).bind(name).first<{ id: number }>()
-    return q?.id ? String(q.id) : null
-  }
-
-  let upserted = 0, skipped = 0, missingMembers: string[] = []
-  for (const r of data) {
-    const d = (r[iDate] || '').trim()
-    const u = (r[iUnit] || '').trim()
-    const s = (r[iShift] || '').trim()
-    if (!d || !u || !s) { skipped++; continue }
-
-    let memberId = (iMid >= 0 && r[iMid]) ? String(r[iMid]).trim() : null
-    const memberName = (iMName >= 0 && r[iMName]) ? String(r[iMName]).trim() : null
-    if (!memberId && memberName) {
-      memberId = await resolveMember(memberName)
-      if (!memberId) missingMembers.push(memberName)
+    const resolveMember = async (name: string | null) => {
+      if (!name) return null
+      const q = await c.env.DB.prepare(`SELECT id FROM members WHERE lower(trim(name)) = lower(trim(?))`).bind(name).first<{ id: number }>()
+      return q?.id ? String(q.id) : null
     }
-    const intent = (iIntent >= 0 && r[iIntent]) ? String(r[iIntent]).trim() : null
 
-    await c.env.DB.prepare(`
-      INSERT INTO shifts (shift_date, unit_code, shift_name, member_id, intent, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
-      ON CONFLICT(shift_date, unit_code, shift_name)
-      DO UPDATE SET member_id=COALESCE(excluded.member_id, member_id),
-                    intent=COALESCE(excluded.intent, intent),
-                    updated_at=datetime('now')
-    `).bind(d, u, s, memberId, intent).run()
-    upserted++
+    let upserted = 0, skipped = 0, missingMembers: string[] = []
+    for (const r of data) {
+      const d = (r[iDate] || '').trim()
+      const u = (r[iUnit] || '').trim()
+      const s = (r[iShift] || '').trim()
+      if (!d || !u || !s) { skipped++; continue }
+
+      let memberId = (iMid >= 0 && r[iMid]) ? String(r[iMid]).trim() : null
+      const memberName = (iMName >= 0 && r[iMName]) ? String(r[iMName]).trim() : null
+      if (!memberId && memberName) {
+        memberId = await resolveMember(memberName)
+        if (!memberId) missingMembers.push(memberName)
+      }
+
+      let intent = (iIntent >= 0 && r[iIntent]) ? String(r[iIntent]).trim() : null
+      if (intent == null || intent === '') intent = '-' // satisfy NOT NULL DEFAULT '-'
+
+      await c.env.DB.prepare(`
+        INSERT INTO shifts (shift_date, unit_code, shift_name, member_id, intent, updated_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(shift_date, unit_code, shift_name)
+        DO UPDATE SET member_id=COALESCE(excluded.member_id, member_id),
+                      intent=COALESCE(excluded.intent, intent),
+                      updated_at=datetime('now')
+      `).bind(d, u, s, memberId, intent).run()
+      upserted++
+    }
+    return c.json({ ok: true, upserted, skipped, missingMembers })
+  } catch (e: any) {
+    return c.json({ ok: false, error: String(e?.message ?? e) }, 500)
   }
-  return c.json({ ok: true, upserted, skipped, missingMembers })
 })
 
 // ===== Data feeds =====
@@ -217,7 +221,7 @@ app.get('/api/wallboard', async (c) => {
     const end = isoDay(month, dcount)
     const cutoff = commitmentStartISO()
 
-    // Day/Night assignments (pre-cutoff display)
+    // Day/Night assignments
     let rows: Array<{ shift_date: string; unit_code: string; shift_name: string; member_name: string | null }> = []
     try {
       const q = `
@@ -226,7 +230,8 @@ app.get('/api/wallboard', async (c) => {
         LEFT JOIN members m ON m.id = s.member_id
         WHERE s.shift_date >= ? AND s.shift_date <= ?
           AND s.unit_code IN ('120','121','131')
-          AND s.shift_name IN ('Day','Night')`
+          AND s.shift_name IN ('Day','Night')
+        ORDER BY s.shift_date, s.unit_code, s.shift_name`
       const r = await c.env.DB.prepare(q).bind(start, end).all<typeof rows[0]>()
       rows = r.results ?? []
     } catch {
@@ -293,7 +298,7 @@ app.post('/api/intent', async (c) => {
   }
 })
 
-// ===== Assignment preview (single date) =====
+// ===== Assignment preview (read-only suggestion) =====
 app.post('/api/assign/preview', async (c) => {
   try {
     const { date, prefer24First = false, avoid = [] } = await c.req.json()
@@ -301,102 +306,61 @@ app.post('/api/assign/preview', async (c) => {
       return c.json({ ok: false, error: 'Bad date (YYYY-MM-DD)' }, 400)
     }
 
-    // Load roster
+    // roster
     const mr = await c.env.DB.prepare(
       `SELECT id,name,role,can_drive_type3,prefer_24h FROM members`
     ).all<{ id: number; name: string; role: Role | null; can_drive_type3: number; prefer_24h: number }>()
     const members = (mr.results ?? []).map(m => ({ ...m, role: (m.role ?? 'NMD') as Role }))
     const avoidSet = new Set((avoid as any[]).map(v => String(v)))
 
-    // Intents for current day (AM/PM) and next day AM (for PM→next-AM 24h)
+    // intents today (AM/PM) + next-day AM (for PM→next-AM 24h)
     const nextDate = addDaysISO(String(date), 1)
-
-    const baseIntentQ = `
+    const baseQ = `
       SELECT s.shift_name, s.intent, m.id AS member_id, m.name, m.role, m.can_drive_type3, m.prefer_24h
-      FROM shifts s
-      JOIN members m ON 1=1
-      WHERE s.unit_code = 'ALL'
+      FROM shifts s JOIN members m ON 1=1
+      WHERE s.unit_code='ALL'
     `
-    const curRes = await c.env.DB.prepare(baseIntentQ + ` AND s.shift_date = ? AND s.shift_name IN ('AM','PM')`)
-      .bind(date)
-      .all<{ shift_name: 'AM' | 'PM'; intent: string; member_id: number; name: string; role: any; can_drive_type3: number; prefer_24h: number }>()
-    const nextRes = await c.env.DB.prepare(baseIntentQ + ` AND s.shift_date = ? AND s.shift_name = 'AM'`)
-      .bind(nextDate)
-      .all<{ shift_name: 'AM'; intent: string; member_id: number; name: string; role: any; can_drive_type3: number; prefer_24h: number }>()
+    const cur = await c.env.DB.prepare(baseQ + ` AND s.shift_date=? AND s.shift_name IN ('AM','PM')`)
+      .bind(date).all<{ shift_name: 'AM' | 'PM'; intent: string; member_id: number; name: string; role: any; can_drive_type3: number; prefer_24h: number }>()
+    const nxt = await c.env.DB.prepare(baseQ + ` AND s.shift_date=? AND s.shift_name='AM'`)
+      .bind(nextDate).all<{ shift_name: 'AM'; intent: string; member_id: number; name: string; role: any; can_drive_type3: number; prefer_24h: number }>()
 
     const weight = (v: string) => v === 'P' ? 3 : v === 'A' ? 2 : v === 'S' ? 1 : 0
-    const byAM = new Map<string, number>()
-    const byPM = new Map<string, number>()
-    for (const r of (curRes.results ?? [])) {
-      const w = weight(r.intent || '-')
-      if (r.shift_name === 'AM') byAM.set(String(r.member_id), w)
-      else byPM.set(String(r.member_id), w)
-    }
-    const byNextAM = new Map<string, number>()
-    for (const r of (nextRes.results ?? [])) {
-      const w = weight(r.intent || '-')
-      byNextAM.set(String(r.member_id), w)
-    }
+    const byAM = new Map<string, number>(), byPM = new Map<string, number>(), byNextAM = new Map<string, number>()
+    for (const r of (cur.results ?? [])) (r.shift_name === 'AM' ? byAM : byPM).set(String(r.member_id), weight(r.intent || '-'))
+    for (const r of (nxt.results ?? [])) byNextAM.set(String(r.member_id), weight(r.intent || '-'))
 
-    // prefer-24 eligibility: AM+PM same day OR PM + next-day AM, and member has prefer_24h=1
     const prefer24Eligible = new Set<string>()
-    if (prefer24First) {
-      for (const id of byPM.keys()) {
-        if ((byAM.get(id) ?? 0) > 0 || (byNextAM.get(id) ?? 0) > 0) {
-          prefer24Eligible.add(id)
-        }
-      }
-    }
+    if (prefer24First) for (const id of byPM.keys())
+      if ((byAM.get(id) ?? 0) > 0 || (byNextAM.get(id) ?? 0) > 0) prefer24Eligible.add(id)
 
-    const scoreMember = (m: any) => {
+    const score = (m: any) => {
       const amW = byAM.get(String(m.id)) ?? 0
       const pmW = byPM.get(String(m.id)) ?? 0
       const base = Math.max(amW, pmW)
-      const prefBonus = (prefer24First && m.prefer_24h === 1 && prefer24Eligible.has(String(m.id))) ? 100 : 0
-      return prefBonus + base
+      const bonus = (prefer24First && m.prefer_24h === 1 && prefer24Eligible.has(String(m.id))) ? 100 : 0
+      return base + bonus
     }
-    const canAttend = (role: Role) => role === 'AEMT' || role === 'EMT'
 
-    function chooseCrew(unit: '120' | '121' | '131', pool: typeof members, reasons: string[]) {
-      const usable = pool
-        .filter(m => !avoidSet.has(String(m.id)))
-        .sort((a, b) => scoreMember(b) - scoreMember(a))
-
+    function choose(unit: '120' | '121' | '131') {
+      const usable = members.filter(m => !avoidSet.has(String(m.id))).sort((a, b) => score(b) - score(a))
       const aemt = usable.filter(m => m.role === 'AEMT')
       const emt = usable.filter(m => m.role === 'EMT')
-      const attendants = aemt.length ? aemt : emt
-      const attendant = attendants[0] ?? null
-      if (!attendant || !canAttend(attendant.role)) {
-        reasons.push(`No eligible attendant for unit ${unit}`)
-        return { driver: null, attendant: null }
-      }
-      const others = usable.filter(m => String(m.id) !== String(attendant.id))
-      let driver: any = null
-      if (isType3Unit(unit)) {
-        driver = others.find(m => m.can_drive_type3 === 1) ?? null
-        if (!driver) reasons.push(`No Type-III driver for unit ${unit}`)
-      } else {
-        driver = others[0] ?? null
-      }
+      const attendant = (aemt[0] ?? emt[0]) ?? null
+      if (!attendant) return { driver: null, attendant: null, note: `No attendant for ${unit}` }
+      const rest = usable.filter(m => m.id !== attendant.id)
+      const driver = isType3(unit) ? (rest.find(m => m.can_drive_type3 === 1) ?? null) : (rest[0] ?? null)
       return { driver, attendant }
     }
 
-    const proposals: any[] = []
-    const reasons: string[] = []
-    const pool = members // all members are eligible pool; weighting comes from intents/prefer24
-
-    for (const unit of UNITS) {
-      const pick = chooseCrew(unit, pool, reasons)
-      proposals.push({ unit, Day: pick, Night: pick }) // preview (not committing to DB)
-    }
-
-    return c.json({ ok: true, date, proposals, reasons })
+    const proposals = (['120', '121', '131'] as const).map(u => ({ unit: u, Day: choose(u), Night: choose(u) }))
+    return c.json({ ok: true, date, proposals })
   } catch (e: any) {
     return c.json({ ok: false, error: String(e?.message ?? e) }, 500)
   }
 })
 
-// ===== HTML UI (wallboard + special selection considerations) =====
+// ===== HTML UI =====
 app.get('/', (c) => c.redirect('/wallboard.html', 302))
 app.get('/wallboard.html', (c) => {
   const html = `<!doctype html>
@@ -416,7 +380,9 @@ th{background:#121a2b;position:sticky;top:0;z-index:1}
 .today{background:#20325a}
 .btn{background:#121a2b;color:#e6edf3;border:1px solid #24304c;border-radius:8px;padding:4px 8px;cursor:pointer}
 .small{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #24304c;background:#1b2440;color:#e6edf3;cursor:pointer}
-pre{background:#0002;padding:10px;border-radius:8px;overflow:auto}
+pre{background:#0002;padding:10px;border-radius:8px;overflow:auto;white-space:pre-wrap}
+#previewOut{max-height:320px;overflow:auto}
+#previewBtn[disabled]{opacity:.6;cursor:progress}
 </style>
 </head>
 <body>
@@ -458,7 +424,7 @@ pre{background:#0002;padding:10px;border-radius:8px;overflow:auto}
     err.textContent='Failed to load wallboard ('+res.status+').';
     return;
   }
-  const data=await res.json(); // unified variable
+  const data=await res.json();
   meta.textContent='Month '+data.month+' — Today '+data.today+' — Cutoff '+data.cutoff;
 
   // ===== Trucks (pre-cutoff only) =====
@@ -513,20 +479,20 @@ pre{background:#0002;padding:10px;border-radius:8px;overflow:auto}
     }
   }
 
-  // ===== Assignment Preview wiring =====
+  // ===== Assignment Preview wiring (robust + no double-click) =====
   const avoidList  = document.getElementById('avoidList');
   const prefer24   = document.getElementById('prefer24');
   const previewBtn = document.getElementById('previewBtn');
   const previewOut = document.getElementById('previewOut');
   const previewNote= document.getElementById('previewNote');
 
-  // Populate avoid list
   (async()=>{
     const r=await fetch('/api/members');
     const j=r.ok?await r.json():{members:[]};
     (j.members||[]).forEach(m=>{
       const id='m_'+m.id;
       const li=document.createElement('li');
+      li.style.listStyle='none';
       li.innerHTML =
         '<input type="checkbox" id="'+id+'"> '+
         '<label for="'+id+'" style="cursor:pointer">'+
@@ -545,14 +511,36 @@ pre{background:#0002;padding:10px;border-radius:8px;overflow:auto}
   }
 
   previewBtn.onclick = async ()=>{
-    previewNote.textContent=''; previewOut.textContent='';
+    if (previewBtn.disabled) return;
+    previewBtn.disabled = true;
+    previewNote.textContent = 'Working…';
+    previewOut.textContent = '';
+
     const date = firstEditableISO();
     const avoid = Array.from(avoidList.querySelectorAll('input[type="checkbox"]:checked')).map(cb=>cb.id.replace('m_',''));
     const body = { date, prefer24First: !!prefer24.checked, avoid };
-    const r = await fetch('/api/assign/preview', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
-    const out = await r.json();
-    if(!r.ok || !out.ok){ previewNote.textContent = 'Preview error: ' + (out.error || r.status); return; }
-    previewOut.textContent = JSON.stringify(out, null, 2);
+
+    try{
+      const res = await fetch('/api/assign/preview', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+      const raw = await res.text();
+      if(!res.ok){
+        previewNote.textContent = 'Preview error: '+res.status;
+        previewOut.textContent = raw;
+        return;
+      }
+      try{
+        const out = JSON.parse(raw);
+        previewNote.textContent = out.ok ? 'Preview ready.' : ('Preview error: ' + (out.error || 'unknown'));
+        previewOut.textContent = JSON.stringify(out, null, 2);
+      }catch{
+        previewNote.textContent = 'Preview returned non-JSON (showing raw):';
+        previewOut.textContent = raw;
+      }
+    }catch(e){
+      previewNote.textContent = 'Network error: ' + e;
+    }finally{
+      previewBtn.disabled = false;
+    }
   };
 })();
 <\/script>

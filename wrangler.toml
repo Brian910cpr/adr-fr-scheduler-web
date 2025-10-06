@@ -9,3 +9,4 @@ database_id = "eedd9a67-410c-4bc9-b428-5bf7c3f12773"
 
 [vars]
 BUILD_TAG = "wallboard-v11-hybrid"
+IMPORT_TOKEN = "qwerty123"
