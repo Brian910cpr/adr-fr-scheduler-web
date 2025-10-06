@@ -6,7 +6,9 @@ type Env = { DB: D1Database }
 // ---------- Time helpers (America/New_York) ----------
 const TZ = 'America/New_York'
 function fmtTz(date: Date) {
-  const f = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
+  const f = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+  })
   const [y, m, d] = f.format(date).split('-')
   return { y, m, d, iso: `${y}-${m}-${d}` }
 }
@@ -14,7 +16,9 @@ function todayISO() { return fmtTz(new Date()).iso }
 function addDaysISO(iso: string, days: number) {
   const [Y, M, D] = iso.split('-').map(Number)
   const dt = new Date(Date.UTC(Y, M - 1, D + days))
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(dt)
 }
 // 0=Sun..6=Sat in Eastern time
 function weekdayEST(iso: string) {
@@ -168,7 +172,94 @@ app.post('/admin/import/calendar', async (c) => {
 })
 
 // ---------- API: Wallboard data ----------
-// ---------- HTML UI (robust, with diagnostics + editable-only AM/PM) ----------
+app.get('/api/wallboard', async (c) => {
+  try {
+    const month = assertMonth(c.req.query('month'))
+    const start = `${month}-01`
+    const dcount = daysInMonth(month)
+    const end = isoDay(month, dcount)
+    const cutoff = commitmentStartISO()
+
+    // Truck assignments (pre-cutoff read-only)
+    let rows: Array<{ shift_date: string; unit_code: string; shift_name: string; member_name: string | null }> = []
+    try {
+      const q = `
+        SELECT s.shift_date, s.unit_code, s.shift_name, m.name AS member_name
+        FROM shifts s
+        LEFT JOIN members m ON m.id = s.member_id
+        WHERE s.shift_date >= ? AND s.shift_date <= ?
+          AND s.unit_code IN ('120','121','131')
+          AND s.shift_name IN ('Day','Night')
+      `
+      const r = await c.env.DB.prepare(q).bind(start, end).all<typeof rows[0]>()
+      rows = r.results ?? []
+    } catch {
+      const q2 = `
+        SELECT shift_date, unit_code, shift_name, NULL AS member_name
+        FROM shifts
+        WHERE shift_date >= ? AND shift_date <= ?
+          AND unit_code IN ('120','121','131')
+          AND shift_name IN ('Day','Night')
+      `
+      const r2 = await c.env.DB.prepare(q2).bind(start, end).all<typeof rows[0]>()
+      rows = r2.results ?? []
+    }
+    const assignments: Record<string, { member_name: string | null }> = {}
+    for (const r of rows) assignments[`${r.shift_date}|${r.unit_code}|${r.shift_name}`] = { member_name: r.member_name }
+
+    // AM/PM intents (post-cutoff editable)
+    const ires = await c.env.DB.prepare(`
+      SELECT shift_date, shift_name, intent
+      FROM shifts
+      WHERE shift_date >= ? AND shift_date <= ?
+        AND unit_code = ?
+        AND shift_name IN ('AM','PM')
+    `).bind(start, end, SENTINEL_UNIT).all<{ shift_date: string; shift_name: string; intent: string }>()
+    const intents: Record<string, Intent> = {}
+    for (const r of ires.results ?? []) intents[`${r.shift_date}|${r.shift_name}`] = (r.intent as Intent) ?? '-'
+
+    return c.json({
+      month, days: dcount, cutoff, today: todayISO(),
+      trucks: UNITS, truckShifts: TRUCK_SHIFTS, ampmShifts: AMPM_SHIFTS,
+      assignments, intents
+    })
+  } catch (err: any) {
+    return c.json({ ok: false, error: String(err?.message ?? err) }, 500)
+  }
+})
+
+// ---------- API: Save intent ----------
+app.post('/api/intent', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}))
+    const key = String((body as any).key || '')
+    const value = String((body as any).value || '')
+    const user = (body as any).user ? String((body as any).user) : null
+
+    if (!/^\d{4}-\d{2}-\d{2}\|(AM|PM)$/.test(key)) return c.json({ ok: false, error: 'Bad key' }, 400)
+    if (!['-', 'P', 'A', 'S'].includes(value)) return c.json({ ok: false, error: 'Bad value' }, 400)
+
+    const [shift_date, shift_name] = key.split('|')
+    const cutoff = commitmentStartISO()
+    if (shift_date < cutoff) return c.json({ ok: false, error: `Locked until ${cutoff}` }, 403)
+
+    await c.env.DB.prepare(`
+      INSERT INTO shifts (shift_date, unit_code, shift_name, intent, updated_by, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(shift_date, unit_code, shift_name)
+      DO UPDATE SET intent=excluded.intent,
+                    updated_by=excluded.updated_by,
+                    updated_at=datetime('now')
+    `).bind(shift_date, SENTINEL_UNIT, shift_name, value, user).run()
+
+    return c.json({ ok: true })
+  } catch (e: any) {
+    return c.json({ ok: false, error: String(e?.message ?? e) }, 500)
+  }
+})
+
+// ---------- HTML UI (robust, shows only editable AM/PM columns) ----------
+app.get('/', (c) => c.redirect('/wallboard.html', 302))
 app.get('/wallboard.html', (c) => {
   const html = `<!doctype html>
 <html lang="en"><head>
@@ -303,10 +394,122 @@ button.small{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid 
     document.getElementById('err').textContent='Script error: '+(e&&e.message?e.message:String(e));
   }
 })();
-</script>
-</body></html>`;
-  return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store, max-age=0' } })
+<\/script>
+</body></html>`
+  return new Response(html, {
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store, max-age=0' }
+  })
 })
 
+// ---- Assignment preview (single date) ----
+app.post('/api/assign/preview', async (c) => {
+  try {
+    const { date, prefer24First = false, avoid = [] } = await c.req.json();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+      return c.json({ ok: false, error: 'Bad date (YYYY-MM-DD)' }, 400);
+    }
+
+    // load members
+    const mr = await c.env.DB.prepare(
+      `SELECT id, name, role, can_drive_type3, prefer_24h FROM members`
+    ).all<{ id:number; name:string; role:'MR'|'NMD'|'EMT'|'AEMT'|null; can_drive_type3:number; prefer_24h:number }>();
+    const members = (mr.results ?? []).map(m => ({ ...m, role: (m.role ?? 'NMD') as 'MR'|'NMD'|'EMT'|'AEMT' }));
+    const avoidSet = new Set((avoid as any[]).map(v => String(v)));
+
+    // intents for date (AM/PM) and next day AM (to allow PM→next-AM 24h)
+    const next = (d: string) => {
+      const [Y,M,D] = d.split('-').map(Number);
+      const dt = new Date(Date.UTC(Y, M-1, D+1));
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
+    };
+    const nextDate = next(String(date));
+
+    const baseIntentQ = `
+      SELECT s.shift_name, s.intent, m.id AS member_id, m.name, m.role, m.can_drive_type3, m.prefer_24h
+      FROM shifts s
+      JOIN members m ON 1=1
+      WHERE s.unit_code = 'ALL'
+    `;
+
+    const curRes = await c.env.DB.prepare(baseIntentQ + ` AND s.shift_date = ? AND s.shift_name IN ('AM','PM')`)
+      .bind(date).all<{shift_name:'AM'|'PM'; intent:string; member_id:number; name:string; role:any; can_drive_type3:number; prefer_24h:number}>();
+
+    const nextRes = await c.env.DB.prepare(baseIntentQ + ` AND s.shift_date = ? AND s.shift_name = 'AM'`)
+      .bind(nextDate).all<{shift_name:'AM'; intent:string; member_id:number; name:string; role:any; can_drive_type3:number; prefer_24h:number}>();
+
+    const weight = (v: string) => v==='P'?3 : v==='A'?2 : v==='S'?1 : 0;
+
+    const byAM = new Map<string, number>();
+    const byPM = new Map<string, number>();
+    for (const r of (curRes.results ?? [])) {
+      const w = weight(r.intent || '-');
+      if (r.shift_name === 'AM') byAM.set(String(r.member_id), w);
+      else byPM.set(String(r.member_id), w);
+    }
+    const byNextAM = new Map<string, number>();
+    for (const r of (nextRes.results ?? [])) {
+      const w = weight(r.intent || '-');
+      byNextAM.set(String(r.member_id), w);
+    }
+
+    // prefer-24 eligibility: AM+PM same day OR PM + next-day AM
+    const prefer24Eligible = new Set<string>();
+    if (prefer24First) {
+      for (const id of byPM.keys()) {
+        if ((byAM.get(id) ?? 0) > 0 || (byNextAM.get(id) ?? 0) > 0) {
+          prefer24Eligible.add(id);
+        }
+      }
+    }
+
+    const scoreMember = (m: any) => {
+      const amW = byAM.get(String(m.id)) ?? 0;
+      const pmW = byPM.get(String(m.id)) ?? 0;
+      const base = Math.max(amW, pmW);
+      const prefBonus = (prefer24First && m.prefer_24h === 1 && prefer24Eligible.has(String(m.id))) ? 100 : 0;
+      return prefBonus + base;
+    };
+
+    const canAttend = (role: string) => role === 'AEMT' || role === 'EMT';
+    const isType3 = (u: string) => u === '121' || u === '131';
+
+    function chooseCrew(unit: '120'|'121'|'131', pool: typeof members, reasons: string[]) {
+      const usable = pool
+        .filter(m => !avoidSet.has(String(m.id)))
+        .sort((a, b) => scoreMember(b) - scoreMember(a));
+
+      const aemt = usable.filter(m => m.role === 'AEMT');
+      const emt  = usable.filter(m => m.role === 'EMT');
+      const attendants = aemt.length ? aemt : emt;
+      const attendant = attendants[0] ?? null;
+      if (!attendant) {
+        reasons.push(`No eligible attendant for unit ${unit}`);
+        return { driver: null, attendant: null };
+      }
+      const others = usable.filter(m => String(m.id) !== String(attendant.id));
+      let driver: any = null;
+      if (isType3(unit)) {
+        driver = others.find(m => m.can_drive_type3 === 1) ?? null;
+        if (!driver) reasons.push(`No Type-III driver for unit ${unit}`);
+      } else {
+        driver = others[0] ?? null;
+      }
+      return { driver, attendant };
+    }
+
+    const proposals: any[] = [];
+    const reasons: string[] = [];
+    const pool = members; // simple: everyone (you can restrict to those with any intent > 0 if you want)
+
+    for (const unit of ['120','121','131'] as const) {
+      const pick = chooseCrew(unit, pool, reasons);
+      proposals.push({ unit, Day: pick, Night: pick }); // preview only; committing can split by shift later
+    }
+
+    return c.json({ ok: true, date, proposals, reasons });
+  } catch (e: any) {
+    return c.json({ ok: false, error: String(e?.message ?? e) }, 500);
+  }
+});
 
 export default app
