@@ -10,13 +10,13 @@
     --accent:#4da3ff; --accent2:#7bd389; --warn:#ffc857; --danger:#ff7070;
     --gap:8px; --pad:8px; --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.35);
     --fs-xxs:11px; --fs-xs:12px; --fs-s:13px; --fs:14px; --fs-h:16px;
-    --day-min:112px;
+    --day-min:112px; --pop: #0f111a;
   }
   @media (prefers-color-scheme: light){
     :root{
       --bg:#f6f7fb; --card:#ffffff; --muted:#5e6c8f; --text:#1b2430;
       --accent:#2667ff; --accent2:#249b4a; --warn:#b38b00; --danger:#c04646;
-      --shadow:0 1px 2px rgba(0,0,0,.1);
+      --shadow:0 1px 2px rgba(0,0,0,.1); --pop:#ffffff;
     }
   }
   body{margin:0;background:var(--bg);color:var(--text);font:400 var(--fs)/1.35 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
@@ -66,6 +66,15 @@
   #toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--card);border:1px solid color-mix(in srgb,var(--muted)30%,transparent);
     padding:8px 12px;border-radius:10px;box-shadow:var(--shadow);font-size:var(--fs-xxs);display:none;z-index:99}
   #toast.show{display:block}
+
+  /* popover */
+  .pop{position:absolute;z-index:20;background:var(--pop);color:var(--text);
+    border:1px solid color-mix(in srgb,var(--muted)30%,transparent);border-radius:10px;box-shadow:var(--shadow);padding:6px;display:none}
+  .pop.show{display:block}
+  .popgrid{display:grid;grid-template-columns:repeat(4,28px);gap:6px}
+  .pop .opt{width:28px;height:28px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;cursor:pointer}
+  .opt.P{outline:2px solid var(--accent2)} .opt.A{outline:2px solid var(--danger)} .opt.D{outline:2px solid var(--warn)} .opt._{opacity:.55}
 </style>
 </head>
 <body class="dense">
@@ -102,98 +111,67 @@
 <main>
   <div id="dow" class="calendar"></div>
   <div id="grid" class="calendar"></div>
-  <div class="note">Click AM/PM dots to set your intent (cycles: – → P → A → D).</div>
+  <div class="note">Click AM/PM dot to choose intent.</div>
 </main>
 
 <div id="toast"></div>
+<div id="pop" class="pop" role="dialog" aria-label="Select intent">
+  <div class="popgrid">
+    <div class="opt _" data-code="-">–</div>
+    <div class="opt P" data-code="P">P</div>
+    <div class="opt A" data-code="A">A</div>
+    <div class="opt D" data-code="D">D</div>
+  </div>
+</div>
 
 <script>
 (function(){
-  // ======== CONFIG: update if your API route differs =========
-  const INTENT_ENDPOINT = '/api/intent'; // expects POST JSON: {member_id, date:'YYYY-MM-DD', shift:'AM'|'PM', intent:'-'|'P'|'A'|'D'}
+  // ======== CONFIG =========
+  const INTENT_ENDPOINT = '/api/intent'; // POST JSON: {member_id, date:'YYYY-MM-DD', shift:'AM'|'PM', intent:'-'|'P'|'A'|'D'}
 
   const qs = s => document.querySelector(s);
   const monthSel = qs('#monthSel'), grid = qs('#grid'), dow = qs('#dow'), densityBtn = qs('#density'), meSel = qs('#meSel');
-  const toastEl = qs('#toast');
-
+  const toastEl = qs('#toast'), pop = qs('#pop');
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const CYCLE = ['-','P','A','D'];
   const STORAGE_ME = 'adrfr.me';
 
   function toast(msg, ms=1800){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), ms); }
-
-  function renderDOW(){
-    dow.innerHTML = '';
-    DOW.forEach(d => {
-      const el = document.createElement('div');
-      el.className = 'dow';
-      el.textContent = d;
-      dow.appendChild(el);
-    });
-  }
+  function renderDOW(){ dow.innerHTML = ''; DOW.forEach(d => { const el = document.createElement('div'); el.className = 'dow'; el.textContent = d; dow.appendChild(el); }); }
   renderDOW();
 
   function monthKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
   function fmt(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function firstOfMonthFromStr(ym){ const [y,m] = ym.split('-').map(Number); return new Date(y, m-1, 1); }
-
-  async function loadWallboard(ym){
-    const res = await fetch(`/api/wallboard?month=${ym}`);
-    if(!res.ok) throw new Error(`API ${res.status}`);
-    return res.json();
-  }
-  async function loadMembers(){
-    const res = await fetch('/api/members');
-    if(!res.ok) throw new Error(`members ${res.status}`);
-    return res.json();
-  }
+  async function loadWallboard(ym){ const res = await fetch(`/api/wallboard?month=${ym}`); if(!res.ok) throw new Error(`API ${res.status}`); return res.json(); }
+  async function loadMembers(){ const res = await fetch('/api/members'); if(!res.ok) throw new Error(`members ${res.status}`); return res.json(); }
 
   function buildCells(ym){
     const first = firstOfMonthFromStr(ym);
     const startDow = first.getDay();
     const start = new Date(first); start.setDate(first.getDate() - startDow);
-    const days = [];
-    for(let i=0;i<42;i++){ const d = new Date(start); d.setDate(start.getDate()+i); days.push(d); }
+    const days = []; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); days.push(d); }
     return { month:first.getMonth(), days };
   }
 
   function dotClass(code){ return 'dot ' + (code==='-' ? '_' : code); }
-  function nextIntent(current){
-    const i = CYCLE.indexOf(current ?? '-');
-    return CYCLE[(i+1) % CYCLE.length];
-  }
 
-  // Set or update an intent (UI optimistic), then POST to backend
   async function submitIntent(memberId, dateStr, shift, code, onRevert){
     try{
       const res = await fetch(INTENT_ENDPOINT, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ member_id: memberId, date: dateStr, shift, intent: code })
       });
-      if(!res.ok){
-        toast(`Save failed (${res.status})`);
-        if(onRevert) onRevert();
-        return;
-      }
+      if(!res.ok){ toast(`Save failed (${res.status})`); onRevert && onRevert(); return; }
       const data = await res.json().catch(()=>({}));
-      if(data && data.ok === false){
-        toast(`Save failed: ${data.error || 'unknown'}`);
-        if(onRevert) onRevert();
-        return;
-      }
+      if(data && data.ok === false){ toast(`Save failed: ${data.error || 'unknown'}`); onRevert && onRevert(); return; }
       toast('Intent saved');
-    }catch(e){
-      toast('Network error saving intent');
-      if(onRevert) onRevert();
-    }
+    }catch{ toast('Network error saving intent'); onRevert && onRevert(); }
   }
 
   function render(ym, data, state){
     grid.innerHTML = '';
     const {trucks=[], truckShifts=[], ampmShifts=[], assignments={}, intents={}} = data;
     const shifts = truckShifts.length ? truckShifts : (ampmShifts.length ? ampmShifts : ['Day','Night']);
-
     const {month, days} = buildCells(ym);
 
     days.forEach(dt=>{
@@ -203,7 +181,7 @@
       const day = document.createElement('div');
       day.className = 'day' + (other ? ' other' : '');
 
-      // Date row + intent dots (clickable)
+      // Date row + intent dots (with popover)
       const top = document.createElement('div');
       top.className = 'date';
       const num = document.createElement('div'); num.textContent = dt.getDate();
@@ -218,29 +196,11 @@
           span.dataset.day = dayStr;
           span.dataset.shift = which;
           span.textContent = code==='-' ? '–' : code;
-          span.title = `${which} intent: ${code}. Click to cycle`;
+          span.title = `${which} intent: ${code}. Click to choose`;
 
-          span.addEventListener('click', ()=>{
-            const me = state.me;
-            if(!me){ toast('Select your name first'); return; }
-            const prev = span.dataset.code;
-            const next = nextIntent(prev);
-            // optimistic UI
-            span.dataset.code = next;
-            span.className = dotClass(next);
-            span.textContent = next==='-' ? '–' : next;
-
-            // keep local in-memory intents in sync so re-render keeps it
-            data.intents = data.intents || {};
-            data.intents[`${dayStr}|${which}`] = next;
-
-            submitIntent(me, dayStr, which, next, ()=>{
-              // revert UI on failure
-              span.dataset.code = prev;
-              span.className = dotClass(prev);
-              span.textContent = prev==='-' ? '–' : prev;
-              data.intents[`${dayStr}|${which}`] = prev;
-            });
+          span.addEventListener('click', (e)=>{
+            const me = state.me; if(!me){ toast('Select your name first'); return; }
+            openPopForSpan(span, e);
           });
 
           intentsWrap.appendChild(span);
@@ -249,12 +209,11 @@
       top.appendChild(num); top.appendChild(intentsWrap);
       day.appendChild(top);
 
-      // “ALL” strip (AM/PM assignments for the day)
+      // “ALL” strip
       const allAM = assignments[`${dayStr}|ALL|AM`] || assignments[`${dayStr}|All|AM`] || assignments[`${dayStr}|all|AM`];
       const allPM = assignments[`${dayStr}|ALL|PM`] || assignments[`${dayStr}|All|PM`] || assignments[`${dayStr}|all|PM`];
       if (allAM || allPM){
-        const line = document.createElement('div');
-        line.className = 'allline';
+        const line = document.createElement('div'); line.className = 'allline';
         const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'ALL';
         line.appendChild(tag);
 
@@ -291,16 +250,62 @@
     });
   }
 
+  // popover behavior
+  let popCtx = null;
+  function openPopForSpan(span, ev){
+    const rect = span.getBoundingClientRect();
+    pop.style.left = `${rect.left + window.scrollX - 10}px`;
+    pop.style.top  = `${rect.bottom + window.scrollY + 8}px`;
+    pop.classList.add('show');
+    popCtx = { span };
+
+    // highlight current
+    [...pop.querySelectorAll('.opt')].forEach(o=>{
+      o.classList.remove('sel');
+      if ((span.dataset.code||'-') === (o.dataset.code||'-')) o.classList.add('sel');
+      o.onclick = () => choose(span, o.dataset.code);
+    });
+  }
+  function closePop(){ pop.classList.remove('show'); popCtx = null; }
+  document.addEventListener('click', (e)=>{
+    if(!pop.classList.contains('show')) return;
+    if (pop.contains(e.target)) return;
+    if (popCtx?.span && popCtx.span.contains(e.target)) return;
+    closePop();
+  });
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePop(); });
+
+  function choose(span, code){
+    const prev = span.dataset.code;
+    const dayStr = span.dataset.day;
+    const which = span.dataset.shift;
+    const me = Number(localStorage.getItem('adrfr.me') || '0') || null;
+    if(!me){ toast('Select your name first'); return; }
+
+    // optimistic
+    span.dataset.code = code;
+    span.className = dotClass(code);
+    span.textContent = code==='-' ? '–' : code;
+
+    closePop();
+
+    // persist local page state so re-render keeps it
+    // NOTE: we don’t have a shared object here, so we’ll re-fetch next month change;
+    // the server will send back the saved choice, so view stays consistent.
+    submitIntent(me, dayStr, which, code, ()=>{
+      // revert on error
+      span.dataset.code = prev;
+      span.className = dotClass(prev);
+      span.textContent = prev==='-' ? '–' : prev;
+    });
+  }
+
   // controls
   function setMonthInput(d){ monthSel.value = monthKey(d); }
   function currentMonth(){ return monthSel.value || monthKey(new Date()); }
-  async function redraw(state){
-    const ym = currentMonth();
-    const data = await loadWallboard(ym);
-    render(ym, data, state);
-  }
+  async function redraw(state){ const ym = currentMonth(); const data = await loadWallboard(ym); render(ym, data, state); }
 
-  // identity (“I am …”) handling
+  // identity
   async function populateMe(state){
     const payload = await loadMembers();
     const members = payload.members || payload || [];
@@ -328,11 +333,7 @@
   qs('#prev').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()-1); setMonthInput(d); redraw(state).catch(console.error); });
   qs('#next').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()+1); setMonthInput(d); redraw(state).catch(console.error); });
   monthSel.addEventListener('change', ()=>redraw(state).catch(console.error));
-
-  densityBtn.addEventListener('click', ()=>{
-    const cozy = document.body.classList.toggle('cozy');
-    densityBtn.textContent = cozy ? 'Cozy' : 'Compact';
-  });
+  densityBtn.addEventListener('click', ()=>{ const cozy = document.body.classList.toggle('cozy'); densityBtn.textContent = cozy ? 'Cozy' : 'Compact'; });
 })();
 </script>
 </body>
