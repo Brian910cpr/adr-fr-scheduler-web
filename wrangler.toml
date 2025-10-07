@@ -11,6 +11,7 @@ binding = "DB"
 database_name = "adr_fr"
 database_id = "eedd9a67-410c-4bc9-b428-5bf7c3f12773"
 
+# Top-level (NOT inside d1_databases)
 routes = [
   { pattern = "s.adr-fr.org/*", zone_name = "adr-fr.org" }
 ]
