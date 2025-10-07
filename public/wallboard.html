@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ADR-FR • Wallboard Calendar (Dense)</title>
+<title>ADR-FR • Wallboard Calendar</title>
 <style>
   :root{
     --bg:#0b0c10; --card:#121319; --muted:#8187a2; --text:#e9ecf1;
@@ -23,18 +23,18 @@
   header{position:sticky;top:0;z-index:5;backdrop-filter:blur(6px);
     background:color-mix(in srgb,var(--bg) 82%,transparent);
     border-bottom:1px solid color-mix(in srgb,var(--muted) 22%,transparent)}
-  .bar{max-width:1200px;margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .bar{max-width:1200px;margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .bar h1{font-size:18px;margin:0 6px 0 0}
   .sp{flex:1}
   .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:var(--card);
     border:1px solid color-mix(in srgb,var(--muted) 25%,transparent);box-shadow:var(--shadow)}
-  .pill input{background:transparent;border:none;color:var(--text);font:inherit;outline:none}
+  .pill input,.pill select{background:transparent;border:none;color:var(--text);font:inherit;outline:none}
   .btn{appearance:none;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);background:var(--card);color:var(--text);
     padding:8px 10px;border-radius:10px;box-shadow:var(--shadow);cursor:pointer}
   .btn:hover{border-color:var(--accent)}
   .legend{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--fs-xxs)}
   .dot{width:20px;height:20px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);
-    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px}
+    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;cursor:pointer;user-select:none}
   .dot.P{outline:2px solid var(--accent2)} .dot.A{outline:2px solid var(--danger)} .dot.D{outline:2px solid var(--warn)} .dot._{opacity:.55}
 
   main{max-width:1200px;margin:14px auto;padding:0 12px 28px}
@@ -61,17 +61,34 @@
 
   /* density toggle */
   body.cozy{ --day-min:140px; --fs-xxs:12px; --fs-xs:13px; --fs:15px }
+
+  /* tiny toast */
+  #toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--card);border:1px solid color-mix(in srgb,var(--muted)30%,transparent);
+    padding:8px 12px;border-radius:10px;box-shadow:var(--shadow);font-size:var(--fs-xxs);display:none;z-index:99}
+  #toast.show{display:block}
 </style>
 </head>
 <body class="dense">
 <header>
   <div class="bar">
     <h1>ADR-FR Wallboard</h1>
-    <div class="pill"><label for="monthSel" style="color:var(--muted);font-size:var(--fs-xxs);margin-right:6px">Month</label><input id="monthSel" type="month"></div>
+
+    <div class="pill">
+      <label for="monthSel" style="color:var(--muted);font-size:var(--fs-xxs);margin-right:6px">Month</label>
+      <input id="monthSel" type="month">
+    </div>
+
     <button id="prev" class="btn">◀ Prev</button>
     <button id="next" class="btn">Next ▶</button>
     <button id="density" class="btn" title="Toggle Compact / Cozy">Compact</button>
+
+    <div class="pill">
+      <span style="color:var(--muted);font-size:var(--fs-xxs)">I am</span>
+      <select id="meSel"></select>
+    </div>
+
     <div class="sp"></div>
+
     <div class="legend">
       <span>Intent</span>
       <span class="dot P">P</span><span>Prefer</span>
@@ -85,15 +102,26 @@
 <main>
   <div id="dow" class="calendar"></div>
   <div id="grid" class="calendar"></div>
-  <div class="note">Day tile: date + (AM/PM intent dots), optional “ALL” strip, up to 3 trucks × 2 shifts.</div>
+  <div class="note">Click AM/PM dots to set your intent (cycles: – → P → A → D).</div>
 </main>
+
+<div id="toast"></div>
 
 <script>
 (function(){
+  // ======== CONFIG: update if your API route differs =========
+  const INTENT_ENDPOINT = '/api/intent'; // expects POST JSON: {member_id, date:'YYYY-MM-DD', shift:'AM'|'PM', intent:'-'|'P'|'A'|'D'}
+
   const qs = s => document.querySelector(s);
-  const monthSel = qs('#monthSel'), grid = qs('#grid'), dow = qs('#dow'), densityBtn = qs('#density');
+  const monthSel = qs('#monthSel'), grid = qs('#grid'), dow = qs('#dow'), densityBtn = qs('#density'), meSel = qs('#meSel');
+  const toastEl = qs('#toast');
 
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const CYCLE = ['-','P','A','D'];
+  const STORAGE_ME = 'adrfr.me';
+
+  function toast(msg, ms=1800){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), ms); }
+
   function renderDOW(){
     dow.innerHTML = '';
     DOW.forEach(d => {
@@ -114,6 +142,11 @@
     if(!res.ok) throw new Error(`API ${res.status}`);
     return res.json();
   }
+  async function loadMembers(){
+    const res = await fetch('/api/members');
+    if(!res.ok) throw new Error(`members ${res.status}`);
+    return res.json();
+  }
 
   function buildCells(ym){
     const first = firstOfMonthFromStr(ym);
@@ -124,16 +157,39 @@
     return { month:first.getMonth(), days };
   }
 
-  function intentDot(intents, dayStr, which){
-    const code = intents?.[`${dayStr}|${which}`] ?? '-';
-    const span = document.createElement('span');
-    span.className = 'dot ' + (code==='-' ? '_' : code);
-    span.textContent = code==='-' ? '–' : code;
-    span.title = `${which} intent: ${code}`;
-    return span;
+  function dotClass(code){ return 'dot ' + (code==='-' ? '_' : code); }
+  function nextIntent(current){
+    const i = CYCLE.indexOf(current ?? '-');
+    return CYCLE[(i+1) % CYCLE.length];
   }
 
-  function render(ym, data){
+  // Set or update an intent (UI optimistic), then POST to backend
+  async function submitIntent(memberId, dateStr, shift, code, onRevert){
+    try{
+      const res = await fetch(INTENT_ENDPOINT, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ member_id: memberId, date: dateStr, shift, intent: code })
+      });
+      if(!res.ok){
+        toast(`Save failed (${res.status})`);
+        if(onRevert) onRevert();
+        return;
+      }
+      const data = await res.json().catch(()=>({}));
+      if(data && data.ok === false){
+        toast(`Save failed: ${data.error || 'unknown'}`);
+        if(onRevert) onRevert();
+        return;
+      }
+      toast('Intent saved');
+    }catch(e){
+      toast('Network error saving intent');
+      if(onRevert) onRevert();
+    }
+  }
+
+  function render(ym, data, state){
     grid.innerHTML = '';
     const {trucks=[], truckShifts=[], ampmShifts=[], assignments={}, intents={}} = data;
     const shifts = truckShifts.length ? truckShifts : (ampmShifts.length ? ampmShifts : ['Day','Night']);
@@ -147,14 +203,48 @@
       const day = document.createElement('div');
       day.className = 'day' + (other ? ' other' : '');
 
-      // Date row + intent dots
+      // Date row + intent dots (clickable)
       const top = document.createElement('div');
       top.className = 'date';
       const num = document.createElement('div'); num.textContent = dt.getDate();
+
       const intentsWrap = document.createElement('div'); intentsWrap.className = 'intentRow';
       if (ampmShifts && ampmShifts.length === 2){
-        intentsWrap.appendChild(intentDot(intents, dayStr, ampmShifts[0]));
-        intentsWrap.appendChild(intentDot(intents, dayStr, ampmShifts[1]));
+        ['AM','PM'].forEach(which=>{
+          const code = (intents?.[`${dayStr}|${which}`]) ?? '-';
+          const span = document.createElement('span');
+          span.className = dotClass(code);
+          span.dataset.code = code;
+          span.dataset.day = dayStr;
+          span.dataset.shift = which;
+          span.textContent = code==='-' ? '–' : code;
+          span.title = `${which} intent: ${code}. Click to cycle`;
+
+          span.addEventListener('click', ()=>{
+            const me = state.me;
+            if(!me){ toast('Select your name first'); return; }
+            const prev = span.dataset.code;
+            const next = nextIntent(prev);
+            // optimistic UI
+            span.dataset.code = next;
+            span.className = dotClass(next);
+            span.textContent = next==='-' ? '–' : next;
+
+            // keep local in-memory intents in sync so re-render keeps it
+            data.intents = data.intents || {};
+            data.intents[`${dayStr}|${which}`] = next;
+
+            submitIntent(me, dayStr, which, next, ()=>{
+              // revert UI on failure
+              span.dataset.code = prev;
+              span.className = dotClass(prev);
+              span.textContent = prev==='-' ? '–' : prev;
+              data.intents[`${dayStr}|${which}`] = prev;
+            });
+          });
+
+          intentsWrap.appendChild(span);
+        });
       }
       top.appendChild(num); top.appendChild(intentsWrap);
       day.appendChild(top);
@@ -204,16 +294,40 @@
   // controls
   function setMonthInput(d){ monthSel.value = monthKey(d); }
   function currentMonth(){ return monthSel.value || monthKey(new Date()); }
-  async function redraw(){ const ym = currentMonth(); const data = await loadWallboard(ym); render(ym, data); }
+  async function redraw(state){
+    const ym = currentMonth();
+    const data = await loadWallboard(ym);
+    render(ym, data, state);
+  }
+
+  // identity (“I am …”) handling
+  async function populateMe(state){
+    const payload = await loadMembers();
+    const members = payload.members || payload || [];
+    meSel.innerHTML = `<option value="">— select —</option>` + members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    const saved = localStorage.getItem(STORAGE_ME);
+    if(saved){ meSel.value = saved; state.me = Number(saved) || null; }
+    meSel.addEventListener('change', ()=>{
+      const v = meSel.value ? Number(meSel.value) : null;
+      state.me = v;
+      if(v){ localStorage.setItem(STORAGE_ME, String(v)); } else { localStorage.removeItem(STORAGE_ME); }
+      toast(v ? 'Identity set' : 'Identity cleared');
+    });
+  }
 
   // init
+  const state = { me: null };
   const init = (new URL(location.href)).searchParams.get('month') || monthKey(new Date());
   setMonthInput(firstOfMonthFromStr(init));
-  redraw().catch(err => grid.innerHTML = `<div style="grid-column:1/-1;padding:12px;border:1px solid #555;border-radius:8px;background:#1f2230">Error loading wallboard: ${err.message}</div>`);
 
-  qs('#prev').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()-1); setMonthInput(d); redraw().catch(console.error); });
-  qs('#next').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()+1); setMonthInput(d); redraw().catch(console.error); });
-  monthSel.addEventListener('change', ()=>redraw().catch(console.error));
+  Promise.resolve()
+    .then(()=>populateMe(state))
+    .then(()=>redraw(state))
+    .catch(err => grid.innerHTML = `<div style="grid-column:1/-1;padding:12px;border:1px solid #555;border-radius:8px;background:#1f2230">Error loading: ${err.message}</div>`);
+
+  qs('#prev').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()-1); setMonthInput(d); redraw(state).catch(console.error); });
+  qs('#next').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()+1); setMonthInput(d); redraw(state).catch(console.error); });
+  monthSel.addEventListener('change', ()=>redraw(state).catch(console.error));
 
   densityBtn.addEventListener('click', ()=>{
     const cozy = document.body.classList.toggle('cozy');
