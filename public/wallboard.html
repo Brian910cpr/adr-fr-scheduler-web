@@ -3,133 +3,81 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ADR-FR • Wallboard Calendar</title>
+<title>ADR-FR • Wallboard Calendar (Dense)</title>
 <style>
   :root{
-    --bg: #0b0c10;
-    --card:#121319;
-    --muted:#8187a2;
-    --text:#e9ecf1;
-    --accent:#4da3ff;
-    --accent2:#7bd389;
-    --warn:#ffc857;
-    --danger:#ff7070;
-    --grid-gap: 8px;
-    --day-pad: 8px;
-    --truck-gap: 6px;
-    --radius: 10px;
-    --shadow: 0 1px 2px rgba(0,0,0,.35);
-    --small: 12px;
-    --base: 14px;
-    --h: 16px;
+    --bg:#0b0c10; --card:#121319; --muted:#8187a2; --text:#e9ecf1;
+    --accent:#4da3ff; --accent2:#7bd389; --warn:#ffc857; --danger:#ff7070;
+    --gap:8px; --pad:8px; --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.35);
+    --fs-xxs:11px; --fs-xs:12px; --fs-s:13px; --fs:14px; --fs-h:16px;
+    --day-min:112px;
   }
-  @media (prefers-color-scheme: light) {
+  @media (prefers-color-scheme: light){
     :root{
-      --bg:#f6f7fb; --card:#ffffff; --muted:#627191; --text:#1b2430;
+      --bg:#f6f7fb; --card:#ffffff; --muted:#5e6c8f; --text:#1b2430;
       --accent:#2667ff; --accent2:#249b4a; --warn:#b38b00; --danger:#c04646;
-      --shadow: 0 1px 2px rgba(0,0,0,.1);
+      --shadow:0 1px 2px rgba(0,0,0,.1);
     }
   }
-  *{box-sizing: border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--text); font: 400 var(--base)/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-  }
-  header{
-    position:sticky; top:0; z-index:5; backdrop-filter: blur(6px);
-    background: color-mix(in srgb, var(--bg) 80%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
-  }
-  .bar{
-    max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px;
-  }
-  .bar h1{ font-size: 18px; margin: 0 6px 0 0; letter-spacing:.2px;}
-  .spacer{flex:1}
-  .pill{
-    display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius: 999px;
-    background: var(--card); border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent); box-shadow: var(--shadow);
-  }
-  .pill input, .pill select{ color:var(--text); background:transparent; border:none; outline:none; font:inherit }
-  .btn{
-    appearance:none; border:none; color:var(--text); background: var(--card);
-    border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
-    padding:8px 10px; border-radius: 10px; box-shadow: var(--shadow); cursor: pointer;
-  }
-  .btn:hover{ border-color: var(--accent); }
-  .legend{ display:flex; align-items:center; gap:10px; color: var(--muted); font-size: var(--small);}
+  body{margin:0;background:var(--bg);color:var(--text);font:400 var(--fs)/1.35 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  header{position:sticky;top:0;z-index:5;backdrop-filter:blur(6px);
+    background:color-mix(in srgb,var(--bg) 82%,transparent);
+    border-bottom:1px solid color-mix(in srgb,var(--muted) 22%,transparent)}
+  .bar{max-width:1200px;margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .bar h1{font-size:18px;margin:0 6px 0 0}
+  .sp{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:var(--card);
+    border:1px solid color-mix(in srgb,var(--muted) 25%,transparent);box-shadow:var(--shadow)}
+  .pill input{background:transparent;border:none;color:var(--text);font:inherit;outline:none}
+  .btn{appearance:none;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);background:var(--card);color:var(--text);
+    padding:8px 10px;border-radius:10px;box-shadow:var(--shadow);cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .legend{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--fs-xxs)}
+  .dot{width:20px;height:20px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);
+    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px}
+  .dot.P{outline:2px solid var(--accent2)} .dot.A{outline:2px solid var(--danger)} .dot.D{outline:2px solid var(--warn)} .dot._{opacity:.55}
 
-  main{ max-width: 1200px; margin: 14px auto; padding: 0 12px 28px; }
+  main{max-width:1200px;margin:14px auto;padding:0 12px 28px}
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap)}
+  .dow{font-weight:600;color:var(--muted);font-size:var(--fs-xxs);text-transform:uppercase;text-align:center;padding:6px 0}
+  .day{min-height:var(--day-min);display:flex;flex-direction:column;gap:6px;background:var(--card);
+    border:1px solid color-mix(in srgb,var(--muted)20%,transparent);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow)}
+  .day.other{opacity:.55}
+  .date{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:var(--fs-h)}
+  .intentRow{display:flex;gap:6px}
+  .allline{display:flex;gap:6px;align-items:center;font-size:var(--fs-xs)}
+  .allline .tag{font-weight:700;color:var(--muted);font-size:var(--fs-xxs);padding:1px 6px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent)}
+  .mpill{display:inline-flex;align-items:center;gap:6px;padding:3px 6px;border-radius:8px;
+    border:1px solid color-mix(in srgb,var(--muted)18%,transparent);font-size:var(--fs-xxs);background:color-mix(in srgb,var(--card) 80%,transparent)}
+  .mpill.assigned{border-color:color-mix(in srgb,var(--accent2)45%,transparent)}
+  .mpill .k{color:var(--muted)}
+  .tr{border-radius:8px;border:1px dashed color-mix(in srgb,var(--muted)25%,transparent);padding:6px;display:flex;flex-direction:column;gap:4px}
+  .tr .name{font-size:var(--fs-xxs);font-weight:700;color:var(--muted)}
+  .shift{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-xxs);padding:3px 6px;border-radius:7px;
+    border:1px solid color-mix(in srgb,var(--muted)15%,transparent)}
+  .shift.assigned{border-color:color-mix(in srgb,var(--accent2)40%,transparent)}
+  .who{font-weight:700}
+  .note{margin-top:10px;color:var(--muted);font-size:var(--fs-xxs);text-align:center}
 
-  .calendar{
-    display:grid; grid-template-columns: repeat(7, 1fr); gap: var(--grid-gap);
-  }
-  .dow{
-    text-transform: uppercase; font-weight:600; color: var(--muted); font-size: var(--small);
-    padding: 8px 4px; text-align:center;
-  }
-  .day{
-    min-height: 130px; display:flex; flex-direction: column; gap: var(--truck-gap);
-    border-radius: var(--radius); background: var(--card);
-    border:1px solid color-mix(in srgb, var(--muted) 20%, transparent);
-    padding: var(--day-pad); position: relative; box-shadow: var(--shadow);
-  }
-  .day.other-month{ opacity:.5 }
-  .day .date{
-    font-weight:700; font-size: var(--h); display:flex; align-items:center; justify-content:space-between;
-  }
-  .date .intent-compact{
-    display:flex; gap:6px; align-items:center;
-  }
-  .badge{
-    font-size:11px; padding:2px 6px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
-    color: var(--muted);
-  }
-  .truck{
-    border-radius: 8px; border: 1px dashed color-mix(in srgb, var(--muted) 25%, transparent);
-    padding:6px; display:flex; flex-direction: column; gap:4px;
-  }
-  .truck .name{ font-size: 12px; font-weight:600; color: var(--muted); }
-  .shift{
-    display:flex; align-items:center; justify-content: space-between; gap:8px;
-    font-size: 12px; padding:4px 6px; border-radius: 6px;
-    border:1px solid color-mix(in srgb, var(--muted) 15%, transparent);
-    background: color-mix(in srgb, var(--card) 80%, transparent);
-  }
-  .shift.assigned{ border-color: color-mix(in srgb, var(--accent2) 40%, transparent); }
-  .shift .who{ font-weight:600; }
-  .key{ color: var(--muted); }
-
-  .intent-dot{
-    width: 22px; height: 22px; border-radius: 999px; border:1px solid color-mix(in srgb, var(--muted) 25%, transparent);
-    background: color-mix(in srgb, var(--bg) 80%, transparent);
-    display:inline-flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:11px; min-width:22px;
-  }
-  .intent-P{ outline:2px solid var(--accent2) }
-  .intent-A{ outline:2px solid var(--danger) }
-  .intent-D{ outline:2px solid var(--warn) }
-  .intent--{ opacity:.6 }
-
-  .footer-note{ margin-top:12px; color:var(--muted); font-size: var(--small); text-align:center; }
+  /* density toggle */
+  body.cozy{ --day-min:140px; --fs-xxs:12px; --fs-xs:13px; --fs:15px }
 </style>
 </head>
-<body>
+<body class="dense">
 <header>
   <div class="bar">
     <h1>ADR-FR Wallboard</h1>
-    <div class="pill">
-      <label for="monthSel" class="key">Month</label>
-      <input id="monthSel" type="month" />
-    </div>
+    <div class="pill"><label for="monthSel" style="color:var(--muted);font-size:var(--fs-xxs);margin-right:6px">Month</label><input id="monthSel" type="month"></div>
     <button id="prev" class="btn">◀ Prev</button>
     <button id="next" class="btn">Next ▶</button>
-    <div class="spacer"></div>
+    <button id="density" class="btn" title="Toggle Compact / Cozy">Compact</button>
+    <div class="sp"></div>
     <div class="legend">
-      <span class="key">Intent:</span>
-      <span class="intent-dot intent-P">P</span><span class="key">Prefer</span>
-      <span class="intent-dot intent-A">A</span><span class="key">Avoid</span>
-      <span class="intent-dot intent-D">D</span><span class="key">Decline</span>
-      <span class="intent-dot intent--">-</span><span class="key">None</span>
+      <span>Intent</span>
+      <span class="dot P">P</span><span>Prefer</span>
+      <span class="dot A">A</span><span>Avoid</span>
+      <span class="dot D">D</span><span>Decline</span>
+      <span class="dot _">–</span><span>None</span>
     </div>
   </div>
 </header>
@@ -137,19 +85,15 @@
 <main>
   <div id="dow" class="calendar"></div>
   <div id="grid" class="calendar"></div>
-  <div class="footer-note">Compact day tiles → up to 3 trucks × 2 shifts per day. Intent dots show AM / PM preferences when available.</div>
+  <div class="note">Day tile: date + (AM/PM intent dots), optional “ALL” strip, up to 3 trucks × 2 shifts.</div>
 </main>
 
 <script>
 (function(){
-  const qs = sel => document.querySelector(sel);
-  const monthSel = qs('#monthSel');
-  const grid = qs('#grid');
-  const dow = qs('#dow');
+  const qs = s => document.querySelector(s);
+  const monthSel = qs('#monthSel'), grid = qs('#grid'), dow = qs('#dow'), densityBtn = qs('#density');
 
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-  // Render day-of-week header once
   function renderDOW(){
     dow.innerHTML = '';
     DOW.forEach(d => {
@@ -161,22 +105,9 @@
   }
   renderDOW();
 
-  // Utilities
-  function fmt(dt){ // YYYY-MM-DD
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth()+1).padStart(2,'0');
-    const d = String(dt.getDate()).padStart(2,'0');
-    return `${y}-${m}-${d}`;
-  }
-  function monthKey(dt){ // YYYY-MM
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth()+1).padStart(2,'0');
-    return `${y}-${m}`;
-  }
-  function firstOfMonthFromStr(ym){ // ym: 'YYYY-MM'
-    const [y,m] = ym.split('-').map(Number);
-    return new Date(y, m-1, 1);
-  }
+  function monthKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+  function fmt(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  function firstOfMonthFromStr(ym){ const [y,m] = ym.split('-').map(Number); return new Date(y, m-1, 1); }
 
   async function loadWallboard(ym){
     const res = await fetch(`/api/wallboard?month=${ym}`);
@@ -184,140 +115,110 @@
     return res.json();
   }
 
-  function buildCalendarCells(ym){
+  function buildCells(ym){
     const first = firstOfMonthFromStr(ym);
-    const startDow = first.getDay(); // 0..6
-    const year = first.getFullYear();
-    const month = first.getMonth(); // 0..11
-
-    // Start from the Sunday before (or the same day if Sunday)
-    const start = new Date(first);
-    start.setDate(first.getDate() - startDow);
-
-    // We will render 6 weeks (42 tiles) to cover any month
+    const startDow = first.getDay();
+    const start = new Date(first); start.setDate(first.getDate() - startDow);
     const days = [];
-    for(let i=0;i<42;i++){
-      const d = new Date(start);
-      d.setDate(start.getDate()+i);
-      days.push(d);
-    }
-    return {year, month, days};
+    for(let i=0;i<42;i++){ const d = new Date(start); d.setDate(start.getDate()+i); days.push(d); }
+    return { month:first.getMonth(), days };
   }
 
-  function intentBadge(intents, d, which){ // which: 'AM'|'PM'
-    const k = `${d}|${which}`;
-    const code = intents?.[k] ?? '-';
+  function intentDot(intents, dayStr, which){
+    const code = intents?.[`${dayStr}|${which}`] ?? '-';
     const span = document.createElement('span');
-    span.className = `intent-dot intent-${code}`;
-    span.textContent = code === '-' ? '–' : code;
+    span.className = 'dot ' + (code==='-' ? '_' : code);
+    span.textContent = code==='-' ? '–' : code;
     span.title = `${which} intent: ${code}`;
     return span;
   }
 
   function render(ym, data){
     grid.innerHTML = '';
-    const {trucks, truckShifts=[], ampmShifts=[], assignments={}, intents={}} = data;
-    const shifts = truckShifts.length ? truckShifts : (ampmShifts.length ? ampmShifts : ['Day','Night']); // fallback
+    const {trucks=[], truckShifts=[], ampmShifts=[], assignments={}, intents={}} = data;
+    const shifts = truckShifts.length ? truckShifts : (ampmShifts.length ? ampmShifts : ['Day','Night']);
 
-    const {month, days} = buildCalendarCells(ym);
+    const {month, days} = buildCells(ym);
 
     days.forEach(dt=>{
       const dayStr = fmt(dt);
-      const isOther = dt.getMonth() !== month;
+      const other = dt.getMonth() !== month;
 
       const day = document.createElement('div');
-      day.className = 'day' + (isOther ? ' other-month' : '');
+      day.className = 'day' + (other ? ' other' : '');
 
-      // Date row + compact intent dots (AM/PM)
-      const date = document.createElement('div');
-      date.className = 'date';
-      const dnum = document.createElement('div');
-      dnum.textContent = dt.getDate();
-      date.appendChild(dnum);
-
-      // Intent compact (AM & PM if available)
-      const dots = document.createElement('div');
-      dots.className = 'intent-compact';
-      // show only if ampmShifts exist in feed
+      // Date row + intent dots
+      const top = document.createElement('div');
+      top.className = 'date';
+      const num = document.createElement('div'); num.textContent = dt.getDate();
+      const intentsWrap = document.createElement('div'); intentsWrap.className = 'intentRow';
       if (ampmShifts && ampmShifts.length === 2){
-        dots.appendChild(intentBadge(intents, dayStr, ampmShifts[0]));
-        dots.appendChild(intentBadge(intents, dayStr, ampmShifts[1]));
+        intentsWrap.appendChild(intentDot(intents, dayStr, ampmShifts[0]));
+        intentsWrap.appendChild(intentDot(intents, dayStr, ampmShifts[1]));
       }
-      date.appendChild(dots);
-      day.appendChild(date);
+      top.appendChild(num); top.appendChild(intentsWrap);
+      day.appendChild(top);
+
+      // “ALL” strip (AM/PM assignments for the day)
+      const allAM = assignments[`${dayStr}|ALL|AM`] || assignments[`${dayStr}|All|AM`] || assignments[`${dayStr}|all|AM`];
+      const allPM = assignments[`${dayStr}|ALL|PM`] || assignments[`${dayStr}|All|PM`] || assignments[`${dayStr}|all|PM`];
+      if (allAM || allPM){
+        const line = document.createElement('div');
+        line.className = 'allline';
+        const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'ALL';
+        line.appendChild(tag);
+
+        const am = document.createElement('span');
+        am.className = 'mpill' + ((allAM?.member_name)?' assigned':'');
+        am.innerHTML = `<span class="k">AM</span> <span class="who">${allAM?.member_name ?? '—'}</span>`;
+        line.appendChild(am);
+
+        const pm = document.createElement('span');
+        pm.className = 'mpill' + ((allPM?.member_name)?' assigned':'');
+        pm.innerHTML = `<span class="k">PM</span> <span class="who">${allPM?.member_name ?? '—'}</span>`;
+        line.appendChild(pm);
+
+        day.appendChild(line);
+      }
 
       // Up to 3 trucks
-      (trucks || []).slice(0,3).forEach(truckCode=>{
-        const truck = document.createElement('div');
-        truck.className = 'truck';
+      trucks.slice(0,3).forEach(code=>{
+        const t = document.createElement('div'); t.className = 'tr';
+        const label = document.createElement('div'); label.className = 'name'; label.textContent = `Truck ${code}`; t.appendChild(label);
 
-        const name = document.createElement('div');
-        name.className = 'name';
-        name.textContent = `Truck ${truckCode}`;
-        truck.appendChild(name);
-
-        // Two shifts per truck (or whatever your feed specifies)
-        shifts.slice(0,2).forEach(shiftName=>{
-          const key = `${dayStr}|${truckCode}|${shiftName}`;
+        shifts.slice(0,2).forEach(shift=>{
+          const key = `${dayStr}|${code}|${shift}`;
           const assigned = assignments[key]?.member_name || null;
-
-          const row = document.createElement('div');
-          row.className = 'shift' + (assigned ? ' assigned' : '');
-          const label = document.createElement('div');
-          label.className = 'key';
-          label.textContent = shiftName;
-
-          const who = document.createElement('div');
-          who.className = 'who';
-          who.textContent = assigned || '—';
-          row.appendChild(label);
-          row.appendChild(who);
-
-          truck.appendChild(row);
+          const row = document.createElement('div'); row.className = 'shift' + (assigned ? ' assigned':'');
+          row.innerHTML = `<span class="k">${shift}</span><span class="who">${assigned ?? '—'}</span>`;
+          t.appendChild(row);
         });
 
-        day.appendChild(truck);
+        day.appendChild(t);
       });
 
       grid.appendChild(day);
     });
   }
 
-  // Navigation
-  function setMonthInput(dt){
-    monthSel.value = monthKey(dt);
-  }
-  function getMonthFromInput(){
-    return monthSel.value || monthKey(new Date());
-  }
+  // controls
+  function setMonthInput(d){ monthSel.value = monthKey(d); }
+  function currentMonth(){ return monthSel.value || monthKey(new Date()); }
+  async function redraw(){ const ym = currentMonth(); const data = await loadWallboard(ym); render(ym, data); }
 
-  async function redraw(){
-    const ym = getMonthFromInput();
-    const data = await loadWallboard(ym);
-    render(ym, data);
-  }
+  // init
+  const init = (new URL(location.href)).searchParams.get('month') || monthKey(new Date());
+  setMonthInput(firstOfMonthFromStr(init));
+  redraw().catch(err => grid.innerHTML = `<div style="grid-column:1/-1;padding:12px;border:1px solid #555;border-radius:8px;background:#1f2230">Error loading wallboard: ${err.message}</div>`);
 
-  // Init
-  const initMonth = (new URL(location.href)).searchParams.get('month') || monthKey(new Date());
-  setMonthInput(firstOfMonthFromStr(initMonth));
-  redraw().catch(err => {
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:12px;border:1px solid #555;border-radius:8px;background:#1f2230">Error loading wallboard: ${err.message}</div>`;
-  });
-
-  // Controls
-  qs('#prev').addEventListener('click', ()=>{
-    const d = firstOfMonthFromStr(getMonthFromInput());
-    d.setMonth(d.getMonth()-1);
-    setMonthInput(d);
-    redraw().catch(console.error);
-  });
-  qs('#next').addEventListener('click', ()=>{
-    const d = firstOfMonthFromStr(getMonthFromInput());
-    d.setMonth(d.getMonth()+1);
-    setMonthInput(d);
-    redraw().catch(console.error);
-  });
+  qs('#prev').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()-1); setMonthInput(d); redraw().catch(console.error); });
+  qs('#next').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()+1); setMonthInput(d); redraw().catch(console.error); });
   monthSel.addEventListener('change', ()=>redraw().catch(console.error));
+
+  densityBtn.addEventListener('click', ()=>{
+    const cozy = document.body.classList.toggle('cozy');
+    densityBtn.textContent = cozy ? 'Cozy' : 'Compact';
+  });
 })();
 </script>
 </body>
