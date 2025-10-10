@@ -1,0 +1,55 @@
+
+:root{
+  --bg:#0b0f1a; --glass:#0f172aAA; --stroke:#233554;
+  --txt:#e6eeff; --muted:#A6B3CF;
+  --green:#11d28c; --yellow:#ffd43b; --red:#ff6b6b; --waiver:#ff9aa9;
+  --accent:#6aa8ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;font:15px/1.45 ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--txt);
+  background:radial-gradient(1200px 800px at 20% -10%, #15223a, #0b0f1a);
+}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+h1{margin:0 0 4px 0;font-weight:800;letter-spacing:.2px}
+.sub{margin:0 0 12px;color:var(--muted)}
+
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 14px}
+input,button{border:1px solid var(--stroke);background:rgba(18,27,46,.55);color:var(--txt);
+  padding:8px 10px;border-radius:12px;font:inherit;backdrop-filter:blur(8px)}
+button{cursor:pointer}
+.btn{background:linear-gradient(180deg,#3b82f6,#2155c8);border-color:transparent;color:white}
+
+.monthTitle{font-weight:800;opacity:.9;margin:8px 0 12px}
+
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.day{min-height:180px;background:rgba(15,23,42,.68);border:1px solid var(--stroke);border-radius:16px;padding:10px;
+     display:flex;flex-direction:column;gap:8px;backdrop-filter:blur(10px);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.day.outline-green{outline:2px solid var(--green)}
+.day.outline-yellow{outline:2px solid var(--yellow)}
+.day.outline-red{outline:2px solid var(--red)}
+.day.outline-waiver{outline:2px solid var(--waiver)}
+.inactive{opacity:.45;filter:saturate(.6)}
+
+.dateBar{display:flex;justify-content:space-between;align-items:center}
+.date{font-weight:900;font-size:16px}
+.roll{font-weight:700;opacity:.9}
+
+.unitWrap{background:rgba(18,27,46,.6);border:1px solid var(--stroke);border-radius:12px;padding:8px}
+.unitHead{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
+
+.shifts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shift{background:rgba(12,18,34,.86);border:1px solid var(--stroke);border-radius:12px;padding:8px;display:flex;gap:6px;flex-direction:column}
+.shiftHeader{display:flex;justify-content:space-between;align-items:center}
+.bubble{padding:2px 8px;border-radius:999px;border:1px solid var(--stroke);font-size:11px}
+.bubble.green{background:linear-gradient(180deg,rgba(12,60,46,.8),rgba(12,40,32,.7));border-color:#0f6b4f}
+.bubble.yellow{background:linear-gradient(180deg,rgba(60,48,18,.8),rgba(50,40,14,.7));border-color:#7d6510}
+.bubble.red{background:linear-gradient(180deg,rgba(60,18,18,.8),rgba(45,12,12,.7));border-color:#7a1717}
+.bubble.waiver{background:linear-gradient(180deg,rgba(60,24,24,.8),rgba(44,16,16,.7));border-color:#9a3a3a}
+
+.need{font-size:12px;color:var(--muted)}
+
+.intent{display:flex}
+.intent .seg{display:flex;border:1px solid var(--stroke);border-radius:999px;overflow:hidden;background:rgba(26,36,60,.72)}
+.intent .seg button{border:0;background:transparent;padding:4px 8px;font-size:12px;color:var(--txt)}
+.intent .seg button.on{background:linear-gradient(180deg,#3b82f6,#2155c8);color:#fff}
+.intent .seg button + button{border-left:1px solid var(--stroke)}

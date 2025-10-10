@@ -1,339 +1,371 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ADR-FR • Wallboard Calendar</title>
-<style>
-  :root{
-    --bg:#0b0c10; --card:#121319; --muted:#8187a2; --text:#e9ecf1;
-    --accent:#4da3ff; --accent2:#7bd389; --warn:#ffc857; --danger:#ff7070;
-    --gap:8px; --pad:8px; --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.35);
-    --fs-xxs:11px; --fs-xs:12px; --fs-s:13px; --fs:14px; --fs-h:16px;
-    --day-min:112px; --pop: #0f111a;
-  }
-  @media (prefers-color-scheme: light){
+  <meta charset="utf-8" />
+  <title>ADR Wallboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
     :root{
-      --bg:#f6f7fb; --card:#ffffff; --muted:#5e6c8f; --text:#1b2430;
-      --accent:#2667ff; --accent2:#249b4a; --warn:#b38b00; --danger:#c04646;
-      --shadow:0 1px 2px rgba(0,0,0,.1); --pop:#ffffff;
+      --bg:#0f1220;
+      --ink:#e8ecf1;
+      --muted:#9aa3b2;
+      --tile:#171b2e;
+      --tile-border:#242a45;
+
+      /* shift background tints */
+      --green:#0f3b2b;
+      --yellow:#3b370f;
+      --red:#3b0f0f;
+      --flash:#3b0f2b;
+
+      /* seat text colors by credential */
+      --aemt:#f5c542; /* gold */
+      --emt:#ffffff;  /* white */
+      --mr:#d0d0d0;   /* light gray */
     }
-  }
-  body{margin:0;background:var(--bg);color:var(--text);font:400 var(--fs)/1.35 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  header{position:sticky;top:0;z-index:5;backdrop-filter:blur(6px);
-    background:color-mix(in srgb,var(--bg) 82%,transparent);
-    border-bottom:1px solid color-mix(in srgb,var(--muted) 22%,transparent)}
-  .bar{max-width:1200px;margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .bar h1{font-size:18px;margin:0 6px 0 0}
-  .sp{flex:1}
-  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:var(--card);
-    border:1px solid color-mix(in srgb,var(--muted) 25%,transparent);box-shadow:var(--shadow)}
-  .pill input,.pill select{background:transparent;border:none;color:var(--text);font:inherit;outline:none}
-  .btn{appearance:none;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);background:var(--card);color:var(--text);
-    padding:8px 10px;border-radius:10px;box-shadow:var(--shadow);cursor:pointer}
-  .btn:hover{border-color:var(--accent)}
-  .legend{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--fs-xxs)}
-  .dot{width:20px;height:20px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);
-    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;cursor:pointer;user-select:none}
-  .dot.P{outline:2px solid var(--accent2)} .dot.A{outline:2px solid var(--danger)} .dot.D{outline:2px solid var(--warn)} .dot._{opacity:.55}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    h1{font-size:20px;margin:0 0 8px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 16px}
+    .toolbar .pill{background:#12162a;border:1px solid var(--tile-border);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted)}
+    .toolbar .unit-toggle{display:flex;gap:6px;align-items:center;background:var(--tile);border:1px solid var(--tile-border);border-radius:8px;padding:4px 8px}
+    .toolbar .unit-toggle .label{font-weight:600;color:var(--ink)}
+    .toolbar .chip{cursor:pointer;border-radius:6px;border:1px solid var(--tile-border);padding:4px 8px;font-size:12px;background:#131731;color:var(--muted);user-select:none}
+    .chip.active{background:#1d2550;color:var(--ink);border-color:#32408c}
 
-  main{max-width:1200px;margin:14px auto;padding:0 12px 28px}
-  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--gap)}
-  .dow{font-weight:600;color:var(--muted);font-size:var(--fs-xxs);text-transform:uppercase;text-align:center;padding:6px 0}
-  .day{min-height:var(--day-min);display:flex;flex-direction:column;gap:6px;background:var(--card);
-    border:1px solid color-mix(in srgb,var(--muted)20%,transparent);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow)}
-  .day.other{opacity:.55}
-  .date{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:var(--fs-h)}
-  .intentRow{display:flex;gap:6px}
-  .allline{display:flex;gap:6px;align-items:center;font-size:var(--fs-xs)}
-  .allline .tag{font-weight:700;color:var(--muted);font-size:var(--fs-xxs);padding:1px 6px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent)}
-  .mpill{display:inline-flex;align-items:center;gap:6px;padding:3px 6px;border-radius:8px;
-    border:1px solid color-mix(in srgb,var(--muted)18%,transparent);font-size:var(--fs-xxs);background:color-mix(in srgb,var(--card) 80%,transparent)}
-  .mpill.assigned{border-color:color-mix(in srgb,var(--accent2)45%,transparent)}
-  .mpill .k{color:var(--muted)}
-  .tr{border-radius:8px;border:1px dashed color-mix(in srgb,var(--muted)25%,transparent);padding:6px;display:flex;flex-direction:column;gap:4px}
-  .tr .name{font-size:var(--fs-xxs);font-weight:700;color:var(--muted)}
-  .shift{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-xxs);padding:3px 6px;border-radius:7px;
-    border:1px solid color-mix(in srgb,var(--muted)15%,transparent)}
-  .shift.assigned{border-color:color-mix(in srgb,var(--accent2)40%,transparent)}
-  .who{font-weight:700}
-  .note{margin-top:10px;color:var(--muted);font-size:var(--fs-xxs);text-align:center}
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+    .dow{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px}
+    .day{background:var(--tile);border:1px solid var(--tile-border);border-radius:10px;min-height:140px;display:flex;flex-direction:column;overflow:hidden}
+    .day .datebar{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--tile-border);font-size:12px;color:var(--muted)}
+    .day .datebar .dnum{font-weight:700;color:var(--ink)}
+    .shifts{display:grid;grid-template-columns:1fr;gap:6px;padding:8px}
+    .shift{border-radius:8px;border:1px solid var(--tile-border);padding:6px;display:flex;flex-direction:column;gap:6px;background:#131731;position:relative}
+    .shift .label{font-size:12px;font-weight:700;opacity:.9;margin-bottom:2px}
+    .units{display:flex;flex-direction:column;gap:6px}
+    .unit{background:rgba(0,0,0,.15);border:1px solid var(--tile-border);border-radius:8px;padding:6px}
+    .unit .uhead{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .uhead .unum{font-weight:800;color:var(--ink)} /* just the number, no 'Unit' */
+    .seats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .seat{background:#0f1327;border:1px solid #222849;border-radius:6px;padding:6px}
+    .seat .role{font-size:11px;color:var(--muted);margin-bottom:2px}
+    .seat .name{font-size:13px;font-weight:600}
 
-  /* density toggle */
-  body.cozy{ --day-min:140px; --fs-xxs:12px; --fs-xs:13px; --fs:15px }
+    /* shift color states */
+    .shift.green{background:var(--green)}
+    .shift.yellow{background:var(--yellow)}
+    .shift.red{background:var(--red)}
+    .shift.flash{background:var(--flash)}
+    .shift.flash::after{
+      content:"";position:absolute;inset:0;border-radius:8px;border:2px dashed rgba(255,120,210,.6);
+      animation:dash 1.4s linear infinite;
+    }
+    @keyframes dash{to{outline-offset:-10px}}
 
-  /* tiny toast */
-  #toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--card);border:1px solid color-mix(in srgb,var(--muted)30%,transparent);
-    padding:8px 12px;border-radius:10px;box-shadow:var(--shadow);font-size:var(--fs-xxs);display:none;z-index:99}
-  #toast.show{display:block}
+    /* name tint by credential */
+    .cred-aemt{color:var(--aemt)}
+    .cred-emt{color:var(--emt)}
+    .cred-mr,.cred-nmd{color:var(--mr)}
 
-  /* popover */
-  .pop{position:absolute;z-index:20;background:var(--pop);color:var(--text);
-    border:1px solid color-mix(in srgb,var(--muted)30%,transparent);border-radius:10px;box-shadow:var(--shadow);padding:6px;display:none}
-  .pop.show{display:block}
-  .popgrid{display:grid;grid-template-columns:repeat(4,28px);gap:6px}
-  .pop .opt{width:28px;height:28px;border-radius:999px;border:1px solid color-mix(in srgb,var(--muted)25%,transparent);
-    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;cursor:pointer}
-  .opt.P{outline:2px solid var(--accent2)} .opt.A{outline:2px solid var(--danger)} .opt.D{outline:2px solid var(--warn)} .opt._{opacity:.55}
-</style>
+    /* legend */
+    .legend{display:flex;gap:12px;align-items:center;margin:10px 0 18px}
+    .legend .l{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+    .legend .sw{width:14px;height:14px;border-radius:4px;border:1px solid var(--tile-border)}
+    .sw.g{background:var(--green)} .sw.y{background:var(--yellow)} .sw.r{background:var(--red)} .sw.f{background:var(--flash)}
+    .legend .dot{width:10px;height:10px;border-radius:50%}
+    .dot.a{background:var(--aemt)} .dot.e{background:var(--emt)} .dot.m{background:var(--mr)}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .hint{font-size:11px;color:var(--muted)}
+  </style>
 </head>
-<body class="dense">
-<header>
-  <div class="bar">
-    <h1>ADR-FR Wallboard</h1>
+<body>
+<div class="wrap">
+  <h1>ADR Wallboard</h1>
 
-    <div class="pill">
-      <label for="monthSel" style="color:var(--muted);font-size:var(--fs-xxs);margin-right:6px">Month</label>
-      <input id="monthSel" type="month">
-    </div>
-
-    <button id="prev" class="btn">◀ Prev</button>
-    <button id="next" class="btn">Next ▶</button>
-    <button id="density" class="btn" title="Toggle Compact / Cozy">Compact</button>
-
-    <div class="pill">
-      <span style="color:var(--muted);font-size:var(--fs-xxs)">I am</span>
-      <select id="meSel"></select>
-    </div>
-
-    <div class="sp"></div>
-
-    <div class="legend">
-      <span>Intent</span>
-      <span class="dot P">P</span><span>Prefer</span>
-      <span class="dot A">A</span><span>Avoid</span>
-      <span class="dot D">D</span><span>Decline</span>
-      <span class="dot _">–</span><span>None</span>
-    </div>
+  <div class="toolbar" id="unitBar">
+    <span class="pill">Month: <span id="monthLabel" class="muted"></span></span>
+    <span class="pill">Today: <span id="todayLabel" class="muted"></span></span>
+    <!-- Unit toggles injected here -->
   </div>
-</header>
 
-<main>
-  <div id="dow" class="calendar"></div>
-  <div id="grid" class="calendar"></div>
-  <div class="note">Click AM/PM dot to choose intent.</div>
-</main>
-
-<div id="toast"></div>
-<div id="pop" class="pop" role="dialog" aria-label="Select intent">
-  <div class="popgrid">
-    <div class="opt _" data-code="-">–</div>
-    <div class="opt P" data-code="P">P</div>
-    <div class="opt A" data-code="A">A</div>
-    <div class="opt D" data-code="D">D</div>
+  <div class="legend">
+    <div class="l"><span class="sw g"></span> Green (ideal)</div>
+    <div class="l"><span class="sw y"></span> Yellow (legal, not ideal)</div>
+    <div class="l"><span class="sw r"></span> Red (waiver / not legal)</div>
+    <div class="l"><span class="sw f"></span> Flashing Red (missing legal seat)</div>
+    <div class="l">| Seat text: <span class="dot a"></span> AEMT <span class="dot e"></span> EMT <span class="dot m"></span> MR/NMD</div>
   </div>
+
+  <div class="calendar" id="calendar"></div>
+
+  <p class="hint">Unit toggles (top): click to cycle Blank → AM+PM → AM → PM → Blank. Defaults: 120 is AM+PM, others Blank. Auto-applies after ~3s.</p>
 </div>
 
 <script>
 (function(){
-  // ======== CONFIG =========
-  const INTENT_ENDPOINT = '/api/intent'; // POST JSON: {member_id, date:'YYYY-MM-DD', shift:'AM'|'PM', intent:'-'|'P'|'A'|'D'}
+  const qs = new URLSearchParams(location.search);
+  const month = qs.get("month") || new Date().toISOString().slice(0,7);
+  const apiBase = location.origin;
 
-  const qs = s => document.querySelector(s);
-  const monthSel = qs('#monthSel'), grid = qs('#grid'), dow = qs('#dow'), densityBtn = qs('#density'), meSel = qs('#meSel');
-  const toastEl = qs('#toast'), pop = qs('#pop');
-  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const STORAGE_ME = 'adrfr.me';
+  const calendarEl = document.getElementById('calendar');
+  const unitBar = document.getElementById('unitBar');
+  const monthLabel = document.getElementById('monthLabel');
+  const todayLabel = document.getElementById('todayLabel');
 
-  function toast(msg, ms=1800){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), ms); }
-  function renderDOW(){ dow.innerHTML = ''; DOW.forEach(d => { const el = document.createElement('div'); el.className = 'dow'; el.textContent = d; dow.appendChild(el); }); }
-  renderDOW();
+  let membersById = new Map(); // id -> {name, role, can_drive_type3, prefer_24h}
+  let wall = null;
+  let unitState = {}; // { "120": "OFF|BOTH|AM|PM", ... }
+  let saveTimer = null;
 
-  function monthKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-  function fmt(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-  function firstOfMonthFromStr(ym){ const [y,m] = ym.split('-').map(Number); return new Date(y, m-1, 1); }
-  async function loadWallboard(ym){ const res = await fetch(`/api/wallboard?month=${ym}`); if(!res.ok) throw new Error(`API ${res.status}`); return res.json(); }
-  async function loadMembers(){ const res = await fetch('/api/members'); if(!res.ok) throw new Error(`members ${res.status}`); return res.json(); }
-
-  function buildCells(ym){
-    const first = firstOfMonthFromStr(ym);
-    const startDow = first.getDay();
-    const start = new Date(first); start.setDate(first.getDate() - startDow);
-    const days = []; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); days.push(d); }
-    return { month:first.getMonth(), days };
+  // Credentials
+  function normRole(role){
+    if(!role) return "EMT"; // default if null
+    const r = String(role).toUpperCase();
+    if (r.includes("AEMT") || r.includes("ADV")) return "AEMT";
+    if (r.includes("MR") || r.includes("MEDICAL RESPONDER")) return "MR";
+    return "EMT";
+  }
+  function credClass(role){
+    const r = normRole(role);
+    if (r==="AEMT") return "cred-aemt";
+    if (r==="EMT") return "cred-emt";
+    return "cred-mr";
   }
 
-  function dotClass(code){ return 'dot ' + (code==='-' ? '_' : code); }
+  // Color rules you set
+  function crewColor(attRole, drvRole){
+    const A = attRole ? normRole(attRole) : null;
+    const D = drvRole ? normRole(drvRole) : null;
+    if (!A || !D) return "flash";
 
-  async function submitIntent(memberId, dateStr, shift, code, onRevert){
-    try{
-      const res = await fetch(INTENT_ENDPOINT, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ member_id: memberId, date: dateStr, shift, intent: code })
-      });
-      if(!res.ok){ toast(`Save failed (${res.status})`); onRevert && onRevert(); return; }
-      const data = await res.json().catch(()=>({}));
-      if(data && data.ok === false){ toast(`Save failed: ${data.error || 'unknown'}`); onRevert && onRevert(); return; }
-      toast('Intent saved');
-    }catch{ toast('Network error saving intent'); onRevert && onRevert(); }
+    if (A==="AEMT" && D==="EMT") return "green";
+    if (A==="AEMT" && D==="AEMT") return "yellow";
+    if (A==="AEMT" && D==="MR")  return "yellow";
+
+    if (A==="EMT" && D==="EMT")  return "red";
+    if (A==="EMT" && D==="MR")   return "red";
+
+    if (A==="MR"  && D==="AEMT") return "yellow";
+    if (A==="MR"  && (D==="MR" || !D)) return "flash";
+
+    // If you later model Non-Medical explicitly, treat AEMT+NMD and EMT+NMD as red here.
+
+    return "red"; // conservative fallback
   }
 
-  function render(ym, data, state){
-    grid.innerHTML = '';
-    const {trucks=[], truckShifts=[], ampmShifts=[], assignments={}, intents={}} = data;
-    const shifts = truckShifts.length ? truckShifts : (ampmShifts.length ? ampmShifts : ['Day','Night']);
-    const {month, days} = buildCells(ym);
+  function seatSpan(member){
+    if (!member || (!member.member_id && !member.member_name)) {
+      return `<span class="name cred-mr">—</span>`;
+    }
+    let role = null;
+    if (member.member_id && membersById.has(member.member_id)){
+      role = membersById.get(member.member_id).role;
+    }
+    if (!role && member.member_name){
+      for (const v of membersById.values()){
+        if (v.name === member.member_name){ role = v.role; break; }
+      }
+    }
+    const css = credClass(role);
+    const name = member.member_name || ("#" + member.member_id);
+    return `<span class="name ${css}">${name}</span>`;
+  }
 
-    days.forEach(dt=>{
-      const dayStr = fmt(dt);
-      const other = dt.getMonth() !== month;
+  // Unit toggles (4-state)
+  function buildUnitBar(trucks){
+    trucks.forEach(u=>{
+      if (!unitState[u]) unitState[u] = (u==="120" ? "BOTH" : "OFF"); // default
+    });
+    const frag = document.createDocumentFragment();
+    const legend = document.createElement('span');
+    legend.className = 'pill';
+    legend.textContent = 'Units:';
+    frag.appendChild(legend);
 
+    trucks.forEach(u=>{
+      const box = document.createElement('div');
+      box.className = 'unit-toggle';
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = u; // just number
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.dataset.unit=u;
+      chip.textContent = stateLabel(unitState[u]);
+
+      function cycle(){
+        unitState[u] = nextState(unitState[u]);
+        chip.textContent = stateLabel(unitState[u]);
+        chip.classList.toggle('active', unitState[u]!=="OFF");
+        scheduleSave();
+        renderCalendar();
+      }
+      chip.addEventListener('click', cycle);
+      label.addEventListener('click', cycle);
+      chip.classList.toggle('active', unitState[u]!=="OFF");
+      box.appendChild(label); box.appendChild(chip);
+      frag.appendChild(box);
+    });
+
+    [...unitBar.querySelectorAll('.unit-toggle')].forEach(n=>n.remove());
+    unitBar.appendChild(frag);
+  }
+  function stateLabel(s){ return s==="BOTH" ? "AM+PM" : s; }
+  function nextState(s){ return s==="OFF" ? "BOTH" : s==="BOTH" ? "AM" : s==="AM" ? "PM" : "OFF"; }
+  function scheduleSave(){
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(async ()=>{
+      // Hook when backend is ready:
+      // await fetch(`${apiBase}/admin/units/activate`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({month, state:unitState})})
+    }, 3000);
+  }
+
+  // Month grid
+  function buildMonthGrid(year, monthIndex){
+    const first = new Date(Date.UTC(year, monthIndex, 1));
+    const startDow = first.getUTCDay();
+    const daysInMonth = new Date(Date.UTC(year, monthIndex+1, 0)).getUTCDate();
+    calendarEl.innerHTML = "";
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{
+      const h = document.createElement('div');
+      h.className = 'dow';
+      h.textContent = d;
+      calendarEl.appendChild(h);
+    });
+    for (let i=0;i<startDow;i++) calendarEl.appendChild(document.createElement('div'));
+    for (let d=1; d<=daysInMonth; d++){
+      const iso = `${String(year)}-${String(monthIndex+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const day = document.createElement('div');
-      day.className = 'day' + (other ? ' other' : '');
+      day.className = 'day';
+      day.innerHTML = `
+        <div class="datebar">
+          <span class="dnum">${d}</span>
+          <span class="muted">${iso}</span>
+        </div>
+        <div class="shifts" data-date="${iso}">
+          ${renderShiftBlock(iso, "AM")}
+          ${renderShiftBlock(iso, "PM")}
+        </div>
+      `;
+      calendarEl.appendChild(day);
+    }
+  }
+  function unitActiveForShift(unit, shift){
+    const s = unitState[unit] || "OFF";
+    if (s==="BOTH") return true;
+    if (s==="AM" && shift==="AM") return true;
+    if (s==="PM" && shift==="PM") return true;
+    return false;
+  }
 
-      // Date row + intent dots (with popover)
-      const top = document.createElement('div');
-      top.className = 'date';
-      const num = document.createElement('div'); num.textContent = dt.getDate();
+  function renderShiftBlock(isoDate, shift){
+    const unitsHtml = (wall.trucks||[]).filter(u => unitActiveForShift(u, shift)).map(u=>{
+      const key = `${isoDate}|${u}|${shift}`;
+      const a = wall.assignments[key];
 
-      const intentsWrap = document.createElement('div'); intentsWrap.className = 'intentRow';
-      if (ampmShifts && ampmShifts.length === 2){
-        ['AM','PM'].forEach(which=>{
-          const code = (intents?.[`${dayStr}|${which}`]) ?? '-';
-          const span = document.createElement('span');
-          span.className = dotClass(code);
-          span.dataset.code = code;
-          span.dataset.day = dayStr;
-          span.dataset.shift = which;
-          span.textContent = code==='-' ? '–' : code;
-          span.title = `${which} intent: ${code}. Click to choose`;
+      // NEW: Expect seat-level objects {A:{}, D:{}}
+      let A = a && a.A ? a.A : null;
+      let D = a && a.D ? a.D : null;
 
-          span.addEventListener('click', (e)=>{
-            const me = state.me; if(!me){ toast('Select your name first'); return; }
-            openPopForSpan(span, e);
-          });
+      // Legacy fallback removed from display logic (no more "Committed").
+      // If legacy single name still arrives, both seats show dashes.
 
-          intentsWrap.appendChild(span);
-        });
-      }
-      top.appendChild(num); top.appendChild(intentsWrap);
-      day.appendChild(top);
+      const attRole = resolveRole(A);
+      const drvRole = resolveRole(D);
+      const color = crewColor(attRole, drvRole);
 
-      // “ALL” strip
-      const allAM = assignments[`${dayStr}|ALL|AM`] || assignments[`${dayStr}|All|AM`] || assignments[`${dayStr}|all|AM`];
-      const allPM = assignments[`${dayStr}|ALL|PM`] || assignments[`${dayStr}|All|PM`] || assignments[`${dayStr}|all|PM`];
-      if (allAM || allPM){
-        const line = document.createElement('div'); line.className = 'allline';
-        const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'ALL';
-        line.appendChild(tag);
+      return `
+        <div class="unit">
+          <div class="uhead"><span class="unum">${u}</span><span class="small muted">${shift}</span></div>
+          <div class="seats">
+            <div class="seat">
+              <div class="role">Attendant</div>
+              <div>${seatSpan(A)}</div>
+            </div>
+            <div class="seat">
+              <div class="role">Driver</div>
+              <div>${seatSpan(D)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
 
-        const am = document.createElement('span');
-        am.className = 'mpill' + ((allAM?.member_name)?' assigned':'');
-        am.innerHTML = `<span class="k">AM</span> <span class="who">${allAM?.member_name ?? '—'}</span>`;
-        line.appendChild(am);
-
-        const pm = document.createElement('span');
-        pm.className = 'mpill' + ((allPM?.member_name)?' assigned':'');
-        pm.innerHTML = `<span class="k">PM</span> <span class="who">${allPM?.member_name ?? '—'}</span>`;
-        line.appendChild(pm);
-
-        day.appendChild(line);
-      }
-
-      // Up to 3 trucks
-      trucks.slice(0,3).forEach(code=>{
-        const t = document.createElement('div'); t.className = 'tr';
-        const label = document.createElement('div'); label.className = 'name'; label.textContent = `Truck ${code}`; t.appendChild(label);
-
-        shifts.slice(0,2).forEach(shift=>{
-          const key = `${dayStr}|${code}|${shift}`;
-          const assigned = assignments[key]?.member_name || null;
-          const row = document.createElement('div'); row.className = 'shift' + (assigned ? ' assigned':'');
-          row.innerHTML = `<span class="k">${shift}</span><span class="who">${assigned ?? '—'}</span>`;
-          t.appendChild(row);
-        });
-
-        day.appendChild(t);
+    // Overall shift color from worst unit in this shift
+    let shiftClass = "";
+    if ((wall.trucks||[]).some(u => unitActiveForShift(u, shift))) {
+      const colors = (wall.trucks||[]).filter(u=>unitActiveForShift(u, shift)).map(u=>{
+        const key = `${isoDate}|${u}|${shift}`;
+        const a = wall.assignments[key];
+        const A = a && a.A ? a.A : null;
+        const D = a && a.D ? a.D : null;
+        return crewColor(resolveRole(A), resolveRole(D));
       });
+      if (colors.includes("flash")) shiftClass = "flash";
+      else if (colors.includes("red")) shiftClass = "red";
+      else if (colors.includes("yellow")) shiftClass = "yellow";
+      else if (colors.includes("green")) shiftClass = "green";
+    }
 
-      grid.appendChild(day);
-    });
+    return `
+      <div class="shift ${shiftClass}">
+        <div class="label">${shift}</div>
+        <div class="units">
+          ${unitsHtml || `<div class="muted small">No active units</div>`}
+        </div>
+      </div>
+    `;
   }
 
-  // popover behavior
-  let popCtx = null;
-  function openPopForSpan(span, ev){
-    const rect = span.getBoundingClientRect();
-    pop.style.left = `${rect.left + window.scrollX - 10}px`;
-    pop.style.top  = `${rect.bottom + window.scrollY + 8}px`;
-    pop.classList.add('show');
-    popCtx = { span };
-
-    // highlight current
-    [...pop.querySelectorAll('.opt')].forEach(o=>{
-      o.classList.remove('sel');
-      if ((span.dataset.code||'-') === (o.dataset.code||'-')) o.classList.add('sel');
-      o.onclick = () => choose(span, o.dataset.code);
-    });
+  function resolveRole(member){
+    if (!member) return null;
+    if (member.member_id && membersById.has(member.member_id)){
+      return membersById.get(member.member_id).role;
+    }
+    if (member.member_name){
+      for (const v of membersById.values()){
+        if (v.name === member.member_name) return v.role;
+      }
+    }
+    return null;
   }
-  function closePop(){ pop.classList.remove('show'); popCtx = null; }
-  document.addEventListener('click', (e)=>{
-    if(!pop.classList.contains('show')) return;
-    if (pop.contains(e.target)) return;
-    if (popCtx?.span && popCtx.span.contains(e.target)) return;
-    closePop();
+
+  function renderCalendar(){
+    const [y,m] = wall.month.split("-").map(n=>parseInt(n,10));
+    monthLabel.textContent = wall.month;
+    todayLabel.textContent = wall.today || "";
+    buildMonthGrid(y, m-1);
+  }
+
+  async function fetchData(){
+    const [membersRes, wallRes] = await Promise.all([
+      fetch(`${apiBase}/api/members`),
+      fetch(`${apiBase}/api/wallboard?month=${encodeURIComponent(month)}`)
+    ]);
+    const membersJson = await membersRes.json();
+    wall = await wallRes.json();
+
+    membersById.clear();
+    if (Array.isArray(membersJson.members)){
+      for (const m of membersJson.members){
+        membersById.set(m.id, {
+          id:m.id,
+          name:m.name,
+          role:m.role,
+          can_drive_type3:m.can_drive_type3,
+          prefer_24h:m.prefer_24h
+        });
+      }
+    }
+
+    buildUnitBar(wall.trucks || []);
+    renderCalendar();
+  }
+
+  fetchData().catch(err=>{
+    console.error(err);
+    calendarEl.innerHTML = `<div class="muted">Failed to load data.</div>`;
   });
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePop(); });
-
-  function choose(span, code){
-    const prev = span.dataset.code;
-    const dayStr = span.dataset.day;
-    const which = span.dataset.shift;
-    const me = Number(localStorage.getItem('adrfr.me') || '0') || null;
-    if(!me){ toast('Select your name first'); return; }
-
-    // optimistic
-    span.dataset.code = code;
-    span.className = dotClass(code);
-    span.textContent = code==='-' ? '–' : code;
-
-    closePop();
-
-    // persist local page state so re-render keeps it
-    // NOTE: we don’t have a shared object here, so we’ll re-fetch next month change;
-    // the server will send back the saved choice, so view stays consistent.
-    submitIntent(me, dayStr, which, code, ()=>{
-      // revert on error
-      span.dataset.code = prev;
-      span.className = dotClass(prev);
-      span.textContent = prev==='-' ? '–' : prev;
-    });
-  }
-
-  // controls
-  function setMonthInput(d){ monthSel.value = monthKey(d); }
-  function currentMonth(){ return monthSel.value || monthKey(new Date()); }
-  async function redraw(state){ const ym = currentMonth(); const data = await loadWallboard(ym); render(ym, data, state); }
-
-  // identity
-  async function populateMe(state){
-    const payload = await loadMembers();
-    const members = payload.members || payload || [];
-    meSel.innerHTML = `<option value="">— select —</option>` + members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-    const saved = localStorage.getItem(STORAGE_ME);
-    if(saved){ meSel.value = saved; state.me = Number(saved) || null; }
-    meSel.addEventListener('change', ()=>{
-      const v = meSel.value ? Number(meSel.value) : null;
-      state.me = v;
-      if(v){ localStorage.setItem(STORAGE_ME, String(v)); } else { localStorage.removeItem(STORAGE_ME); }
-      toast(v ? 'Identity set' : 'Identity cleared');
-    });
-  }
-
-  // init
-  const state = { me: null };
-  const init = (new URL(location.href)).searchParams.get('month') || monthKey(new Date());
-  setMonthInput(firstOfMonthFromStr(init));
-
-  Promise.resolve()
-    .then(()=>populateMe(state))
-    .then(()=>redraw(state))
-    .catch(err => grid.innerHTML = `<div style="grid-column:1/-1;padding:12px;border:1px solid #555;border-radius:8px;background:#1f2230">Error loading: ${err.message}</div>`);
-
-  qs('#prev').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()-1); setMonthInput(d); redraw(state).catch(console.error); });
-  qs('#next').addEventListener('click', ()=>{ const d = firstOfMonthFromStr(currentMonth()); d.setMonth(d.getMonth()+1); setMonthInput(d); redraw(state).catch(console.error); });
-  monthSel.addEventListener('change', ()=>redraw(state).catch(console.error));
-  densityBtn.addEventListener('click', ()=>{ const cozy = document.body.classList.toggle('cozy'); densityBtn.textContent = cozy ? 'Cozy' : 'Compact'; });
 })();
 </script>
 </body>
