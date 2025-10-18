@@ -1,0 +1,710 @@
+<!--
+File: /index.html
+Purpose: Landing page + interest form for join.adr-fr.org
+Note: The form posts JSON to /api/interest (Cloudflare Worker below).
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Join ADR‑FR — Acme‑Delco‑Riegelwood Fire‑Rescue</title>
+  <meta name="description" content="Volunteer with Acme‑Delco‑Riegelwood Fire‑Rescue. Veterans, students, parents, and retirees welcome. Many roles beyond hose‑dragging.">
+  <!-- SEO / social cards (edit URLs/placeholders to match your org) -->
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#b22222">
+  <link rel="canonical" href="https://join.adr-fr.org/">
+  <link rel="preload" as="image" href="/WWW/images/Facebook-Logo-On-Fire.jpg">
+  <link rel="preload" as="image" href="/images/adr-logo.png">
+  <link rel="icon" type="image/png" href="/images/adr-logo.png">
+  <link rel="shortcut icon" href="/images/adr-logo.png">
+  <link rel="apple-touch-icon" href="/images/adr-logo.png">
+  <link rel="preload" as="image" href="/WWW/images/Facebook-Logo-On-Fire.jpg">
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Acme‑Delco‑Riegelwood Fire‑Rescue">
+  <meta property="og:title" content="Join ADR‑FR — Volunteer & Support Team">
+  <meta property="og:description" content="Volunteer with Acme‑Delco‑Riegelwood Fire‑Rescue. Veterans, students, parents, and retirees welcome. Many roles beyond hose‑dragging.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://join.adr-fr.org/">
+  <!-- TODO: swap this image URL for a real hosted image (1200x630 preferred) -->
+  <meta property="og:image" content="https://adr-fr.org/static/adr-fr-og.jpg">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Join ADR‑FR — Volunteer & Support Team">
+  <meta name="twitter:description" content="Volunteer with Acme‑Delco‑Riegelwood Fire‑Rescue. Veterans, students, parents, and retirees welcome.">
+  <meta name="twitter:image" content="https://adr-fr.org/static/adr-fr-og.jpg">
+
+  <!-- Structured data: FireStation (fill placeholders) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FireStation",
+    "@id": "https://join.adr-fr.org/#org",
+    "name": "Acme-Delco-Riegelwood Fire-Rescue",
+    "url": "https://www.adr-fr.org/",
+    "telephone": "+1-910-655-3380",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "100 John L Riegel Rd",
+      "addressLocality": "Riegelwood",
+      "addressRegion": "NC",
+      "postalCode": "28456",
+      "addressCountry": "US"
+    },
+    "areaServed": "Acme, Delco, Riegelwood and surrounding communities",
+    "sameAs": [
+      "https://www.facebook.com/p/ADR-Fire-Rescue-100067657203732/"
+    ],
+    "contactPoint": [{
+      "@type": "ContactPoint",
+      "contactType": "volunteer recruitment",
+      "telephone": "+1-910-655-3380",
+      "areaServed": "US-NC"
+    }]
+  }
+  </script>
+  
+  <!-- FAQ schema for rich results -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {"@type": "Question","name": "Do I need prior experience?","acceptedAnswer":{"@type":"Answer","text":"No. We train volunteers for the roles they choose. Many start with support roles and grow into response roles."}},
+      {"@type": "Question","name": "Can retirees or people with limited mobility help?","acceptedAnswer":{"@type":"Answer","text":"Absolutely. Not all roles are heavy-lift. Logistics, rehab/canteen, community education, admin, and radio/IT are vital."}},
+      {"@type": "Question","name": "How much time is required?","acceptedAnswer":{"@type":"Answer","text":"Flexible. Tell us what works—weeknights, weekends, event-only, or storm-only support. We’ll fit service to your life."}},
+      {"@type": "Question","name": "Is this an application?","acceptedAnswer":{"@type":"Answer","text":"No—this form is just a quick hello so we can reach out. Any eligibility checks or paperwork happen later, after we talk."}}
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --brand:#b22222; /* fire red */
+      --brand-dark:#7a1212;
+      --accent:#f59e0b; /* warm amber */
+      --bg:#0b0b0d;
+      --card:#111217;
+      --muted:#e5e7eb;
+      --ok:#10b981;
+      --warn:#ef4444;
+      --max:980px;
+      --radius:16px;
+    }
+    html,body{margin:0;background:#0b0b0d;color:#f5f5f7;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+    a{color:#9fd5ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:var(--max);margin:0 auto;padding:20px}
+    header{
+      background:linear-gradient(135deg,var(--brand) 0%,#e11d48 45%,#ef4444 100%);
+      color:#fff; border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    .brandbar{display:flex;align-items:center;gap:14px;padding:18px 20px}
+    .brandbar .logo{width:54px;height:54px;border-radius:50%;background:#00000022;display:grid;place-items:center;border:1px solid #ffffff33;overflow:hidden;box-shadow:0 0 0 2px #ffffff12 inset,0 4px 12px rgba(0,0,0,.35)}
+    .brandbar .logo img{width:100%;height:100%;object-fit:contain;padding:6px;image-rendering:auto}
+    .brandbar h1{font-size:20px;margin:0;line-height:1.2;font-weight:700}
+    .brandbar h1 small{display:block;font-weight:500;opacity:.9}
+
+    .hero{padding:28px 20px 22px}
+    .hero h2{font-size:32px;line-height:1.15;margin:0 0 10px}
+    .hero p{margin:8px 0 0;font-size:18px;max-width:56ch}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .chip{border:1px solid #fff5;border-radius:999px;padding:8px 12px;cursor:pointer;user-select:none;font-size:14px;background:#ffffff10}
+    .chip[aria-pressed="true"]{background:#fff;color:#000;border-color:#fff}
+
+    main{background:linear-gradient(180deg,#0b0b0d 0%, #0f1116 100%);}  
+    .grid{display:grid;gap:18px;grid-template-columns:1.25fr .75fr}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border:1px solid #ffffff17;border-radius:var(--radius);padding:18px}
+    .card h3{margin:0 0 6px;font-size:20px}
+    .card p{margin:8px 0;color:#d1d5db}
+
+    form .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+    @media (max-width:720px){form .row{grid-template-columns:1fr}}
+    label{font-size:14px;color:#e5e7eb}
+    input,select,textarea{width:100%;background:#0b0c10;color:#fff;border:1px solid #30323a;border-radius:12px;padding:12px 12px;font-size:16px}
+    textarea{min-height:120px;resize:vertical}
+    .help{font-size:12px;color:#9ca3af;margin-top:4px}
+    .checkgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    @media (max-width:720px){.checkgrid{grid-template-columns:1fr}}
+    .check{display:flex;align-items:flex-start;gap:8px}
+    .check input[type=checkbox]{width:18px;height:18px;margin-top:2px}
+    .note{font-size:13px;color:#cbd5e1}
+    .muted{color:#a1a1aa}
+    .btnbar{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+    button{background:var(--ok);border:0;color:#001b12;padding:12px 16px;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer}
+    button.secondary{background:#1f2937;color:#e5e7eb;border:1px solid #3b3f52}
+
+    .roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    @media (max-width:900px){.roles{grid-template-columns:1fr 1fr}}
+    .role{background:#0b0c10;border:1px dashed #ffffff22;border-radius:12px;padding:12px}
+    .role b{display:block;margin-bottom:6px}
+
+    footer{color:#a1a1aa;padding:28px 20px;font-size:14px}
+    .success,.error{margin-top:12px;padding:12px;border-radius:12px}
+    .success{background:#052e1f;color:#bfffe9;border:1px solid #0a5a3f}
+    .error{background:#3b0a0a;color:#ffd1d1;border:1px solid #7a1212}
+    .required{color:#ffb4b4}
+    .social-icon{width:20px;height:20px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:6px;box-shadow:0 0 0 1px #ffffff22}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap brandbar">
+      <div class="logo" aria-hidden="true"><img src="/images/adr-logo.png" alt="" width="54" height="54" decoding="async" fetchpriority="high"></div>
+      <h1>Acme‑Delco‑Riegelwood Fire‑Rescue <small>Volunteer & Support Team</small></h1>
+    </div>
+    <div class="wrap hero">
+      <h2>Join the crew that shows up when neighbors need neighbors.</h2>
+      <p id="lead">We need your help — but how can we help you? Whether you’re a seasoned vet, a student or parent, mid‑career neighbor, or a retiree, there’s a place for you here. Not every role means dragging hose.</p>
+      <div class="chips" role="group" aria-label="I am">
+        <button class="chip" type="button" data-persona="Veteran / Former Responder">Seasoned Vet / Former Fire‑EMS‑LE</button>
+        <button class="chip" type="button" data-persona="Student / Parent">High‑Schooler / Parent</button>
+        <button class="chip" type="button" data-persona="Working Adult">Working Adult</button>
+        <button class="chip" type="button" data-persona="Retiree">Retiree</button>
+        <button class="chip" type="button" data-persona="Other">Other</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap grid" aria-live="polite">
+      <section class="card" aria-labelledby="formTitle">
+        <h3 id="formTitle">Quick hello — not an application <span class="muted">(60–90 seconds)</span></h3>
+        <p class="note">Keep it simple: tell us who you are and how you’d like to help. We’ll reach out for a friendly chat. No quizzes, no background questions here.</p>
+
+        <form id="joinForm" novalidate>
+          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div class="row">
+            <div>
+              <label for="name">Full name <span class="required" aria-hidden="true">*</span></label>
+              <input id="name" name="name" required placeholder="Jane Doe">
+            </div>
+            <div>
+              <label for="zip">ZIP / Community</label>
+              <input id="zip" name="zip" placeholder="28420 or Riegelwood">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" placeholder="you@example.com">
+              <div class="help">Share email or phone — whichever is easiest. One is plenty.</div>
+            </div>
+            <div>
+              <label for="phone">Mobile</label>
+              <input id="phone" name="phone" type="tel" placeholder="(910) 555‑0123">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="persona">I consider myself</label>
+              <select id="persona" name="persona">
+                <option value="">Choose…</option>
+                <option>Veteran / Former Responder</option>
+                <option>Student / Parent</option>
+                <option>Working Adult</option>
+                <option>Retiree</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div>
+              <label for="reach">How should we reach you?</label>
+              <select id="reach" name="reach">
+                <option>Email</option>
+                <option>Text</option>
+                <option>Phone call</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label>Ways I’m interested in helping</label>
+            <div class="checkgrid" role="group" aria-label="Interest areas">
+              <label class="check"><input type="checkbox" name="roles" value="Firefighting"> <span>Firefighting (we’ll get you trained)</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="EMS / First Responder"> <span>EMS / First Responder</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Traffic / Scene Support"> <span>Traffic / Scene Support</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Rehab / Canteen"> <span>Rehab / Canteen (hydration, cooling, snacks)</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="UAV / Drone"> <span>UAV / Drone team</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Logistics / Admin"> <span>Logistics / Admin</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Fundraising / Events"> <span>Fundraising / Events</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Community Education"> <span>Community Education</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Facilities / Station Care"> <span>Facilities / Station Care</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Training Cadre"> <span>Training Cadre / Instructors</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="IT / Web / Radio"> <span>IT / Web / Radio support</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Photography / Comms"> <span>Photography / Public Info / Social</span></label>
+              <label class="check"><input type="checkbox" name="roles" value="Other"> <span>Other / Wherever needed</span></label>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="availability">Availability (approx.)</label>
+              <select id="availability" name="availability">
+                <option value="">Choose…</option>
+                <option>Weeknights</option>
+                <option>Weekends</option>
+                <option>Weekdays</option>
+                <option>After storms / emergency only</option>
+                <option>Flexible / Let’s discuss</option>
+              </select>
+            </div>
+            <div>
+              <label for="hear">How did you hear about ADR‑FR?</label>
+              <input id="hear" name="hear" placeholder="Neighbor, Facebook, school, event…">
+            </div>
+          </div>
+
+          <div>
+            <label for="message">We need your help — how can we help you?</label>
+            <textarea id="message" name="message" placeholder="Tell us what you’d like to learn, any skills to share, or if you prefer lighter‑duty roles. If you need accommodations, we’ll make it work."></textarea>
+            <div class="help">This is a no‑pressure hello. Eligibility, background, and paperwork (if needed) happen later, after we talk in person.</div>
+          </div>
+
+          <div class="btnbar">
+            <button id="submitBtn" type="submit">Raise my hand</button>
+            <button type="button" class="secondary" id="callBtn">Prefer to talk? Call us</button>
+          </div>
+          <div id="formMsg" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <aside class="card">
+        <h3>Plenty of ways to serve</h3>
+        <div class="roles" aria-label="Examples of roles">
+          <div class="role"><b>Frontline</b> Firefighting, EMS first responder, traffic safety.</div>
+          <div class="role"><b>Support</b> Rehab/canteen, logistics, station care, training help.</div>
+          <div class="role"><b>Special teams</b> UAV/drone, radios/IT, community education, PIO.</div>
+          <div class="role"><b>All seasons of life</b> Students, working adults, retirees, veterans — all welcome.</div>
+          <div class="role"><b>We’ll train you</b> Certifications provided as roles require.</div>
+          <div class="role"><b>Family friendly</b> Plenty of not‑so‑heavy‑lift ways to help.
+          </div>
+        </div>
+        <p class="muted">By the way: your information stays with ADR‑FR. We’ll never sell it or spam you.</p>
+        <div style="margin-top:12px">
+          <h4 style="margin:12px 0 6px">Common questions</h4>
+          <details><summary>Do I need prior experience?</summary><div class="muted">No. We train volunteers for the roles they choose. Many start with support roles and grow into response roles.</div></details>
+          <details><summary>Can retirees or people with limited mobility help?</summary><div class="muted">Absolutely. Not all roles are heavy-lift. Logistics, rehab/canteen, community education, admin, and radio/IT are vital.</div></details>
+          <details><summary>How much time is required?</summary><div class="muted">Flexible. Tell us what works—weeknights, weekends, event-only, or storm-only support. We’ll fit service to your life.</div></details>
+          <details><summary>Is this an application?</summary><div class="muted">No—this form is just a quick hello so we can reach out. Any eligibility checks or paperwork happen later, after we talk.</div></details>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div>Questions now? Call <a href="tel:+19106553380">(910) 655‑3380</a> • <a href="https://www.facebook.com/p/ADR-Fire-Rescue-100067657203732/" target="_blank" aria-label="ADR‑FR on Facebook" rel="me noopener noreferrer"><img src="/WWW/images/Facebook-Logo-On-Fire.jpg" alt="Facebook" class="social-icon" loading="lazy">Facebook</a></div>
+      <div class="muted">© <span id="yr"></span> Acme‑Delco‑Riegelwood Fire‑Rescue. This page is an interest form, not a legal application.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Year
+    document.getElementById('yr').textContent = new Date().getFullYear();
+
+    // Persona chips -> select + headline tweak
+    const chips = document.querySelectorAll('.chip');
+    const personaSel = document.getElementById('persona');
+    const lead = document.getElementById('lead');
+    const leadCopy = {
+      'Veteran / Former Responder': 'Your experience still saves time, money, and lives. Mentor. Lead. Show the next generation. We’ll work with your schedule.',
+      'Student / Parent': 'Vol firehouses are a real‑life civics lesson. Learn skills, find camaraderie, and serve together. Parents welcome to explore alongside students.',
+      'Working Adult': 'Busy life? We’ll fit your service around it. There are impactful roles that won’t wreck your calendar.',
+      'Retiree': 'You don’t have to do heavy lifting to make a big difference. Your steady presence keeps the wheels on.',
+      'Other': 'Tell us what you love to do — we’ll match it to needs on the ground.'
+    };
+    chips.forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        chips.forEach(b=>b.setAttribute('aria-pressed','false'));
+        btn.setAttribute('aria-pressed','true');
+        const p = btn.dataset.persona;
+        personaSel.value = p;
+        if (leadCopy[p]) lead.textContent = leadCopy[p];
+      });
+    });
+
+    // Call button
+    document.getElementById('callBtn').addEventListener('click',()=>{
+      window.location.href = 'tel:+19106553380';
+    });
+
+    // Form submit
+    const form = document.getElementById('joinForm');
+    const msg = document.getElementById('formMsg');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      msg.textContent = '';
+      msg.className = '';
+
+      const fd = new FormData(form);
+      if (fd.get('website')) { return; } // honeypot
+
+      const name = (fd.get('name')||'').toString().trim();
+      const email = (fd.get('email')||'').toString().trim();
+      const phone = (fd.get('phone')||'').toString().trim();
+
+      if (!name) { showError('Please share your name.'); return; }
+      if (!email && !phone) { showError('Share email or phone — one is plenty.'); return; }
+
+      // Build roles array
+      const roles = [];
+      form.querySelectorAll('input[name="roles"]:checked').forEach(c=>roles.push(c.value));
+
+      const payload = {
+        name,
+        zip: fd.get('zip')||'',
+        email,
+        phone,
+        persona: fd.get('persona')||'',
+        reach: fd.get('reach')||'Email',
+        roles,
+        availability: fd.get('availability')||'',
+        hear: fd.get('hear')||'',
+        message: fd.get('message')||''
+      };
+
+      submitBtn.disabled = true; submitBtn.textContent = 'Sending…';
+      try{
+        const res = await fetch('/api/interest',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if(!res.ok) throw new Error('Network response was not ok');
+        showSuccess('Got it! We’ll be in touch shortly by your preferred contact method. Thank you for stepping up.');
+        form.reset();
+        chips.forEach(b=>b.setAttribute('aria-pressed','false'));
+      }catch(err){
+        showError('Sorry — couldn’t send just now. Please call (910) 655‑3380 or message us on Facebook.');
+      }finally{
+        submitBtn.disabled = false; submitBtn.textContent = 'Raise my hand';
+      }
+    });
+
+    function showSuccess(t){ msg.className='success'; msg.textContent=t; }
+    function showError(t){ msg.className='error'; msg.textContent=t; }
+  </script>
+</body>
+</html>
+
+
+<!--
+============================================================
+File: /worker.ts (Cloudflare Worker / Workers for Pages)
+Purpose: Accept POST /api/interest, email via Postmark, optional KV storage
+Bindings required:
+  - POSTMARK_TOKEN (secret) — your Postmark Server Token
+  - FROM_EMAIL (e.g., messages@adr-fr.org) — must be a verified sender in Postmark
+  - TO_EMAIL (e.g., nicholas@coastalcprtraining.com)
+  - CC_EMAIL (optional)
+  - KV_INTERESTS (optional KV namespace)  
+Route example:
+  https://join.adr-fr.org/api/*
+============================================================
+-->
+
+export interface Env {
+  POSTMARK_TOKEN: string;
+  FROM_EMAIL: string;
+  TO_EMAIL: string;
+  CC_EMAIL?: string;
+  KV_INTERESTS?: KVNamespace;
+}
+
+function corsHeaders(origin: string | null) {
+  const allow = origin || '*';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders(request.headers.get('Origin')) });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/interest') {
+      try {
+        const data = await request.json();
+        // Basic validation
+        const name = (data.name||'').toString().trim();
+        const email = (data.email||'').toString().trim();
+        const phone = (data.phone||'').toString().trim();
+        if (!name || (!email && !phone)) {
+          return json({ ok:false, error:'missing_fields' }, 400, request);
+        }
+
+        // KV store (optional)
+        const stamp = new Date().toISOString();
+        const id = `${stamp}_${crypto.randomUUID()}`;
+        if (env.KV_INTERESTS) {
+          await env.KV_INTERESTS.put(id, JSON.stringify({ id, stamp, ...data }), { metadata: { name, email, phone } });
+        }
+
+        // Build Postmark email
+        const TO = env.TO_EMAIL; 
+          if (!env.POSTMARK_TOKEN || !env.FROM_EMAIL || !TO) {
+          return json({ ok:false, error:'server_not_configured' }, 503, request);
+        }
+
+        const subject = `New ADR‑FR Interest: ${name} ${data.persona ? `(${data.persona})` : ''}`.trim();
+        const html = renderHtml(data, id, stamp);
+        const text = renderText(data, id, stamp);
+
+        const pmRes = await fetch('https://api.postmarkapp.com/email', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Postmark-Server-Token': env.POSTMARK_TOKEN
+          },
+          body: JSON.stringify({
+            From: env.FROM_EMAIL,
+            To: TO,
+            Cc: env.CC_EMAIL || undefined,
+            Subject: subject,
+            HtmlBody: html,
+            TextBody: text,
+            MessageStream: 'outbound'
+          })
+        });
+
+        if (!pmRes.ok) {
+          const body = await pmRes.text();
+          return json({ ok:false, error:'postmark_error', detail:body }, 502, request);
+        }
+
+        return json({ ok:true, id }, 200, request);
+      } catch (err: any) {
+        return json({ ok:false, error:'exception', detail: err?.message || String(err) }, 500, request);
+      }
+    }
+
+    // Fallback
+    return new Response('Not found', { status: 404 });
+  }
+}
+
+function json(obj: any, status: number, req: Request) {
+  const headers = { 'Content-Type': 'application/json', ...corsHeaders(req.headers.get('Origin')) };
+  return new Response(JSON.stringify(obj), { status, headers });
+}
+
+function esc(s: any){ return String(s ?? '').replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c] as string)); }
+
+function renderHtml(d: any, id: string, stamp: string){
+  const roles = Array.isArray(d.roles) ? d.roles.join(', ') : '';
+  return `
+  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.45;color:#0b0b0d">
+    <h2>New ADR‑FR Interest</h2>
+    <p><b>${esc(d.name)}</b> ${d.persona?`<span style="color:#6b7280">(${esc(d.persona)})</span>`:''}</p>
+    <table style="border-collapse:collapse;margin-top:8px">
+      ${row('Email', esc(d.email))}
+      ${row('Phone', esc(d.phone))}
+      ${row('ZIP', esc(d.zip))}
+      ${row('Reach', esc(d.reach))}
+      ${row('Availability', esc(d.availability))}
+      ${row('Heard via', esc(d.hear))}
+      ${row('Roles', esc(roles))}
+    </table>
+    ${d.message ? `<p style="margin-top:12px"><b>Message</b><br>${esc(d.message)}</p>`:''}
+    <p style="margin-top:16px;color:#6b7280">ID: ${id}<br>Received: ${esc(stamp)}</p>
+  </div>`;
+}
+
+function renderText(d: any, id: string, stamp: string){
+  const roles = Array.isArray(d.roles) ? d.roles.join(', ') : '';
+  return [
+    `New ADR‑FR Interest`,
+    `Name: ${d.name}`,
+    d.persona?`Persona: ${d.persona}`:'',
+    `Email: ${d.email||''}`,
+    `Phone: ${d.phone||''}`,
+    `ZIP: ${d.zip||''}`,
+    `Reach: ${d.reach||''}`,
+    `Availability: ${d.availability||''}`,
+    `Heard via: ${d.hear||''}`,
+    `Roles: ${roles}`,
+    d.message?`Message: ${d.message}`:'',
+    `ID: ${id}`,
+    `Received: ${stamp}`
+  ].filter(Boolean).join('\n');
+}
+
+function row(k:string,v:string){
+  return `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">${k}</td><td style="padding:4px 0">${v||''}</td></tr>`;
+}
+
+
+<!--
+============================================================
+File: /style-kit.css
+Purpose: Reuse the join page look across other GitHub Pages/Jekyll pages.
+How to use: 
+  1) Add <link rel="stylesheet" href="/assets/style-kit.css"> in your <head> (or adjust path).
+  2) Wrap content in <div class="wrap"> and use classes below on your markup.
+============================================================
+-->
+:root{
+  --brand:#b22222;--brand-dark:#7a1212;--accent:#f59e0b;--bg:#0b0b0d;--card:#111217;--muted:#e5e7eb;--ok:#10b981;--warn:#ef4444;--max:980px;--radius:16px;
+}
+html,body{margin:0;background:var(--bg);color:#f5f5f7;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:#9fd5ff;text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:var(--max);margin:0 auto;padding:20px}
+header.join-hero{background:linear-gradient(135deg,var(--brand) 0%,#e11d48 45%,#ef4444 100%);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+.brandbar{display:flex;align-items:center;gap:14px;padding:18px 20px}
+.brandbar .logo{width:54px;height:54px;border-radius:12px;background:#fff1;display:grid;place-items:center;border:1px solid #ffffff22}
+.brandbar h1{font-size:20px;margin:0;line-height:1.2;font-weight:700}
+.brandbar h1 small{display:block;font-weight:500;opacity:.9}
+.hero{padding:28px 20px 22px}
+.hero h2{font-size:32px;line-height:1.15;margin:0 0 10px}
+.hero p{margin:8px 0 0;font-size:18px;max-width:56ch}
+.grid{display:grid;gap:18px;grid-template-columns:1.25fr .75fr}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid #ffffff17;border-radius:var(--radius);padding:18px}
+.card h3{margin:0 0 6px;font-size:20px}
+.card p{margin:8px 0;color:#d1d5db}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{border:1px solid #fff5;border-radius:999px;padding:8px 12px;cursor:pointer;user-select:none;font-size:14px;background:#ffffff10}
+.chip[aria-pressed="true"]{background:#fff;color:#000;border-color:#fff}
+.btnbar{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+button{background:var(--ok);border:0;color:#001b12;padding:12px 16px;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer}
+button.secondary{background:#1f2937;color:#e5e7eb;border:1px solid #3b3f52}
+form .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media (max-width:720px){form .row{grid-template-columns:1fr}}
+label{font-size:14px;color:#e5e7eb}
+input,select,textarea{width:100%;background:#0b0c10;color:#fff;border:1px solid #30323a;border-radius:12px;padding:12px 12px;font-size:16px}
+textarea{min-height:120px;resize:vertical}
+.help{font-size:12px;color:#9ca3af;margin-top:4px}
+.checkgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:720px){.checkgrid{grid-template-columns:1fr}}
+.check{display:flex;align-items:flex-start;gap:8px}
+.check input[type=checkbox]{width:18px;height:18px;margin-top:2px}
+.note{font-size:13px;color:#cbd5e1}
+.muted{color:#a1a1aa}
+.roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.roles{grid-template-columns:1fr 1fr}}
+.role{background:#0b0c10;border:1px dashed #ffffff22;border-radius:12px;padding:12px}
+footer{color:#a1a1aa;padding:28px 20px;font-size:14px}
+.alert-success{background:#052e1f;color:#bfffe9;border:1px solid #0a5a3f;margin-top:12px;padding:12px;border-radius:12px}
+.alert-error{background:#3b0a0a;color:#ffd1d1;border:1px solid #7a1212;margin-top:12px;padding:12px;border-radius:12px}
+
+/* Class map cheat‑sheet:
+  Layout: .wrap .grid .card .roles .role
+  Hero/Header: header.join-hero .brandbar .hero
+  Chips: .chips .chip
+  Buttons: .btnbar button .secondary
+  Form: form .row label input select textarea .help .checkgrid .check
+  Text helpers: .muted .note
+*/
+
+
+<!--
+============================================================
+File: /robots.txt (place at repo root)
+============================================================
+-->
+User-agent: *
+Allow: /
+Sitemap: https://join.adr-fr.org/sitemap.xml
+
+<!--
+============================================================
+File: /sitemap.xml (static, simple)
+============================================================
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://join.adr-fr.org/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+
+<!--
+============================================================
+File: /CNAME (tell GitHub Pages your custom domain)
+============================================================
+-->
+join.adr-fr.org
+
+
+<!--
+============================================================
+File: /README-github.md
+Purpose: Deploy join.adr-fr.org on GitHub Pages with the form API
+============================================================
+-->
+# GitHub Pages + API routing (recommended)
+
+**Goal:** Serve static site from GitHub Pages and handle `/api/interest` with a Cloudflare Worker.
+
+## 1) Repo layout
+```
+/
+├─ index.html             # already includes SEO
+├─ assets/style-kit.css   # optional shared styles (linked where needed)
+├─ robots.txt
+├─ sitemap.xml
+├─ CNAME                  # contains: join.adr-fr.org
+└─ worker.ts              # deploy separately to Cloudflare Workers (not in Pages build)
+```
+
+## 2) Enable GitHub Pages
+- Repo → **Settings → Pages**
+- Source: `Deploy from a branch` (e.g., `main`), folder `/`.
+- Add **CNAME** file with `join.adr-fr.org`. In Pages settings, set Custom domain = `join.adr-fr.org` and enable **Enforce HTTPS**.
+
+## 3) DNS (two options)
+- If you **use Cloudflare DNS** for `adr-fr.org` (recommended):
+  - Add a CNAME: `join` → `<username>.github.io` (or `<org>.github.io`) and set it **Proxied** (orange cloud).
+  - SSL/TLS mode: **Full**.
+  - You can now attach a **Worker route** to `join.adr-fr.org/api/*`.
+- If you **don’t use Cloudflare**: you can still run the site on GH Pages, but the Worker route won’t be available. Use an alt backend (see §6).
+
+## 4) Cloudflare Worker (API)
+- Create Worker `adr-fr-form-api` and paste `worker.ts`.
+- **Bindings / Environment variables**:
+  - `POSTMARK_TOKEN` = your Postmark Server Token (Outbound)
+  - `FROM_EMAIL` = verified sender (e.g., `messages@adr-fr.org`)
+  - `TO_EMAIL` = destination (e.g., `nicholas@coastalcprtraining.com`)
+  - `CC_EMAIL` (optional)
+  - `KV_INTERESTS` (optional KV namespace)
+- **Routes**: `join.adr-fr.org/api/*` → `adr-fr-form-api` (zone-level route; works even if origin is GitHub Pages).
+- Keep `index.html` pointing to `fetch('/api/interest')` (same-origin).
+
+## 5) Test
+- Visit `https://join.adr-fr.org/` → submit with name + either email or phone.
+- You should get a Postmark email titled `New ADR‑FR Interest: <name> (Persona)`.
+
+## 6) No Cloudflare? Quick alternates
+- Replace the fetch URL in `index.html` with any of these:
+  - **Formspree** or **Getform** endpoint (no-code form relay to email).
+  - A **Vercel/Netlify Function** you create: change `fetch('/api/interest')` → `fetch('https://api.yourdomain/interest')`.
+- The UI stays the same; only the endpoint changes.
+
+## 7) Style reuse across other GH Pages
+- Include the kit: `<link rel="stylesheet" href="/assets/style-kit.css">`
+- Use the same classes (`.wrap`, `.card`, `.chips`, `.btnbar`, etc.). See the class map at the bottom of `/style-kit.css`.
+
+## 8) SEO
+- Already included in `index.html` head (Open Graph, Twitter card, JSON‑LD) + `robots.txt` + `sitemap.xml`.
+- Swap `og:image`/`twitter:image` to a 1200x630 hosted image.
+
