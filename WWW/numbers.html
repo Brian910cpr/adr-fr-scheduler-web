@@ -24,6 +24,33 @@ footer{padding:24px 20px;color:#a1a1aa;font-size:14px;text-align:center;}
 </style>
 </head>
 <body>
+
+<!-- ADR-FR Top Navigation -->
+<nav class="adr-nav">
+  <div class="wrap">
+    <a class="adr-brand" href="https://www.adr-fr.org">
+      <span class="logo">
+        <img src="/WWW/images/adrfr-logo.png" alt="ADR-FR" width="26" height="26"
+             style="width:26px;height:26px;object-fit:contain">
+      </span>
+      <h1>ADR-FR <small>Programs & Requests</small></h1>
+    </a>
+
+    <button class="adr-burger" aria-expanded="false" aria-controls="adrLinks" id="navBurger">Menu</button>
+
+    <div class="adr-links" id="adrLinks">
+      <a href="https://www.adr-fr.org">Home</a>
+      <a href="https://static.adr-fr.org/WWW/join.html"      id="navJoin">Join</a>
+      <a href="https://static.adr-fr.org/WWW/alarms.html"    id="navAlarms">Smoke Alarms</a>
+      <a href="https://static.adr-fr.org/WWW/numbers.html"   id="navNumbers">Reflective Numbers</a>
+      <a href="https://static.adr-fr.org/WWW/knoxbox.html"   id="navKnox">Home KnoxBox</a>
+      <a href="mailto:info@adr-fr.org" class="adr-cta">Contact</a>
+    </div>
+  </div>
+</nav>
+
+
+
 <header>
   <h1>ADR-FR Reflective House Number Sign Request</h1>
   <p>Serving residents of Acme, Delco, Riegelwood, Sandy Creek, and East Arcadia</p>
@@ -95,5 +122,26 @@ footer{padding:24px 20px;color:#a1a1aa;font-size:14px;text-align:center;}
 <footer>
   &copy; 2025 ADR-FR. Reflective Signage Program &bull; <a href="https://adr-fr.org" style="color:#9fd5ff;">adr-fr.org</a>
 </footer>
+
+<script>
+  // Mobile toggle
+  const burger = document.getElementById('navBurger');
+  const links  = document.getElementById('adrLinks');
+  burger?.addEventListener('click', ()=>{
+    const open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Active link highlighting (based on current file name)
+  (function(){
+    const url = (location.pathname || '').toLowerCase();
+    if (url.endsWith('/www/join.html'))      document.getElementById('navJoin')?.classList.add('active');
+    if (url.endsWith('/www/alarms.html'))    document.getElementById('navAlarms')?.classList.add('active');
+    if (url.endsWith('/www/numbers.html'))   document.getElementById('navNumbers')?.classList.add('active');
+    if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
+  })();
+</script>
+
+
 </body>
 </html>
