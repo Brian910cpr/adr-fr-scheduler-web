@@ -36,19 +36,24 @@ footer{padding:24px 20px;color:#a1a1aa;font-size:14px;text-align:center;}
       <h1>ADR-FR <small>Programs & Requests</small></h1>
     </a>
 
+    <!-- Mobile toggle button stays the same if you’re using it -->
     <button class="adr-burger" aria-expanded="false" aria-controls="adrLinks" id="navBurger">Menu</button>
 
-    <div class="adr-links" id="adrLinks">
-      <a href="https://www.adr-fr.org">Home</a>
-      <a href="https://static.adr-fr.org/WWW/join.html"      id="navJoin">Join</a>
-      <a href="https://static.adr-fr.org/WWW/alarms.html"    id="navAlarms">Smoke Alarms</a>
-      <a href="https://static.adr-fr.org/WWW/numbers.html"   id="navNumbers">Reflective Numbers</a>
-      <a href="https://static.adr-fr.org/WWW/knoxbox.html"   id="navKnox">Home KnoxBox</a>
-      <a href="mailto:info@adr-fr.org" class="adr-cta">Contact</a>
+    <!-- Button container row -->
+    <div class="adr-links-row">
+      <!-- Choose ONE: even OR center -->
+      <div class="adr-links even" id="adrLinks">
+        <!-- OR: <div class="adr-links center" id="adrLinks"> -->
+        <a href="https://www.adr-fr.org"                         id="navHome">Home</a>
+        <a href="https://static.adr-fr.org/WWW/join.html"        id="navJoin">Join</a>
+        <a href="https://static.adr-fr.org/WWW/alarms.html"      id="navAlarms">Smoke Alarms</a>
+        <a href="https://static.adr-fr.org/WWW/numbers.html"     id="navNumbers">Reflective Numbers</a>
+        <a href="https://static.adr-fr.org/WWW/knoxbox.html"     id="navKnox">Home KnoxBox</a>
+        <a href="mailto:info@adr-fr.org" class="adr-cta">Contact</a>
+      </div>
     </div>
   </div>
 </nav>
-
 
 
 <header>
@@ -141,6 +146,25 @@ footer{padding:24px 20px;color:#a1a1aa;font-size:14px;text-align:center;}
     if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
   })();
 </script>
+<script>
+  const burger = document.getElementById('navBurger');
+  const links  = document.getElementById('adrLinks');
+  burger?.addEventListener('click', ()=>{
+    const open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Active link highlighting
+  (function(){
+    const url = (location.pathname || '').toLowerCase();
+    if (url.endsWith('/www/join.html'))      document.getElementById('navJoin')?.classList.add('active');
+    if (url.endsWith('/www/alarms.html'))    document.getElementById('navAlarms')?.classList.add('active');
+    if (url.endsWith('/www/numbers.html'))   document.getElementById('navNumbers')?.classList.add('active');
+    if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
+  })();
+</script>
+</body>
+</html>
 
 
 </body>

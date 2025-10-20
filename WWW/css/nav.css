@@ -121,3 +121,53 @@ button{cursor:pointer}
   .adr-links.open { display: flex; }
   .adr-burger { display: inline-block; }
 }
+/* --- Button container + layouts --- */
+.adr-links {
+  /* reset from earlier */
+  display: grid; gap: 12px; align-items: center;
+}
+
+/* BUTTON LOOK */
+.adr-links a {
+  display: inline-block;
+  text-align: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid #ffffff22;
+  background: #ffffff10;
+  color: #e5e7eb;
+}
+.adr-links a:hover { background: #ffffff18; color: #fff; }
+.adr-links a.active { background: #ffffff22; color: #fff; }
+
+/* LAYOUT A: EVENLY SPACED ACROSS AVAILABLE WIDTH */
+.adr-links.even {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  justify-items: stretch;   /* buttons fill their grid cell */
+}
+
+/* LAYOUT B: CENTERED CLUSTER (buttons hug, stay centered) */
+.adr-links.center {
+  /* use inline-grid so width = content; then center via parent wrapper */
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  justify-items: center;
+  gap: 12px;
+}
+
+/* The row wrapper that centers the cluster */
+.adr-links-row {
+  display: flex;
+  justify-content: center;   /* center cluster */
+  align-items: center;
+  width: 100%;
+}
+
+/* Mobile: stack buttons nicely */
+@media (max-width: 900px){
+  .adr-links.even { grid-template-columns: 1fr 1fr; }
+  .adr-links.center { grid-auto-flow: row; grid-auto-rows: max-content; }
+}
