@@ -1,0 +1,13 @@
+id,name,role,is_admin,can_drive_type3,prefer_24h
+1001,Gordon,AEMT,0,1,0
+1002,Lynnsey,EMT,0,0,0
+1003,AJ,EMT,0,1,0
+1004,Nikki,AEMT,0,0,0
+1005,Shane,EMT,0,0,0
+1006,Brian,EMT,1,0,0
+1007,Cliff,Nmv,0,0,0
+1008,Steve,AEMT,1,1,0
+1009,Roger,EMT,0,1,0
+1010,Anna,AEMT,0,1,0
+1011,Nick,AEMT,1,1,0
+1012,Lisa,AEMT,0,1,0

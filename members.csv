@@ -1,0 +1,13 @@
+name,role,email,phone,external_id,is_admin,can_drive_type3,prefer_24h
+Gordon,AEMT,Gordon@adr-fr.org,910-555-0101,1001,0,1,
+Lynnsey,EMT-B,Lynnsey@adr-fr.org,910-555-0102,1002,0,0,
+AJ,EMT-B,AJ@adr-fr.org,910-555-0103,1003,0,1,
+Nikki,AEMT,Nikki@adr-fr.org,910-555-0104,1004,0,0,
+Shane,EMT-B,Shane@adr-fr.org,910-555-0105,1005,0,0,
+Brian,EMT-B,Brian@adr-fr.org,910-555-0106,1006,1,0,
+Cliff,NMV,Cliff@adr-fr.org,910-555-0107,1007,0,0,
+Steve,AEMT,Steve@adr-fr.org,910-555-0108,1008,1,1,
+Roger,EMT-B,Roger@adr-fr.org,910-555-0109,1009,0,1,
+Anna,AEMT,Anna@adr-fr.org,910-555-0110,1010,0,1,
+Nick,AEMT,Nick@adr-fr.org,910-555-0111,1011,1,1,
+Lisa,AEMT,Lisa@adr-fr.org,910-555-0111,1012,0,1,

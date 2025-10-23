@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reflective House Number Sign Request | ADR-FR Districts</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+:root {
+  --brand:#b22222;--accent:#f59e0b;--bg:#0b0b0d;--card:#111217;--muted:#e5e7eb;
+  --ok:#10b981;--warn:#ef4444;--radius:14px;--max:960px;
+}
+body{margin:0;background:var(--bg);color:#f5f5f7;font-family:system-ui,Segoe UI,Roboto,sans-serif;}
+header{background:linear-gradient(135deg,var(--brand) 0%,#ef4444 100%);color:#fff;padding:24px 20px;text-align:center;}
+h1{margin:0;font-size:28px;}
+main{max-width:var(--max);margin:0 auto;padding:20px;}
+form{background:var(--card);padding:20px;border-radius:var(--radius);border:1px solid #ffffff18;}
+label{display:block;margin-top:16px;font-weight:600;color:#fff;}
+input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#0b0c10;color:#fff;font-size:16px;}
+button{margin-top:20px;padding:12px 18px;background:var(--ok);border:0;border-radius:10px;font-weight:700;font-size:16px;cursor:pointer;}
+section.info{margin-top:40px;background:#1a1b22;padding:20px;border-radius:var(--radius);}
+img.sample{max-width:100%;border-radius:8px;margin-top:12px;}
+footer{padding:24px 20px;color:#a1a1aa;font-size:14px;text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- ADR-FR Top Navigation -->
+<nav class="adr-nav">
+  <div class="wrap">
+    <a class="adr-brand" href="https://www.adr-fr.org">
+      <span class="logo">
+        <img src="/WWW/images/adrfr-logo.png" alt="ADR-FR" width="26" height="26"
+             style="width:26px;height:26px;object-fit:contain">
+      </span>
+      <h1>ADR-FR <small>Programs & Requests</small></h1>
+    </a>
+
+    <!-- Mobile toggle button stays the same if you’re using it -->
+    <button class="adr-burger" aria-expanded="false" aria-controls="adrLinks" id="navBurger">Menu</button>
+
+    <!-- Button container row -->
+    <div class="adr-links-row">
+      <!-- Choose ONE: even OR center -->
+      <div class="adr-links even" id="adrLinks">
+        <!-- OR: <div class="adr-links center" id="adrLinks"> -->
+        <a href="https://www.adr-fr.org"                         id="navHome">Home</a>
+        <a href="https://static.adr-fr.org/WWW/join.html"        id="navJoin">Join</a>
+        <a href="https://static.adr-fr.org/WWW/alarms.html"      id="navAlarms">Smoke Alarms</a>
+        <a href="https://static.adr-fr.org/WWW/numbers.html"     id="navNumbers">Reflective Numbers</a>
+        <a href="https://static.adr-fr.org/WWW/knoxbox.html"     id="navKnox">Home KnoxBox</a>
+        <a href="mailto:info@adr-fr.org" class="adr-cta">Contact</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<header>
+  <h1>ADR-FR Reflective House Number Sign Request</h1>
+  <p>Serving residents of Acme, Delco, Riegelwood, Sandy Creek, and East Arcadia</p>
+</header>
+
+<main>
+  <p>Proper reflective house numbers help first responders find your home quickly. 
+  If no preference is provided, we will install the most common signage—priced at <strong>$40</strong> for a <strong>6"x18"</strong> reflective aluminum sign 
+  (up to 6 letters/numbers). Typical lead time is <strong>3–4 weeks</strong> for installation.</p>
+
+  <img src="/WWW/images/sign-sample-placeholder.jpg" alt="Reflective Sign Sample" class="sample">
+
+  <form action="/api/reflective-request" method="POST">
+    <label for="name">Full Name</label>
+    <input type="text" id="name" name="name" required>
+
+    <label for="address">Installation Address</label>
+    <input type="text" id="address" name="address" placeholder="Street address within ADR district" required>
+
+    <label for="district">Select Your Fire District</label>
+    <select id="district" name="district" required>
+      <option value="">-- Select District --</option>
+      <option>Acme</option>
+      <option>Delco</option>
+      <option>Riegelwood</option>
+      <option>Sandy Creek</option>
+      <option>East Arcadia</option>
+    </select>
+
+    <label for="houseNumber">House Number or Text</label>
+    <input type="text" id="houseNumber" name="houseNumber" placeholder="e.g., 1234 or 56A">
+
+    <label for="orientation">Sign Orientation</label>
+    <select id="orientation" name="orientation">
+      <option value="">No preference (standard vertical)</option>
+      <option>Vertical (numbers stacked)</option>
+      <option>Horizontal (numbers side-by-side)</option>
+    </select>
+
+    <label for="mounting">Mounting Preference</label>
+    <select id="mounting" name="mounting">
+      <option value="">No preference (standard post install)</option>
+      <option>Mounted on post</option>
+      <option>Mailbox mount</option>
+      <option>Wall mount</option>
+    </select>
+
+    <label for="contact">Phone or Email for Confirmation</label>
+    <input type="text" id="contact" name="contact" required>
+
+    <label for="notes">Additional Notes</label>
+    <textarea id="notes" name="notes" placeholder="Gate code, alternate contact, special instructions"></textarea>
+
+    <button type="submit">Submit Request</button>
+  </form>
+
+  <section class="info">
+    <h2>How It Works</h2>
+    <ol>
+      <li>Submit your request form above.</li>
+      <li>Our team will verify your address within your listed district.</li>
+      <li>We’ll contact you to confirm details and arrange payment.</li>
+      <li>Signs are fabricated and installed within 3–4 weeks.</li>
+    </ol>
+    <img src="/WWW/images/installation-placeholder.jpg" alt="Example Installation" class="sample">
+  </section>
+</main>
+
+<footer>
+  &copy; 2025 ADR-FR. Reflective Signage Program &bull; <a href="https://adr-fr.org" style="color:#9fd5ff;">adr-fr.org</a>
+</footer>
+
+<script>
+  // Mobile toggle
+  const burger = document.getElementById('navBurger');
+  const links  = document.getElementById('adrLinks');
+  burger?.addEventListener('click', ()=>{
+    const open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Active link highlighting (based on current file name)
+  (function(){
+    const url = (location.pathname || '').toLowerCase();
+    if (url.endsWith('/www/join.html'))      document.getElementById('navJoin')?.classList.add('active');
+    if (url.endsWith('/www/alarms.html'))    document.getElementById('navAlarms')?.classList.add('active');
+    if (url.endsWith('/www/numbers.html'))   document.getElementById('navNumbers')?.classList.add('active');
+    if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
+  })();
+</script>
+<script>
+  const burger = document.getElementById('navBurger');
+  const links  = document.getElementById('adrLinks');
+  burger?.addEventListener('click', ()=>{
+    const open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Active link highlighting
+  (function(){
+    const url = (location.pathname || '').toLowerCase();
+    if (url.endsWith('/www/join.html'))      document.getElementById('navJoin')?.classList.add('active');
+    if (url.endsWith('/www/alarms.html'))    document.getElementById('navAlarms')?.classList.add('active');
+    if (url.endsWith('/www/numbers.html'))   document.getElementById('navNumbers')?.classList.add('active');
+    if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
+  })();
+</script>
+</body>
+</html>
+
+
+</body>
+</html>

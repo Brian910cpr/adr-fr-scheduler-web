@@ -1,20 +1,20 @@
 <!doctype html>
-<meta charset="utf-8"/>
-<title>ADR FR — Month Calendar</title>
-<link rel="stylesheet" href="style.css"/>
-<div class="container">
-  <h1>ADR FR — Month Calendar (demo-ready)</h1>
-  <div class="top">
-    <label>Member <input id="member" placeholder="1002 or Chris Smith"/></label>
-    <button id="loadMe" class="primary">Load Me</button>
-    <span id="me" class="small"></span>
-    <span style="flex:1"></span>
-    <label>API Base <input id="apiBase" placeholder="https://adr-fr-api.x.workers.dev/api"/></label>
-    <label>Month <input type="month" id="month"/></label>
-    <button id="prev">◀</button><button id="next">▶</button>
-    <button id="reload">Reload</button>
-  </div>
-  <div id="grid" class="grid"></div>
-  <div class="footer">No API? No problem. This page shows a full <b>demo grid</b>. Set the API Base to switch to live mode.</div>
-</div>
-<script src="ui.js"></script>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShiftCommander</title>
+<script>
+  window.__API_BASE__ = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+</script>
+    <script>
+      // Point this to your Worker/API URL (Cloudflare or other HTTPS host)
+      window.__API_BASE__ = 'https://adr-fr-scheduler-api.adr-fr.org';
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,3 @@
+Source rows: 124
+Derived rows: 62
+Delimiter: ,

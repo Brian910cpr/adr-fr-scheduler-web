@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Request a Home KnoxBox™ | ADR-FR Districts</title>
+
+  <!-- Optional: if you have a shared site stylesheet at the repo root -->
+  <!-- <link rel="stylesheet" href="/style.css"> -->
+
+  <style>
+    :root{
+      --brand:#b22222; --brand2:#ef4444; --ok:#10b981; --warn:#ef4444;
+      --bg:#0b0b0d; --card:#111217; --muted:#e5e7eb; --radius:16px; --max:980px;
+    }
+    html,body{margin:0;background:var(--bg);color:#f5f5f7;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    a{color:#9fd5ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:var(--max);margin:0 auto;padding:22px}
+    header.knox-hero{
+      background:linear-gradient(135deg,var(--brand) 0%,var(--brand2) 100%);
+      color:#fff;border-bottom:1px solid #ffffff20
+    }
+    .brandbar{display:flex;align-items:center;gap:14px;padding:18px 22px}
+    .brandbar .logo{width:56px;height:56px;border-radius:12px;background:#fff1;display:grid;place-items:center;border:1px solid #ffffff22}
+    .brandbar h1{margin:0;font-size:22px;line-height:1.2}
+    .brandbar h1 small{display:block;font-weight:500;opacity:.95}
+
+    .hero{padding:0 22px 24px}
+    .hero h2{margin:8px 0 10px;font-size:34px;line-height:1.15}
+    .hero p{margin:8px 0;max-width:70ch;font-size:18px}
+
+    .grid{display:grid;gap:18px;grid-template-columns:1.2fr .8fr}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border:1px solid #ffffff17;border-radius:var(--radius);padding:18px}
+    .card h3{margin:0 0 10px;font-size:20px}
+    .card p{margin:6px 0;color:#d1d5db}
+
+    form label{display:block;margin-top:12px;font-size:14px;color:#e5e7eb}
+    input,select,textarea{
+      width:100%;background:#0b0c10;color:#fff;border:1px solid #30323a;
+      border-radius:12px;padding:12px 12px;font-size:16px
+    }
+    textarea{min-height:120px;resize:vertical}
+    .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+    @media (max-width:720px){.row{grid-template-columns:1fr}}
+    .hint{font-size:12px;color:#9ca3af;margin-top:4px}
+    .muted{color:#a1a1aa}
+
+    .btnbar{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+    .btn{background:var(--ok);color:#021; border:0; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer}
+    .btn.secondary{background:#1f2937;color:#e5e7eb;border:1px solid #3b3f52}
+
+    .pricebox{display:grid;gap:10px;grid-template-columns:1fr}
+    .stat{background:#0b0c10;border:1px solid #2a2d37;padding:12px;border-radius:12px}
+    .stat strong{display:block;font-size:18px}
+
+    .product-img{width:100%;border-radius:12px;border:1px solid #ffffff15;background:#0b0c10}
+    .thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+    .thumbs img{width:100%;border-radius:10px;border:1px solid #ffffff10;background:#0b0c10}
+
+    .alert{margin-top:12px;padding:12px;border-radius:12px;font-size:15px}
+    .alert.ok{background:#052e1f;color:#bfffe9;border:1px solid #0a5a3f}
+    .alert.err{background:#3b0a0a;color:#ffd1d1;border:1px solid #7a1212}
+
+    footer{color:#a1a1aa;padding:26px 22px;font-size:14px;text-align:center}
+  </style>
+</head>
+<body>
+
+<!-- ADR-FR Top Navigation -->
+<nav class="adr-nav">
+  <div class="wrap">
+    <a class="adr-brand" href="https://www.adr-fr.org">
+      <span class="logo">
+        <img src="/WWW/images/adrfr-logo.png" alt="ADR-FR" width="26" height="26"
+             style="width:26px;height:26px;object-fit:contain">
+      </span>
+      <h1>ADR-FR <small>Programs & Requests</small></h1>
+    </a>
+
+    <!-- Mobile toggle button stays the same if you’re using it -->
+    <button class="adr-burger" aria-expanded="false" aria-controls="adrLinks" id="navBurger">Menu</button>
+
+    <!-- Button container row -->
+    <div class="adr-links-row">
+      <!-- Choose ONE: even OR center -->
+      <div class="adr-links even" id="adrLinks">
+        <!-- OR: <div class="adr-links center" id="adrLinks"> -->
+        <a href="https://www.adr-fr.org"                         id="navHome">Home</a>
+        <a href="https://static.adr-fr.org/WWW/join.html"        id="navJoin">Join</a>
+        <a href="https://static.adr-fr.org/WWW/alarms.html"      id="navAlarms">Smoke Alarms</a>
+        <a href="https://static.adr-fr.org/WWW/numbers.html"     id="navNumbers">Reflective Numbers</a>
+        <a href="https://static.adr-fr.org/WWW/knoxbox.html"     id="navKnox">Home KnoxBox</a>
+        <a href="mailto:info@adr-fr.org" class="adr-cta">Contact</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<header class="knox-hero">
+  <div class="brandbar wrap">
+    <div class="logo">
+      <!-- placeholder logo -->
+      <img src="/WWW/images/knox_logo.png" alt="Knox logo" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 0 rgba(0,0,0,0.2))">
+    </div>
+    <h1>
+      ADR-FR Home KnoxBox™ Program
+      <small>Acme • Delco • Riegelwood • Sandy Creek • East Arcadia</small>
+    </h1>
+  </div>
+  <div class="hero wrap">
+    <h2>Fast, damage-free access for responders — when your family needs help</h2>
+    <p>
+      We recommend the <strong>Knox HomeBox™ (Model 1501)</strong> for residential use across our districts.
+      If no preference is provided, we’ll install the most common configuration. The unit is
+      priced at <strong>$227</strong> and typical installation is <strong>3–4 weeks</strong>.
+    </p>
+    <p class="muted">
+      Not sure this is the best fit? If you need a permanent mount in masonry/steel or a commercial system,
+      please call <strong>910-655-3380</strong> and we’ll guide you to the right option.
+    </p>
+  </div>
+</header>
+
+<main class="wrap grid">
+
+  <!-- FORM -->
+  <section class="card">
+    <h3>Request / Order Form</h3>
+    <form id="knoxForm" action="/api/knoxbox" method="POST" novalidate>
+      <!-- Contact -->
+      <div class="row">
+        <div>
+          <label for="name">Full name *</label>
+          <input id="name" name="name" required />
+        </div>
+        <div>
+          <label for="phone">Phone *</label>
+          <input id="phone" name="phone" inputmode="tel" placeholder="(910) 555-0123" required />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" name="email" inputmode="email" placeholder="you@example.com" />
+          <div class="hint">Share phone or email — whichever is easiest. One is plenty.</div>
+        </div>
+        <div>
+          <label for="contact_pref">How should we reach you?</label>
+          <select id="contact_pref" name="contact_pref">
+            <option>Email</option><option>Call</option><option>Text</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Address -->
+      <h3 style="margin-top:16px">Installation address</h3>
+      <div class="row">
+        <div>
+          <label for="address">Street address *</label>
+          <input id="address" name="address" required />
+          <div class="hint">If applicable, include N/S/E/W.</div>
+        </div>
+        <div>
+          <label for="apt">Suite / Apt / Unit</label>
+          <input id="apt" name="apt" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="city">City *</label>
+          <input id="city" name="city" required />
+        </div>
+        <div>
+          <label for="zip">ZIP *</label>
+          <input id="zip" name="zip" inputmode="numeric" required />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="district">ADR-FR District *</label>
+          <select id="district" name="district" required>
+            <option value="">— Select district —</option>
+            <option>Acme</option>
+            <option>Delco</option>
+            <option>Riegelwood</option>
+            <option>Sandy Creek</option>
+            <option>East Arcadia</option>
+          </select>
+        </div>
+        <div>
+          <label for="res_type">Residence type</label>
+          <select id="res_type" name="res_type">
+            <option>Single-family</option>
+            <option>Mobile home</option>
+            <option>Apartment/Condo</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Product options -->
+      <h3 style="margin-top:16px">Product options (Model 1501 — Knox HomeBox™)</h3>
+      <div class="row">
+        <div>
+          <label for="mount">Mount type</label>
+          <select id="mount" name="mount">
+            <option value="">No preference (standard)</option>
+            <option>Wall Mount (no backplate)</option>
+            <option>Wall Mount (backplate)</option>
+            <option>Door Hanger — Standard Door</option>
+            <option>Door Hanger — Security Door</option>
+          </select>
+        </div>
+        <div>
+          <label for="color">Color</label>
+          <select id="color" name="color">
+            <option>Antique White</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="qty">Quantity</label>
+          <input id="qty" name="qty" type="number" min="1" value="1" />
+        </div>
+        <div>
+          <label for="door_hanger">Door hanger add-on</label>
+          <select id="door_hanger" name="door_hanger">
+            <option>No</option><option>Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <label for="notes" style="margin-top:12px">Notes / special instructions</label>
+      <textarea id="notes" name="notes" placeholder="Gate code, special mounting surface, pets, best times, etc."></textarea>
+
+      <div class="btnbar">
+        <button class="btn" type="submit">Send request</button>
+        <a class="btn secondary" href="tel:19106553380">Prefer to call? 910-655-3380</a>
+      </div>
+
+      <div id="formAlert" class="alert" style="display:none"></div>
+    </form>
+    <p class="hint" style="margin-top:10px">
+      You’re shopping with <strong>Columbus County Fire Marshal’s Office – Whiteville, NC</strong> in partnership with ADR-FR.
+      Pricing shown is current local pricing for residents.
+    </p>
+  </section>
+
+  <!-- PRODUCT PANEL -->
+  <aside class="card">
+    <img class="product-img" src="/WWW/images/knox_homebox_main.jpg" alt="Knox HomeBox Model 1501 (Antique White)">
+    <div class="thumbs">
+      <img src="/WWW/images/knox_homebox_install_wall.jpg" alt="Wall-mount example">
+      <img src="/WWW/images/knox_homebox_doorhanger.jpg" alt="Door-hanger option">
+      <img src="/WWW/images/adr_home_knoxbox_context.jpg" alt="ADR responder with HomeBox">
+    </div>
+
+    <div class="pricebox" style="margin-top:12px">
+      <div class="stat">
+        <strong>$227</strong>
+        Local program price (incl. tax) — Model 1501, Antique White
+      </div>
+      <div class="stat">
+        <strong>3–4 weeks</strong>
+        Typical lead time for installation after confirmation
+      </div>
+      <div class="stat">
+        <strong>Fit questions?</strong>
+        If you need a permanent/commercial solution, please call us first: <a href="tel:19106553380">910-655-3380</a>
+      </div>
+    </div>
+
+    <p style="margin-top:14px">
+      📄 <a href="/WWW/docs/HomeBox_SpecSheet_MKT-KBSPEC-0362_W.pdf" target="_blank" rel="noopener">Download the official spec sheet (PDF)</a>
+    </p>
+    <p class="muted">
+      Images are placeholders — replace files in <code>/WWW/images/</code> to update this page.
+    </p>
+  </aside>
+
+</main>
+
+<footer>
+  &copy; 2025 ADR-FR • Reflective signage & Home KnoxBox programs • <a href="https://adr-fr.org">adr-fr.org</a>
+</footer>
+
+<script>
+  // Lightweight client-side guard: require name + (phone or email)
+  const f = document.getElementById('knoxForm');
+  const alertBox = document.getElementById('formAlert');
+  function showAlert(msg, ok){
+    alertBox.textContent = msg;
+    alertBox.className = 'alert ' + (ok ? 'ok' : 'err');
+    alertBox.style.display = 'block';
+  }
+  f.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(f).entries());
+    const name = (data.name||'').trim();
+    const phone = (data.phone||'').trim();
+    const email = (data.email||'').trim();
+    if(!name || (!phone && !email)){
+      showAlert('Please share your name and at least one contact method (phone or email).', false);
+      return;
+    }
+    try{
+      const res = await fetch(f.action, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(data)
+      });
+      if(!res.ok){
+        const t = await res.text();
+        showAlert('We could not submit your request right now. Please call 910-655-3380. ('+res.status+')', false);
+        console.error(t);
+        return;
+      }
+      showAlert('Thanks! Your request has been sent. We’ll contact you to confirm details and schedule installation.', true);
+      f.reset();
+    }catch(err){
+      showAlert('Network error. Please try again, or call 910-655-3380.', false);
+      console.error(err);
+    }
+  });
+</script>
+<script>
+  // Mobile toggle
+  const burger = document.getElementById('navBurger');
+  const links  = document.getElementById('adrLinks');
+  burger?.addEventListener('click', ()=>{
+    const open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Active link highlighting (based on current file name)
+  (function(){
+    const url = (location.pathname || '').toLowerCase();
+    if (url.endsWith('/www/join.html'))      document.getElementById('navJoin')?.classList.add('active');
+    if (url.endsWith('/www/alarms.html'))    document.getElementById('navAlarms')?.classList.add('active');
+    if (url.endsWith('/www/numbers.html'))   document.getElementById('navNumbers')?.classList.add('active');
+    if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
+  })();
+</script>
+<script>
+  const burger = document.getElementById('navBurger');
+  const links  = document.getElementById('adrLinks');
+  burger?.addEventListener('click', ()=>{
+    const open = links.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Active link highlighting
+  (function(){
+    const url = (location.pathname || '').toLowerCase();
+    if (url.endsWith('/www/join.html'))      document.getElementById('navJoin')?.classList.add('active');
+    if (url.endsWith('/www/alarms.html'))    document.getElementById('navAlarms')?.classList.add('active');
+    if (url.endsWith('/www/numbers.html'))   document.getElementById('navNumbers')?.classList.add('active');
+    if (url.endsWith('/www/knoxbox.html'))   document.getElementById('navKnox')?.classList.add('active');
+  })();
+</script>
+</body>
+</html>
+
+</body>
+</html>

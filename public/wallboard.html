@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ADR Wallboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1220;
+      --ink:#e8ecf1;
+      --muted:#9aa3b2;
+      --tile:#171b2e;
+      --tile-border:#242a45;
+
+      /* shift background tints */
+      --green:#0f3b2b;
+      --yellow:#3b370f;
+      --red:#3b0f0f;
+      --flash:#3b0f2b;
+
+      /* seat text colors by credential */
+      --aemt:#f5c542; /* gold */
+      --emt:#ffffff;  /* white */
+      --mr:#d0d0d0;   /* light gray */
+    }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    h1{font-size:20px;margin:0 0 8px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 16px}
+    .toolbar .pill{background:#12162a;border:1px solid var(--tile-border);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted)}
+    .toolbar .unit-toggle{display:flex;gap:6px;align-items:center;background:var(--tile);border:1px solid var(--tile-border);border-radius:8px;padding:4px 8px}
+    .toolbar .unit-toggle .label{font-weight:600;color:var(--ink)}
+    .toolbar .chip{cursor:pointer;border-radius:6px;border:1px solid var(--tile-border);padding:4px 8px;font-size:12px;background:#131731;color:var(--muted);user-select:none}
+    .chip.active{background:#1d2550;color:var(--ink);border-color:#32408c}
+
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+    .dow{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px}
+    .day{background:var(--tile);border:1px solid var(--tile-border);border-radius:10px;min-height:140px;display:flex;flex-direction:column;overflow:hidden}
+    .day .datebar{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--tile-border);font-size:12px;color:var(--muted)}
+    .day .datebar .dnum{font-weight:700;color:var(--ink)}
+    .shifts{display:grid;grid-template-columns:1fr;gap:6px;padding:8px}
+    .shift{border-radius:8px;border:1px solid var(--tile-border);padding:6px;display:flex;flex-direction:column;gap:6px;background:#131731;position:relative}
+    .shift .label{font-size:12px;font-weight:700;opacity:.9;margin-bottom:2px}
+    .units{display:flex;flex-direction:column;gap:6px}
+    .unit{background:rgba(0,0,0,.15);border:1px solid var(--tile-border);border-radius:8px;padding:6px}
+    .unit .uhead{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .uhead .unum{font-weight:800;color:var(--ink)} /* just the number, no 'Unit' */
+    .seats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .seat{background:#0f1327;border:1px solid #222849;border-radius:6px;padding:6px}
+    .seat .role{font-size:11px;color:var(--muted);margin-bottom:2px}
+    .seat .name{font-size:13px;font-weight:600}
+
+    /* shift color states */
+    .shift.green{background:var(--green)}
+    .shift.yellow{background:var(--yellow)}
+    .shift.red{background:var(--red)}
+    .shift.flash{background:var(--flash)}
+    .shift.flash::after{
+      content:"";position:absolute;inset:0;border-radius:8px;border:2px dashed rgba(255,120,210,.6);
+      animation:dash 1.4s linear infinite;
+    }
+    @keyframes dash{to{outline-offset:-10px}}
+
+    /* name tint by credential */
+    .cred-aemt{color:var(--aemt)}
+    .cred-emt{color:var(--emt)}
+    .cred-mr,.cred-nmd{color:var(--mr)}
+
+    /* legend */
+    .legend{display:flex;gap:12px;align-items:center;margin:10px 0 18px}
+    .legend .l{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+    .legend .sw{width:14px;height:14px;border-radius:4px;border:1px solid var(--tile-border)}
+    .sw.g{background:var(--green)} .sw.y{background:var(--yellow)} .sw.r{background:var(--red)} .sw.f{background:var(--flash)}
+    .legend .dot{width:10px;height:10px;border-radius:50%}
+    .dot.a{background:var(--aemt)} .dot.e{background:var(--emt)} .dot.m{background:var(--mr)}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .hint{font-size:11px;color:var(--muted)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ADR Wallboard</h1>
+
+  <div class="toolbar" id="unitBar">
+    <span class="pill">Month: <span id="monthLabel" class="muted"></span></span>
+    <span class="pill">Today: <span id="todayLabel" class="muted"></span></span>
+    <!-- Unit toggles injected here -->
+  </div>
+
+  <div class="legend">
+    <div class="l"><span class="sw g"></span> Green (ideal)</div>
+    <div class="l"><span class="sw y"></span> Yellow (legal, not ideal)</div>
+    <div class="l"><span class="sw r"></span> Red (waiver / not legal)</div>
+    <div class="l"><span class="sw f"></span> Flashing Red (missing legal seat)</div>
+    <div class="l">| Seat text: <span class="dot a"></span> AEMT <span class="dot e"></span> EMT <span class="dot m"></span> MR/NMD</div>
+  </div>
+
+  <div class="calendar" id="calendar"></div>
+
+  <p class="hint">Unit toggles (top): click to cycle Blank → AM+PM → AM → PM → Blank. Defaults: 120 is AM+PM, others Blank. Auto-applies after ~3s.</p>
+</div>
+
+<script>
+(function(){
+  const qs = new URLSearchParams(location.search);
+  const month = qs.get("month") || new Date().toISOString().slice(0,7);
+  const apiBase = location.origin;
+
+  const calendarEl = document.getElementById('calendar');
+  const unitBar = document.getElementById('unitBar');
+  const monthLabel = document.getElementById('monthLabel');
+  const todayLabel = document.getElementById('todayLabel');
+
+  let membersById = new Map(); // id -> {name, role, can_drive_type3, prefer_24h}
+  let wall = null;
+  let unitState = {}; // { "120": "OFF|BOTH|AM|PM", ... }
+  let saveTimer = null;
+
+  // Credentials
+  function normRole(role){
+    if(!role) return "EMT"; // default if null
+    const r = String(role).toUpperCase();
+    if (r.includes("AEMT") || r.includes("ADV")) return "AEMT";
+    if (r.includes("MR") || r.includes("MEDICAL RESPONDER")) return "MR";
+    return "EMT";
+  }
+  function credClass(role){
+    const r = normRole(role);
+    if (r==="AEMT") return "cred-aemt";
+    if (r==="EMT") return "cred-emt";
+    return "cred-mr";
+  }
+
+  // Color rules you set
+  function crewColor(attRole, drvRole){
+    const A = attRole ? normRole(attRole) : null;
+    const D = drvRole ? normRole(drvRole) : null;
+    if (!A || !D) return "flash";
+
+    if (A==="AEMT" && D==="EMT") return "green";
+    if (A==="AEMT" && D==="AEMT") return "yellow";
+    if (A==="AEMT" && D==="MR")  return "yellow";
+
+    if (A==="EMT" && D==="EMT")  return "red";
+    if (A==="EMT" && D==="MR")   return "red";
+
+    if (A==="MR"  && D==="AEMT") return "yellow";
+    if (A==="MR"  && (D==="MR" || !D)) return "flash";
+
+    // If you later model Non-Medical explicitly, treat AEMT+NMD and EMT+NMD as red here.
+
+    return "red"; // conservative fallback
+  }
+
+  function seatSpan(member){
+    if (!member || (!member.member_id && !member.member_name)) {
+      return `<span class="name cred-mr">—</span>`;
+    }
+    let role = null;
+    if (member.member_id && membersById.has(member.member_id)){
+      role = membersById.get(member.member_id).role;
+    }
+    if (!role && member.member_name){
+      for (const v of membersById.values()){
+        if (v.name === member.member_name){ role = v.role; break; }
+      }
+    }
+    const css = credClass(role);
+    const name = member.member_name || ("#" + member.member_id);
+    return `<span class="name ${css}">${name}</span>`;
+  }
+
+  // Unit toggles (4-state)
+  function buildUnitBar(trucks){
+    trucks.forEach(u=>{
+      if (!unitState[u]) unitState[u] = (u==="120" ? "BOTH" : "OFF"); // default
+    });
+    const frag = document.createDocumentFragment();
+    const legend = document.createElement('span');
+    legend.className = 'pill';
+    legend.textContent = 'Units:';
+    frag.appendChild(legend);
+
+    trucks.forEach(u=>{
+      const box = document.createElement('div');
+      box.className = 'unit-toggle';
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = u; // just number
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.dataset.unit=u;
+      chip.textContent = stateLabel(unitState[u]);
+
+      function cycle(){
+        unitState[u] = nextState(unitState[u]);
+        chip.textContent = stateLabel(unitState[u]);
+        chip.classList.toggle('active', unitState[u]!=="OFF");
+        scheduleSave();
+        renderCalendar();
+      }
+      chip.addEventListener('click', cycle);
+      label.addEventListener('click', cycle);
+      chip.classList.toggle('active', unitState[u]!=="OFF");
+      box.appendChild(label); box.appendChild(chip);
+      frag.appendChild(box);
+    });
+
+    [...unitBar.querySelectorAll('.unit-toggle')].forEach(n=>n.remove());
+    unitBar.appendChild(frag);
+  }
+  function stateLabel(s){ return s==="BOTH" ? "AM+PM" : s; }
+  function nextState(s){ return s==="OFF" ? "BOTH" : s==="BOTH" ? "AM" : s==="AM" ? "PM" : "OFF"; }
+  function scheduleSave(){
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(async ()=>{
+      // Hook when backend is ready:
+      // await fetch(`${apiBase}/admin/units/activate`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({month, state:unitState})})
+    }, 3000);
+  }
+
+  // Month grid
+  function buildMonthGrid(year, monthIndex){
+    const first = new Date(Date.UTC(year, monthIndex, 1));
+    const startDow = first.getUTCDay();
+    const daysInMonth = new Date(Date.UTC(year, monthIndex+1, 0)).getUTCDate();
+    calendarEl.innerHTML = "";
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{
+      const h = document.createElement('div');
+      h.className = 'dow';
+      h.textContent = d;
+      calendarEl.appendChild(h);
+    });
+    for (let i=0;i<startDow;i++) calendarEl.appendChild(document.createElement('div'));
+    for (let d=1; d<=daysInMonth; d++){
+      const iso = `${String(year)}-${String(monthIndex+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const day = document.createElement('div');
+      day.className = 'day';
+      day.innerHTML = `
+        <div class="datebar">
+          <span class="dnum">${d}</span>
+          <span class="muted">${iso}</span>
+        </div>
+        <div class="shifts" data-date="${iso}">
+          ${renderShiftBlock(iso, "AM")}
+          ${renderShiftBlock(iso, "PM")}
+        </div>
+      `;
+      calendarEl.appendChild(day);
+    }
+  }
+  function unitActiveForShift(unit, shift){
+    const s = unitState[unit] || "OFF";
+    if (s==="BOTH") return true;
+    if (s==="AM" && shift==="AM") return true;
+    if (s==="PM" && shift==="PM") return true;
+    return false;
+  }
+
+  function renderShiftBlock(isoDate, shift){
+    const unitsHtml = (wall.trucks||[]).filter(u => unitActiveForShift(u, shift)).map(u=>{
+      const key = `${isoDate}|${u}|${shift}`;
+      const a = wall.assignments[key];
+
+      // NEW: Expect seat-level objects {A:{}, D:{}}
+      let A = a && a.A ? a.A : null;
+      let D = a && a.D ? a.D : null;
+
+      // Legacy fallback removed from display logic (no more "Committed").
+      // If legacy single name still arrives, both seats show dashes.
+
+      const attRole = resolveRole(A);
+      const drvRole = resolveRole(D);
+      const color = crewColor(attRole, drvRole);
+
+      return `
+        <div class="unit">
+          <div class="uhead"><span class="unum">${u}</span><span class="small muted">${shift}</span></div>
+          <div class="seats">
+            <div class="seat">
+              <div class="role">Attendant</div>
+              <div>${seatSpan(A)}</div>
+            </div>
+            <div class="seat">
+              <div class="role">Driver</div>
+              <div>${seatSpan(D)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Overall shift color from worst unit in this shift
+    let shiftClass = "";
+    if ((wall.trucks||[]).some(u => unitActiveForShift(u, shift))) {
+      const colors = (wall.trucks||[]).filter(u=>unitActiveForShift(u, shift)).map(u=>{
+        const key = `${isoDate}|${u}|${shift}`;
+        const a = wall.assignments[key];
+        const A = a && a.A ? a.A : null;
+        const D = a && a.D ? a.D : null;
+        return crewColor(resolveRole(A), resolveRole(D));
+      });
+      if (colors.includes("flash")) shiftClass = "flash";
+      else if (colors.includes("red")) shiftClass = "red";
+      else if (colors.includes("yellow")) shiftClass = "yellow";
+      else if (colors.includes("green")) shiftClass = "green";
+    }
+
+    return `
+      <div class="shift ${shiftClass}">
+        <div class="label">${shift}</div>
+        <div class="units">
+          ${unitsHtml || `<div class="muted small">No active units</div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  function resolveRole(member){
+    if (!member) return null;
+    if (member.member_id && membersById.has(member.member_id)){
+      return membersById.get(member.member_id).role;
+    }
+    if (member.member_name){
+      for (const v of membersById.values()){
+        if (v.name === member.member_name) return v.role;
+      }
+    }
+    return null;
+  }
+
+  function renderCalendar(){
+    const [y,m] = wall.month.split("-").map(n=>parseInt(n,10));
+    monthLabel.textContent = wall.month;
+    todayLabel.textContent = wall.today || "";
+    buildMonthGrid(y, m-1);
+  }
+
+  async function fetchData(){
+    const [membersRes, wallRes] = await Promise.all([
+      fetch(`${apiBase}/api/members`),
+      fetch(`${apiBase}/api/wallboard?month=${encodeURIComponent(month)}`)
+    ]);
+    const membersJson = await membersRes.json();
+    wall = await wallRes.json();
+
+    membersById.clear();
+    if (Array.isArray(membersJson.members)){
+      for (const m of membersJson.members){
+        membersById.set(m.id, {
+          id:m.id,
+          name:m.name,
+          role:m.role,
+          can_drive_type3:m.can_drive_type3,
+          prefer_24h:m.prefer_24h
+        });
+      }
+    }
+
+    buildUnitBar(wall.trucks || []);
+    renderCalendar();
+  }
+
+  fetchData().catch(err=>{
+    console.error(err);
+    calendarEl.innerHTML = `<div class="muted">Failed to load data.</div>`;
+  });
+})();
+</script>
+</body>
+</html>
