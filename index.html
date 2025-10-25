@@ -17,6 +17,9 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Optional: favicon to remove 404 in console -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234f46e5'/%3E%3Ctext x='50' y='58' font-size='48' text-anchor='middle' fill='white'%3ESC%3C/text%3E%3C/svg%3E" />
   </head>
 
   <body class="bg-gray-100 min-h-screen">
@@ -169,178 +172,251 @@
       }
 
       const AvBtn = ({ value, onChange, label }) => (
-        <button className={"w-10 h-8 rounded text-xs font-medium border border-gray-300 "+(AV_COL[value||"unset"])}
-                onClick={()=> onChange(cycle(value))}
-                title={`${label}: ${value||"unset"}`}>
+        <button
+          className={"w-10 h-8 rounded text-xs font-medium border border-gray-300 " + (AV_COL[value || "unset"] || "")}
+          onClick={()=> onChange(cycle(value))}
+          title={`${label}: ${value||"unset"}`}
+        >
           {label}
         </button>
       );
 
-function UserView({ store, member }){
-  const { users, availability, prefs, actions } = store;
-  const [monthsAhead, setMonthsAhead] = useState(2);
-  const [offset, setOffset] = useState(0);
+      // ====================== USER VIEW ======================
+      function UserView({ store, member }){
+        const { users, availability, prefs, actions } = store;
+        const [monthsAhead, setMonthsAhead] = useState(2);
+        const [offset, setOffset] = useState(0);
 
-  const me = useMemo(()=>{
-    if (!users.length) return null;
-    if (!member.user) return users[0];
-    return users.find(u=> u.id === member.user.id) || users[0];
-  },[users, member.user]);
+        const me = useMemo(()=>{
+          if (!users.length) return null;
+          if (!member.user) return users[0];
+          return users.find(u=> u.id === member.user.id) || users[0];
+        },[users, member.user]);
 
-  const start = useMemo(()=> new Date(new Date().getFullYear(), new Date().getMonth()+offset, 1), [offset]);
-  const months = useMemo(()=> Array.from({length: monthsAhead}, (_,i)=>{
-    const d = new Date(start.getFullYear(), start.getMonth()+i, 1);
-    return { year:d.getFullYear(), month:d.getMonth() };
-  }), [monthsAhead, start]);
+        const start = useMemo(()=> new Date(new Date().getFullYear(), new Date().getMonth()+offset, 1), [offset]);
+        const months = useMemo(()=> Array.from({length: monthsAhead}, (_,i)=>{
+          const d = new Date(start.getFullYear(), start.getMonth()+i, 1);
+          return { year:d.getFullYear(), month:d.getMonth() };
+        }), [monthsAhead, start]);
 
-  const av = me ? (availability[me.id] || {}) : {};
-  const myPrefs = me ? (prefs[me.id] || { prefer24s:false, notes:"" }) : { prefer24s:false, notes:"" };
-  const parsedNotes = (()=>{ try{ return JSON.parse(myPrefs.notes||"{}"); }catch{ return {}; }})();
-  const avoid = new Set(parsedNotes.avoid || []);
-  const typeIII = !!parsedNotes.typeIII;
-  const inactive = !!parsedNotes.inactive;
+        const av = me ? (availability[me.id] || {}) : {};
+        const myPrefs = me ? (prefs[me.id] || { prefer24s:false, notes:"" }) : { prefer24s:false, notes:"" };
+        const parsedNotes = (()=>{ try{ return JSON.parse(myPrefs.notes||"{}"); }catch{ return {}; }})();
+        const avoid = new Set(parsedNotes.avoid || []);
+        const typeIII = !!parsedNotes.typeIII;
+        const inactive = !!parsedNotes.inactive;
 
-  const preCommit = (d)=> ((d - new Date())/(1000*60*60*24)) > 28;
+        const preCommit = (d)=> ((d - new Date())/(1000*60*60*24)) > 28;
 
-  // ---- optimistic prefs helpers ----
-  function patchPrefsLocally(patch){
-    // update local prefs so UI reflects immediately
-    const nextPrefs = { ...myPrefs, ...patch };
-    prefs[me.id] = nextPrefs; // mutate the cache we already read from
-  }
-  async function setPrefer24s(on){
-    if (!me) return;
-    patchPrefsLocally({ prefer24s: !!on });
-    await actions.savePrefs(me.id, { prefer24s: !!on });
-  }
-  async function setTypeIII(on){
-    if (!me) return;
-    const notes = JSON.stringify({ ...parsedNotes, typeIII: !!on });
-    patchPrefsLocally({ notes });
-    await actions.savePrefs(me.id, { notes });
-  }
-  async function setAvoid(uid, on){
-    if (!me) return;
-    const arr = Array.from(avoid);
-    const next = on ? Array.from(new Set(arr.concat(uid))) : arr.filter(x=> x!==uid);
-    const notes = JSON.stringify({ ...parsedNotes, avoid: next });
-    patchPrefsLocally({ notes });
-    await actions.savePrefs(me.id, { notes });
-  }
-  async function setInactive(on){
-    if (!me) return;
-    const notes = JSON.stringify({ ...parsedNotes, inactive: !!on });
-    patchPrefsLocally({ notes });
-    await actions.savePrefs(me.id, { notes });
-  }
+        // ---- optimistic prefs helpers ----
+        function patchPrefsLocally(patch){
+          const nextPrefs = { ...myPrefs, ...patch };
+          prefs[me.id] = nextPrefs; // quick local reflection
+        }
+        async function setPrefer24s(on){
+          if (!me) return;
+          patchPrefsLocally({ prefer24s: !!on });
+          await actions.savePrefs(me.id, { prefer24s: !!on });
+        }
+        async function setTypeIII(on){
+          if (!me) return;
+          const notes = JSON.stringify({ ...parsedNotes, typeIII: !!on });
+          patchPrefsLocally({ notes });
+          await actions.savePrefs(me.id, { notes });
+        }
+        async function setAvoid(uid, on){
+          if (!me) return;
+          const arr = Array.from(avoid);
+          const next = on ? Array.from(new Set(arr.concat(uid))) : arr.filter(x=> x!==uid);
+          const notes = JSON.stringify({ ...parsedNotes, avoid: next });
+          patchPrefsLocally({ notes });
+          await actions.savePrefs(me.id, { notes });
+        }
+        async function setInactive(on){
+          if (!me) return;
+          const notes = JSON.stringify({ ...parsedNotes, inactive: !!on });
+          patchPrefsLocally({ notes });
+          await actions.savePrefs(me.id, { notes });
+        }
 
-  // ---- default future setter ----
-  async function setDefaultFuture(state){
-    if (!me) return;
-    const confirmMsg = state==="no"
-      ? "Set ALL future AM/PM to Do Not?"
-      : "Set ALL future AM/PM to Available?";
-    if (!confirm(confirmMsg)) return;
+        // ---- default future setter ----
+        async function setDefaultFuture(state){
+          if (!me) return;
+          const confirmMsg = state==="no"
+            ? "Set ALL future AM/PM to Do Not?"
+            : "Set ALL future AM/PM to Available?";
+          if (!confirm(confirmMsg)) return;
 
-    const today = new Date();
-    for (let i=0;i<180;i++){ // ~6 months
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
-      const k = toISODate(d);
-      await actions.setAvailabilityCell(me.id, k, "AM", state);
-      await actions.setAvailabilityCell(me.id, k, "PM", state);
-    }
-    alert("Default applied to future days.");
-  }
+          const today = new Date();
+          for (let i=0;i<180;i++){ // ~6 months
+            const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
+            const k = toISODate(d);
+            await actions.setAvailabilityCell(me.id, k, "AM", state);
+            await actions.setAvailabilityCell(me.id, k, "PM", state);
+          }
+          alert("Default applied to future days.");
+        }
 
-  if (!me) return <div className="text-sm text-gray-500">Loading…</div>;
+        if (!me) return <div className="text-sm text-gray-500">Loading…</div>;
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="text-sm">Logged in as: <span className="font-semibold">{member.user?.name || me.name}</span></div>
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-green-300 rounded"></span>Prefer</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-yellow-300 rounded"></span>Available</span>
-          <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-red-300 rounded"></span>Do Not</span>
-        </div>
-      </div>
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-sm">Logged in as: <span className="font-semibold">{member.user?.name || me.name}</span></div>
+              <div className="ml-auto flex items-center gap-2 text-xs">
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-green-300 rounded"></span>Prefer</span>
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-yellow-300 rounded"></span>Available</span>
+                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-red-300 rounded"></span>Do Not</span>
+              </div>
+            </div>
 
-      <div className="flex items-center gap-2">
-        <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o-1)}>◀ Prev</button>
-        <label className="text-sm">Months shown</label>
-        <input type="number" min="1" max="6" className="w-16 border rounded px-2 py-1" value={monthsAhead} onChange={e=> setMonthsAhead(Number(e.target.value||1))} />
-        <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o+1)}>Next ▶</button>
+            <div className="flex items-center gap-2">
+              <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o-1)}>◀ Prev</button>
+              <label className="text-sm">Months shown</label>
+              <input type="number" min="1" max="6" className="w-16 border rounded px-2 py-1" value={monthsAhead} onChange={e=> setMonthsAhead(Number(e.target.value||1))} />
+              <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o+1)}>Next ▶</button>
 
-        <div className="ml-auto flex items-center gap-2">
-          <button className="px-3 py-1 rounded bg-red-100 border border-red-300 text-red-700" onClick={()=> setDefaultFuture("no")}>Default future: Do Not</button>
-          <button className="px-3 py-1 rounded bg-yellow-100 border border-yellow-300 text-yellow-800" onClick={()=> setDefaultFuture("available")}>Default future: Available</button>
-        </div>
-      </div>
+              <div className="ml-auto flex items-center gap-2">
+                <button className="px-3 py-1 rounded bg-red-100 border border-red-300 text-red-700" onClick={()=> setDefaultFuture("no")}>Default future: Do Not</button>
+                <button className="px-3 py-1 rounded bg-yellow-100 border border-yellow-300 text-yellow-800" onClick={()=> setDefaultFuture("available")}>Default future: Available</button>
+              </div>
+            </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {months.map(({year, month})=> (
-          <Month key={year+'-'+month} year={year} month={month}
-            renderCell={(d)=>{
-              const k = toISODate(d);
-              const v = av[k] || { AM:"unset", PM:"unset" };
-              const pc = preCommit(d);
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {months.map(({year, month})=> (
+                <Month key={year+'-'+month} year={year} month={month}
+                  renderCell={(d)=>{
+                    const k = toISODate(d);
+                    const v = av[k] || { AM:"unset", PM:"unset" };
+                    const pc = preCommit(d);
 
-              // if inactive, hard-force Do Not look/behavior
-              const disable = inactive;
-              const showAM = disable ? "no" : v.AM;
-              const showPM = disable ? "no" : v.PM;
+                    const disable = inactive;
+                    const showAM = disable ? "no" : v.AM;
+                    const showPM = disable ? "no" : v.PM;
 
-              return (
-                <div className="flex items-center justify-between gap-2 opacity-100">
-                  <div className="flex items-center gap-2">
-                    <AvBtn label="AM" value={showAM} onChange={(s)=> !disable && actions.setAvailabilityCell(me.id, k, "AM", s)} />
-                    <AvBtn label="PM" value={showPM} onChange={(s)=> !disable && actions.setAvailabilityCell(me.id, k, "PM", s)} />
-                  </div>
-                  {pc && <span className="text-[10px] uppercase px-2 py-1 rounded-full bg-purple-100 border border-purple-300">Pre-commit</span>}
-                </div>
-              );
-            }}
-          />
-        ))}
-      </div>
-
-      <details className="rounded-2xl bg-white p-4 shadow">
-        <summary className="cursor-pointer font-semibold">Preferences</summary>
-        <div className="mt-3 grid gap-3">
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={!!myPrefs.prefer24s} onChange={e=> setPrefer24s(e.target.checked)} />
-            Prefer 24s
-          </label>
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={typeIII} onChange={e=> setTypeIII(e.target.checked)} />
-            Type III driver approved
-          </label>
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={inactive} onChange={e=> setInactive(e.target.checked)} />
-            Inactive (block new scheduling)
-          </label>
-          <div>
-            <div className="text-sm font-medium mb-1">Avoid co-workers (backup list)</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {users.filter(u=> u.id!==me.id).map(u=> (
-                <label key={u.id} className="inline-flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1">
-                  <input type="checkbox" checked={avoid.has(u.id)} onChange={e=> setAvoid(u.id, e.target.checked)} />
-                  {u.name}
-                </label>
+                    return (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <AvBtn label="AM" value={showAM} onChange={(s)=> !disable && actions.setAvailabilityCell(me.id, k, "AM", s)} />
+                          <AvBtn label="PM" value={showPM} onChange={(s)=> !disable && actions.setAvailabilityCell(me.id, k, "PM", s)} />
+                        </div>
+                        {pc && <span className="text-[10px] uppercase px-2 py-1 rounded-full bg-purple-100 border border-purple-300">Pre-commit</span>}
+                      </div>
+                    );
+                  }}
+                />
               ))}
             </div>
-          </div>
-        </div>
-      </details>
-    </div>
-  );
-}
 
-      function SupervisorView(){
-        return (
-          <div className="bg-white rounded-2xl p-4 shadow text-sm text-gray-600">
-            Supervisor controls will go here (add/deactivate members, defaults). Backend supports it; UI wiring is next step.
+            <details className="rounded-2xl bg-white p-4 shadow">
+              <summary className="cursor-pointer font-semibold">Preferences</summary>
+              <div className="mt-3 grid gap-3">
+                <label className="inline-flex items-center gap-2">
+                  <input type="checkbox" checked={!!myPrefs.prefer24s} onChange={e=> setPrefer24s(e.target.checked)} />
+                  Prefer 24s
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input type="checkbox" checked={typeIII} onChange={e=> setTypeIII(e.target.checked)} />
+                  Type III driver approved
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input type="checkbox" checked={!!inactive} onChange={e=> setInactive(e.target.checked)} />
+                  Inactive (block new scheduling)
+                </label>
+                <div>
+                  <div className="text-sm font-medium mb-1">Avoid co-workers (backup list)</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {users.filter(u=> u.id!==me.id).map(u=> (
+                      <label key={u.id} className="inline-flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1">
+                        <input type="checkbox" checked={avoid.has(u.id)} onChange={e=> setAvoid(u.id, e.target.checked)} />
+                        {u.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
+        );
+      }
+
+      // =================== SUPERVISOR VIEW ===================
+      function SupervisorView({ store }){
+        const { users, prefs, actions } = store;
+        const [name, setName] = useState("");
+        const [role, setRole] = useState("EMT");
+        const [memberNo, setMemberNo] = useState("");
+
+        async function addUser(){
+          if (!name || !role) return alert("Name and role required.");
+          const body = { name, role, can_drive: [], notes: "", member_no: memberNo || undefined };
+          await fetch(window.__API_BASE__ + "/api/users", {
+            method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body)
+          });
+          setName(""); setRole("EMT"); setMemberNo("");
+          await actions.fetchUsers();
+        }
+
+        function userInactive(u){
+          const p = prefs[u.id] || {};
+          try { return !!JSON.parse(p.notes||"{}").inactive; } catch { return false; }
+        }
+
+        async function setInactive(u, on){
+          const p = prefs[u.id] || { notes:"" };
+          let notes = {};
+          try { notes = JSON.parse(p.notes||"{}"); } catch {}
+          notes.inactive = !!on;
+          await actions.savePrefs(u.id, { notes: JSON.stringify(notes) });
+        }
+
+        return (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-4 shadow">
+              <div className="font-semibold mb-2">Add Member</div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <input className="border rounded px-2 py-1" placeholder="Name" value={name} onChange={e=> setName(e.target.value)} />
+                <select className="border rounded px-2 py-1" value={role} onChange={e=> setRole(e.target.value)}>
+                  <option>EMT</option><option>Driver</option><option>ALS</option>
+                </select>
+                <input className="border rounded px-2 py-1" placeholder="Member #" value={memberNo} onChange={e=> setMemberNo(e.target.value)} />
+                <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={addUser}>Add</button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow">
+              <div className="font-semibold mb-2">Roster</div>
+              <div className="divide-y">
+                {users.map(u=> (
+                  <div key={u.id} className="py-2 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={"w-2 h-2 rounded-full "+(userInactive(u)?"bg-red-500":"bg-emerald-500")} />
+                      <div className="font-medium">{u.name}</div>
+                      <div className="text-xs text-gray-500">{u.role}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm inline-flex items-center gap-2">
+                        <input type="checkbox" checked={userInactive(u)} onChange={e=> setInactive(u, e.target.checked)} />
+                        Inactive
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ========================= APP =========================
+      function NavTab({ active, label, onClick }) {
+        return (
+          <button
+            className={"px-4 py-2 rounded-2xl text-sm font-medium border " + (active?"bg-blue-600 text-white border-blue-600":"bg-white border-gray-300")}
+            onClick={onClick}
+          >
+            {label}
+          </button>
         );
       }
 
@@ -368,13 +444,15 @@ function UserView({ store, member }){
                       <button className="px-2 py-1 rounded bg-gray-200" onClick={member.logout}>Sign out</button>
                     </div>
                   )}
-                  <button className={"px-4 py-2 rounded-2xl text-sm font-medium border "+(tab==="user"?"bg-blue-600 text-white border-blue-600":"bg-white border-gray-300")} onClick={()=> setTab("user")}>User View</button>
-                  <button className={"px-4 py-2 rounded-2xl text-sm font-medium border "+(tab==="super"?"bg-blue-600 text-white border-blue-600":"bg-white border-gray-300")} onClick={()=> setTab("super")}>Supervisor</button>
+
+                  <NavTab label="User View" active={tab==="user"} onClick={()=> setTab("user")} />
+                  <NavTab label="Supervisor" active={tab==="super"} onClick={()=> setTab("super")} />
                 </div>
               </div>
             </header>
+
             <main className="max-w-7xl mx-auto p-4">
-              {tab==="user" ? <UserView store={store} member={member} /> : <SupervisorView />}
+              {tab==="user" ? <UserView store={store} member={member} /> : <SupervisorView store={store} />}
               <footer className="mt-10 text-xs text-gray-500">
                 <div>AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
               </footer>
