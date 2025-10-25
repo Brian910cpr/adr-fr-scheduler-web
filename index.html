@@ -341,11 +341,17 @@
       }
 
       // =================== SUPERVISOR VIEW ===================
-      function SupervisorView({ store }){
-        const { users, prefs, actions } = store;
-        const [name, setName] = useState("");
-        const [role, setRole] = useState("EMT");
-        const [memberNo, setMemberNo] = useState("");
+function SupervisorView({ store }) {
+  const users = Array.isArray(store.users) ? store.users : [];
+  const prefs = store.prefs || {};
+  const actions = store.actions;
+
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("EMT");
+  const [memberNo, setMemberNo] = useState("");
+
+}
+
 
         async function addUser(){
           if (!name || !role) return alert("Name and role required.");
@@ -409,58 +415,81 @@
       }
 
       // ========================= APP =========================
-      function NavTab({ active, label, onClick }) {
-        return (
-          <button
-            className={"px-4 py-2 rounded-2xl text-sm font-medium border " + (active?"bg-blue-600 text-white border-blue-600":"bg-white border-gray-300")}
-            onClick={onClick}
-          >
-            {label}
-          </button>
-        );
+function NavTab({ id, current, label, set }) {
+  const active = current === id;
+  return (
+    <button
+      type="button"
+      className={
+        "px-4 py-2 rounded-2xl text-sm font-medium border " +
+        (active ? "bg-blue-600 text-white border-blue-600" : "bg-white border-gray-300")
       }
+      onClick={() => set(id)}
+      aria-pressed={active}
+      aria-current={active ? "page" : undefined}
+    >
+      {label}
+    </button>
+  );
+}
 
-      function App(){
-        const member = useMember();
-        const store = useStore(member.memberNo);
-        const [tab, setTab] = useState("user");
-        const [inputNo, setInputNo] = useState("");
+function App() {
+  const member = useMember();
+  const store = useStore(member.memberNo);
+  const [tab, setTab] = useState("user");
+  const [inputNo, setInputNo] = useState("");
 
-        return (
-          <div>
-            <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b">
-              <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-                <div className="font-bold text-lg tracking-tight">ShiftCommander</div>
-                <div className="ml-2 text-xs px-2 py-1 rounded-full border">{store.connected?"Live":"Offline"}</div>
-                <div className="ml-auto flex items-center gap-2">
-                  {!member.user ? (
-                    <>
-                      <input className="border rounded px-2 py-1 text-sm" placeholder="Member #" value={inputNo} onChange={e=> setInputNo(e.target.value)} />
-                      <button className="px-3 py-1 rounded bg-blue-600 text-white text-sm" onClick={()=> member.login(inputNo)}>Sign in</button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="px-2 py-1 bg-gray-100 rounded">{member.user.name} • {member.user.role} • #{member.user.member_no||"—"}</span>
-                      <button className="px-2 py-1 rounded bg-gray-200" onClick={member.logout}>Sign out</button>
-                    </div>
-                  )}
+  return (
+    <div>
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="font-bold text-lg tracking-tight">ShiftCommander</div>
+          <div className="ml-2 text-xs px-2 py-1 rounded-full border">{store.connected ? "Live" : "Offline"}</div>
 
-                  <NavTab label="User View" active={tab==="user"} onClick={()=> setTab("user")} />
-                  <NavTab label="Supervisor" active={tab==="super"} onClick={()=> setTab("super")} />
-                </div>
+          <div className="ml-auto flex items-center gap-2">
+            {!member.user ? (
+              <>
+                <input
+                  className="border rounded px-2 py-1 text-sm"
+                  placeholder="Member #"
+                  value={inputNo}
+                  onChange={(e) => setInputNo(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                  onClick={() => member.login(inputNo)}
+                >
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-3 text-sm">
+                <span className="px-2 py-1 bg-gray-100 rounded">
+                  {member.user.name} • {member.user.role} • #{member.user.member_no || "—"}
+                </span>
+                <button type="button" className="px-2 py-1 rounded bg-gray-200" onClick={member.logout}>
+                  Sign out
+                </button>
               </div>
-            </header>
+            )}
 
-            <main className="max-w-7xl mx-auto p-4">
-              {tab==="user" ? <UserView store={store} member={member} /> : <SupervisorView store={store} />}
-              <footer className="mt-10 text-xs text-gray-500">
-                <div>AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
-              </footer>
-            </main>
+            <NavTab id="user" current={tab} label="User View" set={setTab} />
+            <NavTab id="super" current={tab} label="Supervisor" set={setTab} />
           </div>
-        );
-      }
+        </div>
+      </header>
 
+      <main className="max-w-7xl mx-auto p-4">
+        {tab === "user" && <UserView store={store} member={member} />}
+        {tab === "super" && <SupervisorView store={store} />}
+        <footer className="mt-10 text-xs text-gray-500">
+          <div>AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
+        </footer>
+      </main>
+    </div>
+  );
+}
       const root = ReactDOM.createRoot(document.getElementById("root"));
       root.render(<App />);
     </script>
