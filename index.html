@@ -607,5 +607,57 @@
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     </script>
+{/* Bulk Import */}
+<details className="bg-white rounded-2xl p-4 shadow">
+  <summary className="cursor-pointer font-semibold">Bulk import members (CSV or JSON)</summary>
+  <div className="mt-3 grid gap-3 text-sm">
+    <div>
+      <div className="font-medium mb-1">CSV columns:</div>
+      <code>name, role, member_no, can_drive, notes, inactive, typeIII</code>
+      <div className="text-gray-500">Example can_drive: <code>Rescue 1;Tanker 2</code></div>
+    </div>
+
+    <textarea
+      className="border rounded p-2 w-full h-40 font-mono"
+      placeholder={`name,role,member_no,can_drive,notes,inactive,typeIII
+Alex,EMT,101,Rescue 1,,,
+Bailey,Driver,102,"Rescue 1;Tanker 2","Prefers weekends",,yes`}
+      value={importText}
+      onChange={e=>setImportText(e.target.value)}
+    />
+
+    <div className="flex items-center gap-2">
+      <input type="file" accept=".csv,application/json" onChange={handleFile}/>
+      <button
+        className="px-3 py-1 rounded bg-blue-600 text-white"
+        onClick={async ()=>{
+          let res;
+          if (importText.trim().startsWith("{") || importText.trim().startsWith("[")) {
+            // JSON
+            const users = JSON.parse(importText);
+            res = await fetch(window.__API_BASE__+"/api/users/bulk", {
+              method:"POST", headers:{ "Content-Type":"application/json" },
+              body: JSON.stringify(Array.isArray(users)?{users}:{users})
+            });
+          } else {
+            // CSV text
+            res = await fetch(window.__API_BASE__+"/api/users/bulk", {
+              method:"POST", headers:{ "Content-Type":"text/plain" },
+              body: importText
+            });
+          }
+          const j = await res.json();
+          if (!res.ok) return alert(j.error || "Import failed");
+          alert(`Imported ${j.count} user(s).`);
+          setImportText("");
+          await actions.fetchUsers();
+        }}
+      >Import</button>
+    </div>
+  </div>
+</details>
+
+
+
   </body>
 </html>
