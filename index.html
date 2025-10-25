@@ -2,198 +2,140 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ShiftCommander — Beta</title>
 
-    <!-- Point UI to your Cloudflare Worker API -->
-    <script>
-      window.__API_BASE__ = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-    </script>
+    <!-- Worker API base -->
+    <script>window.__API_BASE__='https://adr-fr-scheduler-api.brian-9ac.workers.dev';</script>
 
-    <!-- Tailwind CSS (CDN) -->
+    <!-- Tailwind / React / Babel -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- React 18 UMD + Babel (to run JSX without a build) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Tiny favicon to avoid 404 -->
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234f46e5'/%3E%3Ctext x='50' y='58' font-size='48' text-anchor='middle' fill='white'%3ESC%3C/text%3E%3C/svg%3E"
-    />
+    <!-- tiny favicon (avoid 404) -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234f46e5'/%3E%3Ctext x='50' y='58' font-size='48' text-anchor='middle' fill='white'%3ESC%3C/text%3E%3C/svg%3E">
 
     <style>
-      #errbox {
-        display: none;
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        background: #fee2e2; color: #7f1d1d;
-        padding: 8px 12px; border-top: 1px solid #fecaca;
-        font: 12px/1.4 ui-sans-serif, system-ui; z-index: 9999;
-      }
-      #errbox code { white-space: pre-wrap }
+      #errbox{display:none;position:fixed;left:0;right:0;bottom:0;background:#fee2e2;color:#7f1d1d;padding:8px 12px;border-top:1px solid #fecaca;font:12px/1.4 ui-sans-serif,system-ui;z-index:9999}
+      #errbox code{white-space:pre-wrap}
     </style>
   </head>
-
   <body class="bg-gray-100 min-h-screen">
     <div id="root"></div>
     <div id="errbox"><strong>JS error:</strong> <code id="errmsg"></code></div>
-
     <script>
-      // Show runtime errors in-page so blank screens never hide the cause
-      addEventListener('error', e => {
-        const box = document.getElementById('errbox'), msg = document.getElementById('errmsg');
-        if (box && msg) { msg.textContent = (e?.message || String(e)); box.style.display = 'block'; }
-      });
-      addEventListener('unhandledrejection', e => {
-        const box = document.getElementById('errbox'), msg = document.getElementById('errmsg');
-        if (box && msg) { msg.textContent = (e?.reason?.message) ? e.reason.message : String(e.reason || e); box.style.display = 'block'; }
-      });
+      addEventListener('error',e=>{const b=errbox,m=errmsg;if(b&&m){m.textContent=e?.message||String(e);b.style.display='block';}});
+      addEventListener('unhandledrejection',e=>{const b=errbox,m=errmsg;if(b&&m){m.textContent=(e?.reason?.message)||String(e.reason||e);b.style.display='block';}});
     </script>
 
-    <!-- Our app code. IMPORTANT: data-presets -->
+    <!-- App -->
     <script type="text/babel" data-presets="react,env">
-      const { useEffect, useMemo, useRef, useState } = React;
-      const API_BASE = window.__API_BASE__ || "";
+      const {useEffect,useMemo,useRef,useState} = React;
+      const API = window.__API_BASE__;
 
-      // ---------- utils ----------
-      const todayISO = () => new Date().toISOString().slice(0,10);
-      const addDays = (date, n) => { const d=new Date(date); d.setDate(d.getDate()+n); return d; };
-      const toISODate = (d) => d.toISOString().slice(0,10);
-      const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth()+1, 0);
-      const rangeDays = (start, end) => { const out=[]; let d=new Date(start); while(d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1);} return out; };
-      function parseISO(s){ const d=new Date(s); return isNaN(d)? null : d; }
-      function* daysBetween(start,end){ const d=new Date(start); while(d<=end){ yield new Date(d); d.setDate(d.getDate()+1); } }
+      // utils
+      const iso = d => new Date(d).toISOString().slice(0,10);
+      const todayISO = () => iso(new Date());
+      const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+      const endOfMonth = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
+      function* daysBetween(start,end){const d=new Date(start);const e=new Date(end);while(d<=e){yield new Date(d);d.setDate(d.getDate()+1)}}
+      const wkMon = d=>{const x=new Date(d),w=(x.getDay()+6)%7;x.setDate(x.getDate()-w);return x};
 
-      // ---------- availability UI ----------
-      const AV = ["unset","prefer","available","no"];
-      const AV_COL = { unset:"", prefer:"bg-green-200 ring-2 ring-green-500", available:"bg-yellow-200 ring-2 ring-yellow-500", no:"bg-red-200 ring-2 ring-red-500" };
-      const cycle = (s)=> AV[(AV.indexOf(s??"unset")+1)%AV.length];
+      // availability states
+      const AV = ['unset','prefer','available','no'];
+      const AV_COL = {unset:'', prefer:'bg-green-200 ring-2 ring-green-500', available:'bg-yellow-200 ring-2 ring-yellow-500', no:'bg-red-200 ring-2 ring-red-500'};
+      const nextAv = s => AV[(AV.indexOf(s??'unset')+1)%AV.length];
 
-      // ---------- member (by number) ----------
+      // auth (member # only)
       function useMember(){
-        const [memberNo, setMemberNo] = useState(localStorage.getItem("__memberNo") || "");
-        const [user, setUser] = useState(null);
+        const [memberNo,setNo] = useState(localStorage.getItem('__memberNo')||'');
+        const [user,setUser] = useState(null);
         async function login(no){
-          try{
-            const r = await fetch(API_BASE + "/api/login", {
-              method:"POST", headers:{ "Content-Type":"application/json" },
-              body: JSON.stringify({ memberNo:no })
-            });
-            if(!r.ok) throw new Error();
-            const j = await r.json();
-            localStorage.setItem("__memberNo", no);
-            setMemberNo(no); setUser(j.user);
-          }catch{
-            alert("Login failed. Is that member # in the DB?");
-          }
+          const r = await fetch(API+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({memberNo:no})});
+          if(!r.ok) throw new Error('Login failed'); const j=await r.json();
+          localStorage.setItem('__memberNo',no); setNo(no); setUser(j.user);
         }
-        function logout(){ localStorage.removeItem("__memberNo"); setMemberNo(""); setUser(null); }
-        useEffect(()=>{ if(memberNo) login(memberNo).catch(()=>logout()); }, []);
-        return { memberNo, user, login, logout };
+        function logout(){localStorage.removeItem('__memberNo');setNo('');setUser(null);}
+        useEffect(()=>{if(memberNo) login(memberNo).catch(()=>logout())},[]);
+        return {memberNo,user,login,logout};
       }
 
-      // ---------- data store ----------
-      function useStore(memberNo) {
-        const [users, setUsers] = useState([]);
-        const [availability, setAvailability] = useState({});
-        const [prefs, setPrefs] = useState({});
-        const [shifts, setShifts] = useState({});
-        const [connected, setConnected] = useState(false);
+      // data store
+      function useStore(memberNo){
+        const [users,setUsers] = useState([]);
+        const [availability,setAvailability] = useState({}); // {userId:{date:{AM,PM}}}
+        const [prefs,setPrefs] = useState({}); // {userId:{prefer24s,notes}}
+        const [shifts,setShifts] = useState({}); // {date:{AM:{assignees,status},PM:{...}}}
+        const [connected,setConnected] = useState(false);
         const wsRef = useRef(null);
 
-        async function fetchUsers(){ const r = await fetch(API_BASE + "/api/users"); setUsers(await r.json()); }
-        async function fetchWindow(start, end){
-          const r = await fetch(API_BASE + "/api/state?start="+start+"&end="+end);
-          const j = await r.json();
+        async function fetchUsers(){ const r=await fetch(API+'/api/users'); setUsers(await r.json()); }
+        async function fetchWindow(start,end){
+          const r=await fetch(API+`/api/state?start=${start}&end=${end}`); const j=await r.json();
           setShifts(j.shifts||{}); setAvailability(j.availability||{}); setPrefs(j.prefs||{});
         }
-
-        function openSocket(){
+        function bootSocket(){
           try{
-            const u = new URL(API_BASE);
-            u.protocol = (u.protocol==="https:")?"wss:":"ws:"; u.pathname="/ws"; u.search=""; u.hash="";
-            const ws = new WebSocket(u.toString()); wsRef.current = ws;
-            ws.addEventListener("open", ()=> setConnected(true));
-            ws.addEventListener("close", ()=> setConnected(false));
-            ws.addEventListener("message", ()=>{
-              const start = toISODate(new Date()); const end = toISODate(addDays(new Date(), 60));
-              fetchWindow(start,end); fetchUsers();
-            });
+            const u=new URL(API); u.protocol=(u.protocol==='https:')?'wss:':'ws:'; u.pathname='/ws';
+            const ws=new WebSocket(u); wsRef.current=ws;
+            ws.addEventListener('open',()=>setConnected(true));
+            ws.addEventListener('close',()=>setConnected(false));
+            ws.addEventListener('message',()=>{ const s=todayISO(), e=iso(addDays(new Date(),60)); fetchWindow(s,e); fetchUsers(); });
           }catch{}
         }
 
-        // optimistic UI + 3s auto-commit
-        const pending = useRef(new Map());
-        async function setAvailabilityCell(userId, date, half, state){
-          setAvailability(prev => {
-            const p = { ...(prev[userId]||{}) };
-            const v = { AM:"unset", PM:"unset", ...(p[date]||{}) }; v[half]=state; p[date]=v;
-            return { ...prev, [userId]: p };
+        // optimistic write with 3s debounce/auto-commit
+        const timers = useRef(new Map());
+        function setAvail(userId,date,half,state){
+          setAvailability(prev=>{
+            const u={...(prev[userId]||{})}; const v={AM:'unset',PM:'unset',...(u[date]||{})}; v[half]=state; u[date]=v;
+            return {...prev,[userId]:u};
           });
-          const key = userId+"|"+date+"|"+half;
-          if (pending.current.get(key)) clearTimeout(pending.current.get(key));
-          pending.current.set(key, setTimeout(async ()=>{
-            await fetch(API_BASE + "/api/availability", {
-              method:"POST",
-              headers:{ "Content-Type":"application/json", "x-member": memberNo||"" },
-              body: JSON.stringify({ userId, date, half, state })
-            });
-            pending.current.delete(key);
-          }, 3000));
+          const key=`${userId}|${date}|${half}`;
+          if(timers.current.get(key)) clearTimeout(timers.current.get(key));
+          timers.current.set(key,setTimeout(async()=>{
+            await fetch(API+'/api/availability',{method:'POST',headers:{'Content-Type':'application/json','x-member':memberNo||''},body:JSON.stringify({userId,date,half,state})});
+            timers.current.delete(key);
+          },3000));
+        }
+        async function savePrefs(userId,patch){
+          await fetch(API+'/api/prefs',{method:'POST',headers:{'Content-Type':'application/json','x-member':memberNo||''},body:JSON.stringify({userId,...patch})});
         }
 
-        async function savePrefs(userId, patch){
-          await fetch(API_BASE + "/api/prefs", {
-            method:"POST", headers:{ "Content-Type":"application/json", "x-member": memberNo||"" },
-            body: JSON.stringify({ userId, ...patch })
-          });
-        }
-
-        useEffect(()=>{
-          fetchUsers();
-          const start = toISODate(new Date()); const end = toISODate(addDays(new Date(), 60));
-          fetchWindow(start, end);
-          openSocket();
-          return ()=> wsRef.current?.close();
-        },[]);
-
-        return { users, availability, prefs, shifts, connected,
-          actions:{ setAvailabilityCell, savePrefs, fetchUsers, fetchWindow } };
+        useEffect(()=>{ fetchUsers(); fetchWindow(todayISO(), iso(addDays(new Date(),60))); bootSocket(); return ()=>wsRef.current?.close(); },[]);
+        return {users,availability,prefs,shifts,connected,actions:{setAvail,savePrefs,fetchUsers,fetchWindow}};
       }
 
-      // ---------- UI primitives ----------
-      function Month({ year, month, renderCell, headerRight }){
-        const first = new Date(year, month, 1);
-        const last = endOfMonth(first);
-        const days = rangeDays(first, last);
-        const startPad = (first.getDay()+6)%7; // Monday first
-        const total = Math.ceil((startPad + days.length)/7)*7;
-        const cells = Array.from({length:total}, (_,i)=>{ const idx=i-startPad; return (idx>=0 && idx<days.length)? days[idx]: null; });
+      // primitive components
+      const AvBtn = ({value,onChange,label}) =>
+        <button className={'w-10 h-8 rounded text-xs font-medium border border-gray-300 '+(AV_COL[value||'unset']||'')}
+                onClick={()=>onChange(nextAv(value))} title={`${label}: ${value||'unset'}`}>{label}</button>;
 
+      function Month({year,month,renderCell}){
+        const first=new Date(year,month,1), last=endOfMonth(first);
+        const pad=(first.getDay()+6)%7, days=[...Array(last.getDate())].map((_,i)=>new Date(year,month,i+1));
+        const total=Math.ceil((pad+days.length)/7)*7;
+        const cells=[...Array(total)].map((_,i)=>{const idx=i-pad;return (idx>=0&&idx<days.length)?days[idx]:null;});
         return (
           <div className="bg-white rounded-2xl shadow p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">{first.toLocaleString(undefined,{month:"long",year:"numeric"})}</h3>
-              {headerRight}
+              <h3 className="text-lg font-semibold">{first.toLocaleString(undefined,{month:'long',year:'numeric'})}</h3>
             </div>
             <div className="grid grid-cols-7 gap-2 text-xs font-semibold text-gray-500">
-              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=> <div key={d} className="text-center">{d}</div>)}
+              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=><div key={d} className="text-center">{d}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-2 mt-2">
-              {cells.map((d,i)=> (
-                <div key={i} className={"min-h-[86px] border rounded-xl p-1 "+(d?"bg-gray-50":"bg-transparent border-none")}>
-                  {d && (
-                    <div className="flex flex-col gap-1 h-full">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">{d.getDate()}</span>
-                        <span className={"w-2 h-2 rounded-full "+(toISODate(d)===todayISO()?"bg-blue-500":"bg-transparent")} />
-                      </div>
-                      <div className="flex-1">{renderCell(d)}</div>
+              {cells.map((d,i)=>(
+                <div key={i} className={'min-h-[86px] border rounded-xl p-1 '+(d?'bg-gray-50':'bg-transparent border-none')}>
+                  {d && <div className="flex flex-col gap-1 h-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">{d.getDate()}</span>
+                      <span className={'w-2 h-2 rounded-full '+(iso(d)===todayISO()?'bg-blue-500':'bg-transparent')} />
                     </div>
-                  )}
+                    <div className="flex-1">{renderCell(d)}</div>
+                  </div>}
                 </div>
               ))}
             </div>
@@ -201,84 +143,56 @@
         );
       }
 
-      const AvBtn = ({ value, onChange, label }) => (
-        <button
-          className={"w-10 h-8 rounded text-xs font-medium border border-gray-300 " + (AV_COL[value || "unset"] || "")}
-          onClick={()=> onChange(cycle(value))}
-          title={`${label}: ${value||"unset"}`}
-        >
-          {label}
-        </button>
-      );
-
-      // ---------- User view ----------
-      function UserView({ store, member }){
-        const { users, availability, prefs, actions } = store;
-        const [monthsAhead, setMonthsAhead] = useState(2);
-        const [offset, setOffset] = useState(0);
+      // USER VIEW
+      function UserView({store,member}){
+        const {users,availability,prefs,actions}=store;
+        const [monthsShown,setMonths]=useState(2);
+        const [offset,setOffset]=useState(0);
 
         const me = useMemo(()=>{
-          if (!users.length) return null;
-          if (!member.user) return users[0];
-          return users.find(u=> u.id === member.user.id) || users[0];
-        },[users, member.user]);
+          if(!users.length) return null;
+          if(!member.user) return users[0];
+          return users.find(u=>u.id===member.user.id)||users[0];
+        },[users,member.user]);
 
-        const start = useMemo(()=> new Date(new Date().getFullYear(), new Date().getMonth()+offset, 1), [offset]);
-        const months = useMemo(()=> Array.from({length: monthsAhead}, (_,i)=>{
-          const d = new Date(start.getFullYear(), start.getMonth()+i, 1);
-          return { year:d.getFullYear(), month:d.getMonth() };
-        }), [monthsAhead, start]);
+        const start = useMemo(()=>new Date(new Date().getFullYear(), new Date().getMonth()+offset, 1),[offset]);
+        const months = useMemo(()=>[...Array(monthsShown)].map((_,i)=>{const d=new Date(start);d.setMonth(d.getMonth()+i);return {year:d.getFullYear(),month:d.getMonth()};}),[monthsShown,start]);
 
-        const av = me ? (availability[me.id] || {}) : {};
-        const myPrefs = me ? (prefs[me.id] || { prefer24s:false, notes:"" }) : { prefer24s:false, notes:"" };
-        const parsedNotes = (()=>{ try{ return JSON.parse(myPrefs.notes||"{}"); }catch{ return {}; }})();
+        const av = me?(availability[me.id]||{}):{};
+        const myPrefs = me?(prefs[me.id]||{prefer24s:false,notes:''}):{prefer24s:false,notes:''};
+        const notes = (()=>{try{return JSON.parse(myPrefs.notes||'{}')}catch{return{}}})();
+        const avoid=new Set(notes.avoid||[]); const inactive=!!notes.inactive; const typeIII=!!notes.typeIII;
+        const preCommit = d => ((d - new Date())/86400000)>28;
 
-        const avoid = new Set(parsedNotes.avoid || []);
-        const typeIII = !!parsedNotes.typeIII;
-        const inactive = !!parsedNotes.inactive;
-        const preCommit = (d)=> ((d - new Date())/(1000*60*60*24)) > 28;
+        // local patch for snappy UI
+        const patchPrefs = patch => { if(!me) return; store.prefs={...store.prefs,[me.id]:{...myPrefs,...patch}}; };
+        const setPrefer24s = on => (patchPrefs({prefer24s:!!on}), actions.savePrefs(me.id,{prefer24s:!!on}));
+        const setTypeIII = on => { const n=JSON.stringify({...notes,typeIII:!!on}); patchPrefs({notes:n}); actions.savePrefs(me.id,{notes:n}); };
+        const setAvoid   = (id,on)=>{const arr=[...avoid]; const next=on?[...new Set(arr.concat(id))]:arr.filter(x=>x!==id); const n=JSON.stringify({...notes,avoid:next}); patchPrefs({notes:n}); actions.savePrefs(me.id,{notes:n});};
+        const setInactive= on => { const n=JSON.stringify({...notes,inactive:!!on}); patchPrefs({notes:n}); actions.savePrefs(me.id,{notes:n}); };
 
-        // optimistic prefs -> update local cache fast
-        function patchPrefsLocally(patch){
-          if (!me) return;
-          const next = { ...myPrefs, ...patch };
-          store.prefs = { ...store.prefs, [me.id]: next }; // visual feedback
-        }
-        async function setPrefer24s(on){ if(!me) return; patchPrefsLocally({prefer24s:!!on}); await actions.savePrefs(me.id,{prefer24s:!!on}); }
-        async function setTypeIII(on){ if(!me) return; const notes=JSON.stringify({ ...parsedNotes, typeIII:!!on}); patchPrefsLocally({notes}); await actions.savePrefs(me.id,{notes}); }
-        async function setAvoid(uid,on){ if(!me) return; const arr=[...avoid]; const next=on?[...new Set(arr.concat(uid))]:arr.filter(x=>x!==uid); const notes=JSON.stringify({...parsedNotes,avoid:next}); patchPrefsLocally({notes}); await actions.savePrefs(me.id,{notes}); }
-        async function setInactive(on){ if(!me) return; const notes=JSON.stringify({ ...parsedNotes, inactive:!!on}); patchPrefsLocally({notes}); await actions.savePrefs(me.id,{notes}); }
-
-        // -------- Bulk tools state + helpers
-        const [bulk, setBulk] = useState({ am:true, pm:true, state:"available" });
+        // bulk tools (date range + weekly pattern)
+        const [bulk,setBulk]=useState({am:true,pm:true,state:'available',from:'',until:''});
         async function applyBulk(){
-          if (!me) return;
-          if(!bulk.from){ alert("Pick a 'from' date"); return; }
-          const from = parseISO(bulk.from); const until = bulk.until? parseISO(bulk.until): null;
-          const end = until || addDays(from, 180); // default 6 months
-          for (const d of daysBetween(from,end)){
-            const k = toISODate(d);
-            if (bulk.am) await actions.setAvailabilityCell(me.id,k,"AM",bulk.state);
-            if (bulk.pm) await actions.setAvailabilityCell(me.id,k,"PM",bulk.state);
+          if(!me) return; if(!bulk.from) return alert('Pick a start date');
+          const start=new Date(bulk.from), end=bulk.until?new Date(bulk.until):addDays(start,180);
+          for(const d of daysBetween(start,end)){ const k=iso(d);
+            if(bulk.am) actions.setAvail(me.id,k,'AM',bulk.state);
+            if(bulk.pm) actions.setAvail(me.id,k,'PM',bulk.state);
           }
-          alert("Bulk set complete.");
+          alert('Bulk set complete.');
         }
         async function applyPattern(){
-          if (!me) return;
-          if(!bulk.days?.length || !bulk.repeatUntil || !bulk.from){ alert("Pick from date, days, and repeat-until"); return; }
-          const from = parseISO(bulk.from); const end = parseISO(bulk.repeatUntil);
-          const want = new Set(bulk.days); // 0=Mon..6=Sun
-          for (const d of daysBetween(from,end)){
-            const weekday = (d.getDay()+6)%7; // normalize to Mon=0
-            if (!want.has(weekday)) continue;
-            const k = toISODate(d);
-            if (bulk.am) await actions.setAvailabilityCell(me.id,k,"AM",bulk.state);
-            if (bulk.pm) await actions.setAvailabilityCell(me.id,k,"PM",bulk.state);
+          if(!me) return; if(!bulk.from||!bulk.repeatUntil||!(bulk.days?.length)) return alert('Pick start, days, and repeat-until');
+          const start=new Date(bulk.from), end=new Date(bulk.repeatUntil), want=new Set(bulk.days);
+          for(const d of daysBetween(start,end)){ const w=(d.getDay()+6)%7; if(!want.has(w)) continue; const k=iso(d);
+            if(bulk.am) actions.setAvail(me.id,k,'AM',bulk.state);
+            if(bulk.pm) actions.setAvail(me.id,k,'PM',bulk.state);
           }
-          alert("Pattern applied.");
+          alert('Pattern applied.');
         }
 
-        if (!me) return <div className="text-sm text-gray-500">Loading…</div>;
+        if(!me) return <div className="text-sm text-gray-500">Loading…</div>;
 
         return (
           <div className="space-y-4">
@@ -292,126 +206,76 @@
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o-1)}>◀ Prev</button>
-              <label className="text-sm">Months shown</label>
-              <input type="number" min="1" max="6" className="w-16 border rounded px-2 py-1" value={monthsAhead} onChange={e=> setMonthsAhead(Number(e.target.value||1))} />
-              <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o+1)}>Next ▶</button>
+              <button className="px-3 py-1 rounded bg-white border" onClick={()=>setOffset(o=>o-1)}>◀ Prev</button>
+              <label className="text-sm">Months</label>
+              <input type="number" min="1" max="6" className="w-16 border rounded px-2 py-1" value={monthsShown} onChange={e=>setMonths(Number(e.target.value||1))}/>
+              <button className="px-3 py-1 rounded bg-white border" onClick={()=>setOffset(o=>o+1)}>Next ▶</button>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {months.map(({year, month})=> (
-                <Month key={year+'-'+month} year={year} month={month}
-                  renderCell={(d)=>{
-                    const k = toISODate(d);
-                    const v = av[k] || { AM:"unset", PM:"unset" };
-                    const pc = preCommit(d);
-                    const disable = inactive;
-                    const showAM = disable ? "no" : v.AM;
-                    const showPM = disable ? "no" : v.PM;
-                    return (
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <AvBtn label="AM" value={showAM} onChange={(s)=> !disable && actions.setAvailabilityCell(me.id, k, "AM", s)} />
-                          <AvBtn label="PM" value={showPM} onChange={(s)=> !disable && actions.setAvailabilityCell(me.id, k, "PM", s)} />
-                        </div>
-                        {pc && <span className="text-[10px] uppercase px-2 py-1 rounded-full bg-purple-100 border border-purple-300">Pre-commit</span>}
+              {months.map(({year,month})=>
+                <Month key={year+'-'+month} year={year} month={month} renderCell={d=>{
+                  const k=iso(d), v=av[k]||{AM:'unset',PM:'unset'}, pc=preCommit(d), disabled=inactive;
+                  return (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <AvBtn label="AM" value={disabled?'no':v.AM} onChange={s=>!disabled&&actions.setAvail(me.id,k,'AM',s)}/>
+                        <AvBtn label="PM" value={disabled?'no':v.PM} onChange={s=>!disabled&&actions.setAvail(me.id,k,'PM',s)}/>
                       </div>
-                    );
-                  }}
-                />
-              ))}
+                      {pc && <span className="text-[10px] uppercase px-2 py-1 rounded-full bg-purple-100 border border-purple-300">Pre-commit</span>}
+                    </div>
+                  );
+                }}/>
+              )}
             </div>
 
             <details className="rounded-2xl bg-white p-4 shadow">
-              <summary className="cursor-pointer font-semibold">Preferences</summary>
+              <summary className="cursor-pointer font-semibold">Preferences & bulk tools</summary>
               <div className="mt-3 grid gap-3">
-                <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" checked={!!myPrefs.prefer24s} onChange={e=> setPrefer24s(e.target.checked)} />
-                  Prefer 24s
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" checked={!!typeIII} onChange={e=> setTypeIII(e.target.checked)} />
-                  Type III driver approved
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" checked={!!inactive} onChange={e=> setInactive(e.target.checked)} />
-                  Inactive (block new scheduling)
-                </label>
+                <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!myPrefs.prefer24s} onChange={e=>setPrefer24s(e.target.checked)}/> Prefer 24s</label>
+                <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!typeIII} onChange={e=>setTypeIII(e.target.checked)}/> Type III driver approved</label>
+                <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!inactive} onChange={e=>setInactive(e.target.checked)}/> Inactive (block new scheduling)</label>
 
-                {/* --- Bulk tools ---------------------------------------------------- */}
                 <div className="mt-4 border-t pt-3">
-                  <div className="text-sm font-semibold mb-2">Bulk set availability</div>
+                  <div className="text-sm font-semibold mb-2">Bulk set (date range)</div>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="text-sm">From date
-                      <input type="date" className="mt-1 w-full border rounded px-2 py-1"
-                        onChange={e=> setBulk(s=> ({...s, from:e.target.value}))}/>
-                    </label>
-                    <label className="text-sm">Until date (optional)
-                      <input type="date" className="mt-1 w-full border rounded px-2 py-1"
-                        onChange={e=> setBulk(s=> ({...s, until:e.target.value}))}/>
-                    </label>
+                    <label className="text-sm">From <input type="date" className="mt-1 w-full border rounded px-2 py-1" onChange={e=>setBulk(s=>({...s,from:e.target.value}))}/></label>
+                    <label className="text-sm">Until <input type="date" className="mt-1 w-full border rounded px-2 py-1" onChange={e=>setBulk(s=>({...s,until:e.target.value}))}/></label>
                   </div>
-
                   <div className="mt-2 flex flex-wrap gap-3 items-center text-sm">
                     <span>Set to:</span>
-                    <label className="inline-flex items-center gap-1">
-                      <input type="radio" name="bulkState" defaultChecked
-                        onChange={()=> setBulk(s=> ({...s, state:"available"}))}/> Available
-                    </label>
-                    <label className="inline-flex items-center gap-1">
-                      <input type="radio" name="bulkState"
-                        onChange={()=> setBulk(s=> ({...s, state:"no"}))}/> Do Not
-                    </label>
-
+                    <label className="inline-flex items-center gap-1"><input type="radio" name="bstate" defaultChecked onChange={()=>setBulk(s=>({...s,state:'available'}))}/> Available</label>
+                    <label className="inline-flex items-center gap-1"><input type="radio" name="bstate" onChange={()=>setBulk(s=>({...s,state:'no'}))}/> Do Not</label>
                     <span className="ml-4">Half-days:</span>
-                    <label className="inline-flex items-center gap-1">
-                      <input type="checkbox" defaultChecked
-                        onChange={e=> setBulk(s=> ({...s, am:e.target.checked}))}/> AM
-                    </label>
-                    <label className="inline-flex items-center gap-1">
-                      <input type="checkbox" defaultChecked
-                        onChange={e=> setBulk(s=> ({...s, pm:e.target.checked}))}/> PM
-                    </label>
-
-                    <button className="ml-auto px-3 py-1 rounded bg-emerald-600 text-white"
-                      onClick={applyBulk}>Apply</button>
+                    <label className="inline-flex items-center gap-1"><input type="checkbox" defaultChecked onChange={e=>setBulk(s=>({...s,am:e.target.checked}))}/> AM</label>
+                    <label className="inline-flex items-center gap-1"><input type="checkbox" defaultChecked onChange={e=>setBulk(s=>({...s,pm:e.target.checked}))}/> PM</label>
+                    <button className="ml-auto px-3 py-1 rounded bg-emerald-600 text-white" onClick={applyBulk}>Apply</button>
                   </div>
 
-                  {/* Optional weekly pattern */}
                   <details className="mt-3">
                     <summary className="cursor-pointer text-sm font-medium">Weekly pattern (repeat until date)</summary>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
                       <div className="flex flex-wrap gap-2 text-sm">
-                        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d,i)=>(
+                        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>
                           <label key={d} className="inline-flex items-center gap-1 bg-gray-50 border rounded px-2 py-1">
-                            <input type="checkbox" onChange={e=> setBulk(s=>{
-                              const days=new Set(s.days||[]);
-                              e.target.checked? days.add(i): days.delete(i);
-                              return {...s, days:[...days]};
-                            })}/> {d}
+                            <input type="checkbox" onChange={e=>setBulk(s=>{const ds=new Set(s.days||[]); e.target.checked?ds.add(i):ds.delete(i); return {...s,days:[...ds]};})}/> {d}
                           </label>
-                        ))}
+                        )}
                       </div>
-                      <label className="text-sm">Repeat until
-                        <input type="date" className="mt-1 w-full border rounded px-2 py-1"
-                          onChange={e=> setBulk(s=> ({...s, repeatUntil:e.target.value}))}/>
-                      </label>
+                      <label className="text-sm">Repeat until <input type="date" className="mt-1 w-full border rounded px-2 py-1" onChange={e=>setBulk(s=>({...s,repeatUntil:e.target.value}))}/></label>
                     </div>
-                    <button className="mt-2 px-3 py-1 rounded bg-blue-600 text-white"
-                      onClick={applyPattern}>Apply pattern</button>
+                    <button className="mt-2 px-3 py-1 rounded bg-blue-600 text-white" onClick={applyPattern}>Apply pattern</button>
                   </details>
                 </div>
 
-                {/* Avoid list */}
                 <div className="mt-4">
                   <div className="text-sm font-medium mb-1">Avoid co-workers (backup list)</div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {users.filter(u=> me && u.id!==me.id).map(u=> (
+                    {users.filter(u=>me&&u.id!==me.id).map(u=>
                       <label key={u.id} className="inline-flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1">
-                        <input type="checkbox" checked={avoid.has(u.id)} onChange={e=> setAvoid(u.id, e.target.checked)} />
-                        {u.name}
+                        <input type="checkbox" checked={avoid.has(u.id)} onChange={e=>setAvoid(u.id,e.target.checked)}/> {u.name}
                       </label>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -420,244 +284,248 @@
         );
       }
 
-      // ---------- Supervisor week glance ----------
-      function SmallWeekBoard({ store }) {
-        const usersById = useMemo(()=>Object.fromEntries(store.users.map(u=>[u.id,u])), [store.users]);
-        const now = new Date(); const monday = new Date(now);
-        const day = (monday.getDay()+6)%7; monday.setDate(monday.getDate()-day);
-        const days=[]; for(let i=0;i<7;i++){ const d=new Date(monday); d.setDate(d.getDate()+i); days.push(d); }
+      // Supervisor helpers
+      function parseNotes(p){ try{return JSON.parse(p?.notes||'{}')}catch{return{}} }
+      function isInactive(p){ return !!parseNotes(p).inactive }
 
-        function color(slot){
-          if(!slot?.assignees?.length) return "bg-red-100 border-red-300";
-          return slot.status==="approved" || slot.status==="locked" ? "bg-green-100 border-green-300" : "bg-yellow-100 border-yellow-300";
+      // candidate filter (prefer/available and not inactive)
+      function candidatesForDate(store, dateISO, half){
+        const out=[];
+        for(const u of store.users){
+          const pf = store.prefs[u.id]||{};
+          if(isInactive(pf)) continue;
+          const av = store.availability[u.id]?.[dateISO]?.[half];
+          if(av==='prefer'||av==='available') out.push(u);
+        }
+        return out;
+      }
+
+      // Week / Month glance cards with 2 seats + lock + committed-only toggle
+      function GlanceBoard({store}){
+        const [mode,setMode]=useState('week'); // 'week' | 'month'
+        const [cursor,setCursor]=useState(new Date()); // top-left anchor
+        const [committedOnly,setCommittedOnly]=useState(true);
+
+        useEffect(()=>{ // ensure data window
+          const start = mode==='week'? iso(wkMon(cursor)) : iso(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
+          const end   = mode==='week'? iso(addDays(wkMon(cursor),6)) : iso(endOfMonth(new Date(cursor.getFullYear(),cursor.getMonth(),1)));
+          store.actions.fetchWindow(start,end);
+        },[mode,cursor]);
+
+        function nav(dir){
+          setCursor(c=>{
+            const d=new Date(c);
+            if(mode==='week') d.setDate(d.getDate()+7*dir);
+            else d.setMonth(d.getMonth()+dir);
+            return d;
+          });
         }
 
-        async function toggleLock(dateISO, half, locked){
-          await fetch(window.__API_BASE__+"/api/shift/status",{
-            method:"POST", headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ date:dateISO, half, status: locked ? "locked" : "proposed" })
-          });
-          // server WS will refresh everyone
+        const days = useMemo(()=>{
+          if(mode==='week'){
+            const start=wkMon(cursor); return [...Array(7)].map((_,i)=>addDays(start,i));
+          }else{
+            const first=new Date(cursor.getFullYear(),cursor.getMonth(),1);
+            const last=endOfMonth(first); return [...Array(last.getDate())].map((_,i)=>new Date(first.getFullYear(),first.getMonth(),i+1));
+          }
+        },[mode,cursor]);
+
+        const usersById = useMemo(()=>Object.fromEntries(store.users.map(u=>[u.id,u])),[store.users]);
+
+        async function setLock(dateISO,half,locked){
+          await fetch(API+'/api/shift/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:dateISO,half,status:locked?'locked':'proposed'})});
         }
 
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {days.map(d=>{
-              const k = toISODate(d);
-              const s = store.shifts[k] || { AM:{assignees:[],status:"unassigned"}, PM:{assignees:[],status:"unassigned"} };
-              return (
-                <div key={k} className="p-3 border rounded-xl">
-                  <div className="text-sm font-semibold mb-1">{d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</div>
-                  {["AM","PM"].map(h=>{
-                    const slot=s[h]; const locked = slot.status==="locked";
-                    return (
-                      <div key={h} className={"mt-1 p-2 rounded-lg border flex items-center justify-between "+color(slot)}>
-                        <div className="text-xs">
-                          <div className="font-medium">{h}</div>
-                          <div className="truncate">{slot.assignees?.map(id=>usersById[id]?.name).join(", ") || "Unassigned"}</div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="font-semibold">At-a-glance</div>
+              <div className="ml-2 text-sm">
+                <label className="mr-2"><input type="radio" name="mode" checked={mode==='week'} onChange={()=>setMode('week')}/> Week</label>
+                <label><input type="radio" name="mode" checked={mode==='month'} onChange={()=>setMode('month')}/> Month</label>
+              </div>
+              <div className="ml-4 text-sm">
+                <label className="inline-flex items-center gap-1"><input type="checkbox" checked={committedOnly} onChange={e=>setCommittedOnly(e.target.checked)}/> Committed only</label>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <button className="px-2 py-1 rounded border" onClick={()=>nav(-1)}>◀ Prev</button>
+                <button className="px-2 py-1 rounded border" onClick={()=>nav(+1)}>Next ▶</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {days.map(d=>{
+                const k=iso(d); const s=store.shifts[k]||{AM:{assignees:[],status:'unassigned'},PM:{assignees:[],status:'unassigned'}};
+                return (
+                  <div key={k} className="p-3 border rounded-xl bg-white">
+                    <div className="text-sm font-semibold mb-1">{d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</div>
+                    {['AM','PM'].map(h=>{
+                      const slot=s[h]||{assignees:[],status:'unassigned'};
+                      const locked = slot.status==='locked';
+                      const assignees = (slot.assignees||[]).map(id=>usersById[id]?.name).filter(Boolean);
+                      const candidates = committedOnly? [] : candidatesForDate(store,k,h).map(u=>u.name);
+                      return (
+                        <div key={h} className="mt-2 p-2 rounded-lg border">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs font-medium">{h}</div>
+                            <label className="text-[11px] inline-flex items-center gap-1">
+                              <input type="checkbox" checked={locked} onChange={e=>setLock(k,h,e.target.checked)}/> Lock
+                            </label>
+                          </div>
+                          <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
+                            {[0,1].map(i=>
+                              <div key={i} className="px-2 py-1 rounded bg-gray-50 border">
+                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Seat {i+1}</div>
+                                <div className="truncate">{assignees[i]||'—'}</div>
+                              </div>
+                            )}
+                          </div>
+                          {!committedOnly && (
+                            <details className="mt-1">
+                              <summary className="text-[11px] cursor-pointer">Candidates</summary>
+                              <div className="text-[11px] text-gray-700">{candidates.join(', ')||'—'}</div>
+                            </details>
+                          )}
                         </div>
-                        <label className="text-[11px] inline-flex items-center gap-1">
-                          <input type="checkbox" checked={locked} onChange={e=>toggleLock(k,h,e.target.checked)}/> Lock
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       }
 
-      // ---------- Supervisor view ----------
-      function SupervisorView({ store }){
-        const users = Array.isArray(store.users) ? store.users : [];
-        const prefs = store.prefs || {};
-        const actions = store.actions;
+      // Bulk import panel
+      function BulkImportPanel({onImported}){
+        const [text,setText]=useState('');
+        async function handleFile(e){
+          const f=e.target.files?.[0]; if(!f) return;
+          const t=await f.text(); setText(t);
+        }
+        async function runImport(){
+          let res;
+          try{
+            if(text.trim().startsWith('[')||text.trim().startsWith('{')){
+              // JSON
+              const users = JSON.parse(text);
+              res = await fetch(API+'/api/users/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Array.isArray(users)?{users}:{users})});
+            }else{
+              // CSV
+              res = await fetch(API+'/api/users/bulk',{method:'POST',headers:{'Content-Type':'text/plain'},body:text});
+            }
+            const j=await res.json();
+            if(!res.ok) throw new Error(j.error||'Import failed');
+            alert(`Imported ${j.count} user(s).`);
+            setText(''); onImported?.();
+          }catch(err){ alert(err.message||String(err)); }
+        }
+        return (
+          <details className="bg-white rounded-2xl p-4 shadow">
+            <summary className="cursor-pointer font-semibold">Bulk import members (CSV or JSON)</summary>
+            <div className="mt-3 grid gap-3 text-sm">
+              <div>
+                <div className="font-medium mb-1">CSV columns (header row optional):</div>
+                <code className="block">name, role, member_no, can_drive, notes, inactive, typeIII</code>
+                <div className="text-gray-500">Example <em>can_drive</em>: <code>Rescue 1;Tanker 2</code></div>
+              </div>
+              <textarea className="border rounded p-2 w-full h-40 font-mono" placeholder={`name,role,member_no,can_drive,notes,inactive,typeIII
+Alex,EMT,101,Rescue 1,,,
+Bailey,Driver,102,"Rescue 1;Tanker 2","Prefers weekends",,yes`} value={text} onChange={e=>setText(e.target.value)}/>
+              <div className="flex items-center gap-2">
+                <input type="file" accept=".csv,application/json" onChange={handleFile}/>
+                <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={runImport}>Import</button>
+              </div>
+            </div>
+          </details>
+        );
+      }
 
-        const [name, setName] = useState("");
-        const [role, setRole] = useState("EMT");
-        const [memberNo, setMemberNo] = useState("");
-
+      // SUPERVISOR VIEW
+      function SupervisorView({store}){
+        const [name,setName]=useState(''); const [role,setRole]=useState('EMT'); const [memberNo,setMemberNo]=useState('');
         async function addUser(){
-          if (!name || !role) return alert("Name and role required.");
-          const body = { name, role, can_drive: [], notes: "", member_no: memberNo || undefined };
-          await fetch(window.__API_BASE__ + "/api/users", {
-            method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body)
-          });
-          setName(""); setRole("EMT"); setMemberNo("");
-          await actions.fetchUsers();
+          if(!name||!role) return alert('Name and role required.');
+          await fetch(API+'/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,role,can_drive:[],notes:'',member_no:memberNo||undefined})});
+          setName(''); setRole('EMT'); setMemberNo(''); store.actions.fetchUsers();
         }
-
-        function userInactive(u){
-          const p = prefs[u.id] || {};
-          try { return !!JSON.parse(p.notes||"{}").inactive; } catch { return false; }
+        const userInactive=u=>isInactive(store.prefs[u.id]||{});
+        async function setInactive(u,on){
+          const p=store.prefs[u.id]||{notes:''}; const n={...parseNotes(p),inactive:!!on};
+          await store.actions.savePrefs(u.id,{notes:JSON.stringify(n)});
         }
-
-        async function setInactive(u, on){
-          const p = prefs[u.id] || { notes:"" };
-          let notes = {};
-          try { notes = JSON.parse(p.notes||"{}"); } catch {}
-          notes.inactive = !!on;
-          await actions.savePrefs(u.id, { notes: JSON.stringify(notes) });
-        }
-
         return (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl p-4 shadow">
-              <div className="font-semibold mb-2">Add Member</div>
+              <div className="font-semibold mb-2">Add member</div>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                <input className="border rounded px-2 py-1" placeholder="Name" value={name} onChange={e=> setName(e.target.value)} />
-                <select className="border rounded px-2 py-1" value={role} onChange={e=> setRole(e.target.value)}>
-                  <option>EMT</option><option>Driver</option><option>ALS</option>
-                </select>
-                <input className="border rounded px-2 py-1" placeholder="Member #" value={memberNo} onChange={e=> setMemberNo(e.target.value)} />
+                <input className="border rounded px-2 py-1" placeholder="Name" value={name} onChange={e=>setName(e.target.value)}/>
+                <select className="border rounded px-2 py-1" value={role} onChange={e=>setRole(e.target.value)}><option>EMT</option><option>Driver</option><option>ALS</option></select>
+                <input className="border rounded px-2 py-1" placeholder="Member #" value={memberNo} onChange={e=>setMemberNo(e.target.value)}/>
                 <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={addUser}>Add</button>
               </div>
             </div>
 
             <div className="bg-white rounded-2xl p-4 shadow">
-              <div className="font-semibold mb-2">Roster</div>
-              <div className="divide-y">
-                {users.map(u=> (
-                  <div key={u.id} className="py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={"w-2 h-2 rounded-full "+(userInactive(u)?"bg-red-500":"bg-emerald-500")} />
-                      <div className="font-medium">{u.name}</div>
-                      <div className="text-xs text-gray-500">{u.role}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm inline-flex items-center gap-2">
-                        <input type="checkbox" checked={userInactive(u)} onChange={e=> setInactive(u, e.target.checked)} />
-                        Inactive
-                      </label>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <GlanceBoard store={store}/>
             </div>
 
             <div className="bg-white rounded-2xl p-4 shadow">
-              <div className="font-semibold mb-2">Week at a glance</div>
-              <SmallWeekBoard store={store} />
+              <div className="font-semibold mb-2">Roster</div>
+              <div className="divide-y">
+                {store.users.map(u=>
+                  <div key={u.id} className="py-2 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={'w-2 h-2 rounded-full '+(userInactive(u)?'bg-red-500':'bg-emerald-500')}></div>
+                      <div className="font-medium">{u.name}</div>
+                      <div className="text-xs text-gray-500">{u.role}</div>
+                    </div>
+                    <label className="text-sm inline-flex items-center gap-2"><input type="checkbox" checked={userInactive(u)} onChange={e=>setInactive(u,e.target.checked)}/> Inactive</label>
+                  </div>
+                )}
+              </div>
             </div>
+
+            <BulkImportPanel onImported={()=>store.actions.fetchUsers()} />
           </div>
         );
       }
 
-      // ---------- App ----------
-      function NavTab({ id, current, label, set }) {
-        const active = current === id;
-        return (
-          <button
-            type="button"
-            className={
-              "px-4 py-2 rounded-2xl text-sm font-medium border " +
-              (active ? "bg-blue-600 text-white border-blue-600" : "bg-white border-gray-300")
-            }
-            onClick={() => set(id)}
-            aria-pressed={active}
-            aria-current={active ? "page" : undefined}
-          >
-            {label}
-          </button>
-        );
-      }
-
+      // APP
+      function NavTab({id,current,label,set}){const a=current===id;return <button className={'px-4 py-2 rounded-2xl text-sm font-medium border '+(a?'bg-blue-600 text-white border-blue-600':'bg-white border-gray-300')} onClick={()=>set(id)} aria-pressed={a} aria-current={a?'page':undefined}>{label}</button>;}
       function App(){
-        const member = useMember();
-        const store = useStore(member.memberNo);
-        const [tab, setTab] = useState("user");
-        const [inputNo, setInputNo] = useState("");
-
+        const member=useMember(); const store=useStore(member.memberNo);
+        const [tab,setTab]=useState('user'); const [inputNo,setInputNo]=useState('');
         return (
           <div>
             <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b">
               <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
                 <div className="font-bold text-lg tracking-tight">ShiftCommander</div>
-                <div className="ml-2 text-xs px-2 py-1 rounded-full border">{store.connected?"Live":"Offline"}</div>
+                <div className="ml-2 text-xs px-2 py-1 rounded-full border">{store.connected?'Live':'Offline'}</div>
                 <div className="ml-auto flex items-center gap-2">
-                  {!member.user ? (
-                    <>
-                      <input className="border rounded px-2 py-1 text-sm" placeholder="Member #" value={inputNo} onChange={e=> setInputNo(e.target.value)} />
-                      <button className="px-3 py-1 rounded bg-blue-600 text-white text-sm" onClick={()=> member.login(inputNo)}>Sign in</button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="px-2 py-1 bg-gray-100 rounded">{member.user.name} • {member.user.role} • #{member.user.member_no||"—"}</span>
-                      <button className="px-2 py-1 rounded bg-gray-200" onClick={member.logout}>Sign out</button>
-                    </div>
-                  )}
-                  <NavTab id="user" current={tab} label="User View" set={setTab} />
-                  <NavTab id="super" current={tab} label="Supervisor" set={setTab} />
+                  {!member.user?<>
+                    <input className="border rounded px-2 py-1 text-sm" placeholder="Member #" value={inputNo} onChange={e=>setInputNo(e.target.value)} />
+                    <button className="px-3 py-1 rounded bg-blue-600 text-white text-sm" onClick={()=>member.login(inputNo)}>Sign in</button>
+                  </>:<div className="flex items-center gap-3 text-sm">
+                    <span className="px-2 py-1 bg-gray-100 rounded">{member.user.name} • {member.user.role} • #{member.user.member_no||'—'}</span>
+                    <button className="px-2 py-1 rounded bg-gray-200" onClick={member.logout}>Sign out</button>
+                  </div>}
+                  <NavTab id="user" current={tab} label="User View" set={setTab}/>
+                  <NavTab id="super" current={tab} label="Supervisor" set={setTab}/>
                 </div>
               </div>
             </header>
-
             <main className="max-w-7xl mx-auto p-4">
-              {tab==="user" && <UserView store={store} member={member} />}
-              {tab==="super" && <SupervisorView store={store} />}
-              <footer className="mt-10 text-xs text-gray-500">
-                <div>AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
-              </footer>
+              {tab==='user' && <UserView store={store} member={member}/>}
+              {tab==='super' && <SupervisorView store={store}/>}
+              <footer className="mt-10 text-xs text-gray-500">AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</footer>
             </main>
           </div>
         );
       }
 
-      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
     </script>
-{/* Bulk Import */}
-<details className="bg-white rounded-2xl p-4 shadow">
-  <summary className="cursor-pointer font-semibold">Bulk import members (CSV or JSON)</summary>
-  <div className="mt-3 grid gap-3 text-sm">
-    <div>
-      <div className="font-medium mb-1">CSV columns:</div>
-      <code>name, role, member_no, can_drive, notes, inactive, typeIII</code>
-      <div className="text-gray-500">Example can_drive: <code>Rescue 1;Tanker 2</code></div>
-    </div>
-
-    <textarea
-      className="border rounded p-2 w-full h-40 font-mono"
-      placeholder={`name,role,member_no,can_drive,notes,inactive,typeIII
-Alex,EMT,101,Rescue 1,,,
-Bailey,Driver,102,"Rescue 1;Tanker 2","Prefers weekends",,yes`}
-      value={importText}
-      onChange={e=>setImportText(e.target.value)}
-    />
-
-    <div className="flex items-center gap-2">
-      <input type="file" accept=".csv,application/json" onChange={handleFile}/>
-      <button
-        className="px-3 py-1 rounded bg-blue-600 text-white"
-        onClick={async ()=>{
-          let res;
-          if (importText.trim().startsWith("{") || importText.trim().startsWith("[")) {
-            // JSON
-            const users = JSON.parse(importText);
-            res = await fetch(window.__API_BASE__+"/api/users/bulk", {
-              method:"POST", headers:{ "Content-Type":"application/json" },
-              body: JSON.stringify(Array.isArray(users)?{users}:{users})
-            });
-          } else {
-            // CSV text
-            res = await fetch(window.__API_BASE__+"/api/users/bulk", {
-              method:"POST", headers:{ "Content-Type":"text/plain" },
-              body: importText
-            });
-          }
-          const j = await res.json();
-          if (!res.ok) return alert(j.error || "Import failed");
-          alert(`Imported ${j.count} user(s).`);
-          setImportText("");
-          await actions.fetchUsers();
-        }}
-      >Import</button>
-    </div>
-  </div>
-</details>
-
-
-
   </body>
 </html>
