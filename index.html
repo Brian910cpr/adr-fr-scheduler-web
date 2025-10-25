@@ -5,23 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ShiftCommander — Beta</title>
 
-    <!-- API base (Cloudflare Worker) -->
+    <!-- Point UI to your Cloudflare Worker API -->
     <script>
       window.__API_BASE__ = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
     </script>
 
-    <!-- Tailwind + React + Babel -->
+    <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React 18 UMD + Babel (to run JSX without a build) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- Tiny favicon to avoid 404 -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234f46e5'/%3E%3Ctext x='50' y='58' font-size='48' text-anchor='middle' fill='white'%3ESC%3C/text%3E%3C/svg%3E" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234f46e5'/%3E%3Ctext x='50' y='58' font-size='48' text-anchor='middle' fill='white'%3ESC%3C/text%3E%3C/svg%3E"
+    />
+
     <style>
-      /* Make any error banner obvious */
-      #errbox { display:none; position:fixed; left:0; right:0; bottom:0; background:#fee2e2; color:#7f1d1d; padding:8px 12px; border-top:1px solid #fecaca; font:12px/1.4 ui-sans-serif,system-ui; z-index:9999; }
-      #errbox code { white-space:pre-wrap }
+      #errbox {
+        display: none;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: #fee2e2; color: #7f1d1d;
+        padding: 8px 12px; border-top: 1px solid #fecaca;
+        font: 12px/1.4 ui-sans-serif, system-ui; z-index: 9999;
+      }
+      #errbox code { white-space: pre-wrap }
     </style>
   </head>
 
@@ -31,17 +43,18 @@
 
     <script>
       // Show runtime errors in-page so blank screens never hide the cause
-      window.addEventListener('error', e => {
-        const box = document.getElementById('errbox'); const msg = document.getElementById('errmsg');
+      addEventListener('error', e => {
+        const box = document.getElementById('errbox'), msg = document.getElementById('errmsg');
         if (box && msg) { msg.textContent = (e?.message || String(e)); box.style.display = 'block'; }
       });
-      window.addEventListener('unhandledrejection', e => {
-        const box = document.getElementById('errbox'); const msg = document.getElementById('errmsg');
-        if (box && msg) { msg.textContent = (e?.reason && e.reason.message) ? e.reason.message : String(e.reason || e); box.style.display = 'block'; }
+      addEventListener('unhandledrejection', e => {
+        const box = document.getElementById('errbox'), msg = document.getElementById('errmsg');
+        if (box && msg) { msg.textContent = (e?.reason?.message) ? e.reason.message : String(e.reason || e); box.style.display = 'block'; }
       });
     </script>
 
-<script type="text/babel" data-presets="react,env">
+    <!-- Our app code. IMPORTANT: data-presets -->
+    <script type="text/babel" data-presets="react,env">
       const { useEffect, useMemo, useRef, useState } = React;
       const API_BASE = window.__API_BASE__ || "";
 
@@ -51,6 +64,8 @@
       const toISODate = (d) => d.toISOString().slice(0,10);
       const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth()+1, 0);
       const rangeDays = (start, end) => { const out=[]; let d=new Date(start); while(d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1);} return out; };
+      function parseISO(s){ const d=new Date(s); return isNaN(d)? null : d; }
+      function* daysBetween(start,end){ const d=new Date(start); while(d<=end){ yield new Date(d); d.setDate(d.getDate()+1); } }
 
       // ---------- availability UI ----------
       const AV = ["unset","prefer","available","no"];
@@ -61,7 +76,6 @@
       function useMember(){
         const [memberNo, setMemberNo] = useState(localStorage.getItem("__memberNo") || "");
         const [user, setUser] = useState(null);
-
         async function login(no){
           try{
             const r = await fetch(API_BASE + "/api/login", {
@@ -77,97 +91,80 @@
           }
         }
         function logout(){ localStorage.removeItem("__memberNo"); setMemberNo(""); setUser(null); }
-
         useEffect(()=>{ if(memberNo) login(memberNo).catch(()=>logout()); }, []);
         return { memberNo, user, login, logout };
       }
 
-// ---------- data store ----------
-function useStore(memberNo) {
-  const [users, setUsers] = React.useState([]);
-  const [availability, setAvailability] = React.useState({});
-  const [prefs, setPrefs] = React.useState({});
-  const [shifts, setShifts] = React.useState({});
-  const [connected, setConnected] = React.useState(false);
-  const wsRef = React.useRef(null);
+      // ---------- data store ----------
+      function useStore(memberNo) {
+        const [users, setUsers] = useState([]);
+        const [availability, setAvailability] = useState({});
+        const [prefs, setPrefs] = useState({});
+        const [shifts, setShifts] = useState({});
+        const [connected, setConnected] = useState(false);
+        const wsRef = useRef(null);
 
-  async function fetchUsers() {
-    const r = await fetch(API_BASE + "/api/users");
-    setUsers(await r.json());
-  }
+        async function fetchUsers(){ const r = await fetch(API_BASE + "/api/users"); setUsers(await r.json()); }
+        async function fetchWindow(start, end){
+          const r = await fetch(API_BASE + "/api/state?start="+start+"&end="+end);
+          const j = await r.json();
+          setShifts(j.shifts||{}); setAvailability(j.availability||{}); setPrefs(j.prefs||{});
+        }
 
-  async function fetchWindow(start, end) {
-    const r = await fetch(API_BASE + "/api/state?start=" + start + "&end=" + end);
-    const j = await r.json();
-    setShifts(j.shifts || {});
-    setAvailability(j.availability || {});
-    setPrefs(j.prefs || {});
-  }
+        function openSocket(){
+          try{
+            const u = new URL(API_BASE);
+            u.protocol = (u.protocol==="https:")?"wss:":"ws:"; u.pathname="/ws"; u.search=""; u.hash="";
+            const ws = new WebSocket(u.toString()); wsRef.current = ws;
+            ws.addEventListener("open", ()=> setConnected(true));
+            ws.addEventListener("close", ()=> setConnected(false));
+            ws.addEventListener("message", ()=>{
+              const start = toISODate(new Date()); const end = toISODate(addDays(new Date(), 60));
+              fetchWindow(start,end); fetchUsers();
+            });
+          }catch{}
+        }
 
-  function openSocket() {
-    try {
-      const u = new URL(API_BASE);
-      u.protocol = (u.protocol === "https:") ? "wss:" : "ws:";
-      u.pathname = "/ws"; u.search = ""; u.hash = "";
-      const ws = new WebSocket(u.toString());
-      wsRef.current = ws;
-      ws.addEventListener("open", () => setConnected(true));
-      ws.addEventListener("close", () => setConnected(false));
-      ws.addEventListener("message", () => {
-        const start = toISODate(new Date());
-        const end = toISODate(addDays(new Date(), 60));
-        fetchWindow(start, end);
-        fetchUsers();
-      });
-    } catch {}
-  }
+        // optimistic UI + 3s auto-commit
+        const pending = useRef(new Map());
+        async function setAvailabilityCell(userId, date, half, state){
+          setAvailability(prev => {
+            const p = { ...(prev[userId]||{}) };
+            const v = { AM:"unset", PM:"unset", ...(p[date]||{}) }; v[half]=state; p[date]=v;
+            return { ...prev, [userId]: p };
+          });
+          const key = userId+"|"+date+"|"+half;
+          if (pending.current.get(key)) clearTimeout(pending.current.get(key));
+          pending.current.set(key, setTimeout(async ()=>{
+            await fetch(API_BASE + "/api/availability", {
+              method:"POST",
+              headers:{ "Content-Type":"application/json", "x-member": memberNo||"" },
+              body: JSON.stringify({ userId, date, half, state })
+            });
+            pending.current.delete(key);
+          }, 3000));
+        }
 
-  // optimistic UI + 3s auto-commit
-  const pending = React.useRef(new Map());
-  async function setAvailabilityCell(userId, date, half, state) {
-    setAvailability(prev => {
-      const p = { ...(prev[userId] || {}) };
-      const v = { AM: "unset", PM: "unset", ...(p[date] || {}) };
-      v[half] = state; p[date] = v;
-      return { ...prev, [userId]: p };
-    });
-    const key = userId + "|" + date + "|" + half;
-    if (pending.current.get(key)) clearTimeout(pending.current.get(key));
-    pending.current.set(key, setTimeout(async () => {
-      await fetch(API_BASE + "/api/availability", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-member": memberNo || "" },
-        body: JSON.stringify({ userId, date, half, state })
-      });
-      pending.current.delete(key);
-    }, 3000));
-  }
+        async function savePrefs(userId, patch){
+          await fetch(API_BASE + "/api/prefs", {
+            method:"POST", headers:{ "Content-Type":"application/json", "x-member": memberNo||"" },
+            body: JSON.stringify({ userId, ...patch })
+          });
+        }
 
-  async function savePrefs(userId, patch) {
-    await fetch(API_BASE + "/api/prefs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-member": memberNo || "" },
-      body: JSON.stringify({ userId, ...patch })
-    });
-  }
+        useEffect(()=>{
+          fetchUsers();
+          const start = toISODate(new Date()); const end = toISODate(addDays(new Date(), 60));
+          fetchWindow(start, end);
+          openSocket();
+          return ()=> wsRef.current?.close();
+        },[]);
 
-  React.useEffect(() => {
-    fetchUsers();
-    const start = toISODate(new Date());
-    const end = toISODate(addDays(new Date(), 60));
-    fetchWindow(start, end);
-    openSocket();
-    return () => wsRef.current?.close();
-  }, []);
+        return { users, availability, prefs, shifts, connected,
+          actions:{ setAvailabilityCell, savePrefs, fetchUsers, fetchWindow } };
+      }
 
-  return {
-    users, availability, prefs, shifts, connected,
-    actions: { setAvailabilityCell, savePrefs, fetchUsers, fetchWindow }
-  };
-}
-
-
-      // ---------- UI bits ----------
+      // ---------- UI primitives ----------
       function Month({ year, month, renderCell, headerRight }){
         const first = new Date(year, month, 1);
         const last = endOfMonth(first);
@@ -235,6 +232,7 @@ function useStore(memberNo) {
         const av = me ? (availability[me.id] || {}) : {};
         const myPrefs = me ? (prefs[me.id] || { prefer24s:false, notes:"" }) : { prefer24s:false, notes:"" };
         const parsedNotes = (()=>{ try{ return JSON.parse(myPrefs.notes||"{}"); }catch{ return {}; }})();
+
         const avoid = new Set(parsedNotes.avoid || []);
         const typeIII = !!parsedNotes.typeIII;
         const inactive = !!parsedNotes.inactive;
@@ -244,25 +242,40 @@ function useStore(memberNo) {
         function patchPrefsLocally(patch){
           if (!me) return;
           const next = { ...myPrefs, ...patch };
-          store.prefs = { ...store.prefs, [me.id]: next };
+          store.prefs = { ...store.prefs, [me.id]: next }; // visual feedback
         }
         async function setPrefer24s(on){ if(!me) return; patchPrefsLocally({prefer24s:!!on}); await actions.savePrefs(me.id,{prefer24s:!!on}); }
         async function setTypeIII(on){ if(!me) return; const notes=JSON.stringify({ ...parsedNotes, typeIII:!!on}); patchPrefsLocally({notes}); await actions.savePrefs(me.id,{notes}); }
         async function setAvoid(uid,on){ if(!me) return; const arr=[...avoid]; const next=on?[...new Set(arr.concat(uid))]:arr.filter(x=>x!==uid); const notes=JSON.stringify({...parsedNotes,avoid:next}); patchPrefsLocally({notes}); await actions.savePrefs(me.id,{notes}); }
         async function setInactive(on){ if(!me) return; const notes=JSON.stringify({ ...parsedNotes, inactive:!!on}); patchPrefsLocally({notes}); await actions.savePrefs(me.id,{notes}); }
 
-        async function setDefaultFuture(state){
+        // -------- Bulk tools state + helpers
+        const [bulk, setBulk] = useState({ am:true, pm:true, state:"available" });
+        async function applyBulk(){
           if (!me) return;
-          const ok = confirm(state==="no" ? "Set ALL future AM/PM to Do Not?" : "Set ALL future AM/PM to Available?");
-          if (!ok) return;
-          const today = new Date();
-          for (let i=0;i<180;i++){
-            const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
+          if(!bulk.from){ alert("Pick a 'from' date"); return; }
+          const from = parseISO(bulk.from); const until = bulk.until? parseISO(bulk.until): null;
+          const end = until || addDays(from, 180); // default 6 months
+          for (const d of daysBetween(from,end)){
             const k = toISODate(d);
-            await actions.setAvailabilityCell(me.id, k, "AM", state);
-            await actions.setAvailabilityCell(me.id, k, "PM", state);
+            if (bulk.am) await actions.setAvailabilityCell(me.id,k,"AM",bulk.state);
+            if (bulk.pm) await actions.setAvailabilityCell(me.id,k,"PM",bulk.state);
           }
-          alert("Default applied to future days.");
+          alert("Bulk set complete.");
+        }
+        async function applyPattern(){
+          if (!me) return;
+          if(!bulk.days?.length || !bulk.repeatUntil || !bulk.from){ alert("Pick from date, days, and repeat-until"); return; }
+          const from = parseISO(bulk.from); const end = parseISO(bulk.repeatUntil);
+          const want = new Set(bulk.days); // 0=Mon..6=Sun
+          for (const d of daysBetween(from,end)){
+            const weekday = (d.getDay()+6)%7; // normalize to Mon=0
+            if (!want.has(weekday)) continue;
+            const k = toISODate(d);
+            if (bulk.am) await actions.setAvailabilityCell(me.id,k,"AM",bulk.state);
+            if (bulk.pm) await actions.setAvailabilityCell(me.id,k,"PM",bulk.state);
+          }
+          alert("Pattern applied.");
         }
 
         if (!me) return <div className="text-sm text-gray-500">Loading…</div>;
@@ -283,11 +296,6 @@ function useStore(memberNo) {
               <label className="text-sm">Months shown</label>
               <input type="number" min="1" max="6" className="w-16 border rounded px-2 py-1" value={monthsAhead} onChange={e=> setMonthsAhead(Number(e.target.value||1))} />
               <button className="px-3 py-1 rounded bg-white border" onClick={()=> setOffset(o=> o+1)}>Next ▶</button>
-
-              <div className="ml-auto flex items-center gap-2">
-                <button className="px-3 py-1 rounded bg-red-100 border border-red-300 text-red-700" onClick={()=> setDefaultFuture("no")}>Default future: Do Not</button>
-                <button className="px-3 py-1 rounded bg-yellow-100 border border-yellow-300 text-yellow-800" onClick={()=> setDefaultFuture("available")}>Default future: Available</button>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -297,11 +305,9 @@ function useStore(memberNo) {
                     const k = toISODate(d);
                     const v = av[k] || { AM:"unset", PM:"unset" };
                     const pc = preCommit(d);
-
                     const disable = inactive;
                     const showAM = disable ? "no" : v.AM;
                     const showPM = disable ? "no" : v.PM;
-
                     return (
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
@@ -324,17 +330,83 @@ function useStore(memberNo) {
                   Prefer 24s
                 </label>
                 <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" checked={typeIII} onChange={e=> setTypeIII(e.target.checked)} />
+                  <input type="checkbox" checked={!!typeIII} onChange={e=> setTypeIII(e.target.checked)} />
                   Type III driver approved
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input type="checkbox" checked={!!inactive} onChange={e=> setInactive(e.target.checked)} />
                   Inactive (block new scheduling)
                 </label>
-                <div>
+
+                {/* --- Bulk tools ---------------------------------------------------- */}
+                <div className="mt-4 border-t pt-3">
+                  <div className="text-sm font-semibold mb-2">Bulk set availability</div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="text-sm">From date
+                      <input type="date" className="mt-1 w-full border rounded px-2 py-1"
+                        onChange={e=> setBulk(s=> ({...s, from:e.target.value}))}/>
+                    </label>
+                    <label className="text-sm">Until date (optional)
+                      <input type="date" className="mt-1 w-full border rounded px-2 py-1"
+                        onChange={e=> setBulk(s=> ({...s, until:e.target.value}))}/>
+                    </label>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-3 items-center text-sm">
+                    <span>Set to:</span>
+                    <label className="inline-flex items-center gap-1">
+                      <input type="radio" name="bulkState" defaultChecked
+                        onChange={()=> setBulk(s=> ({...s, state:"available"}))}/> Available
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <input type="radio" name="bulkState"
+                        onChange={()=> setBulk(s=> ({...s, state:"no"}))}/> Do Not
+                    </label>
+
+                    <span className="ml-4">Half-days:</span>
+                    <label className="inline-flex items-center gap-1">
+                      <input type="checkbox" defaultChecked
+                        onChange={e=> setBulk(s=> ({...s, am:e.target.checked}))}/> AM
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <input type="checkbox" defaultChecked
+                        onChange={e=> setBulk(s=> ({...s, pm:e.target.checked}))}/> PM
+                    </label>
+
+                    <button className="ml-auto px-3 py-1 rounded bg-emerald-600 text-white"
+                      onClick={applyBulk}>Apply</button>
+                  </div>
+
+                  {/* Optional weekly pattern */}
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-sm font-medium">Weekly pattern (repeat until date)</summary>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <div className="flex flex-wrap gap-2 text-sm">
+                        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d,i)=>(
+                          <label key={d} className="inline-flex items-center gap-1 bg-gray-50 border rounded px-2 py-1">
+                            <input type="checkbox" onChange={e=> setBulk(s=>{
+                              const days=new Set(s.days||[]);
+                              e.target.checked? days.add(i): days.delete(i);
+                              return {...s, days:[...days]};
+                            })}/> {d}
+                          </label>
+                        ))}
+                      </div>
+                      <label className="text-sm">Repeat until
+                        <input type="date" className="mt-1 w-full border rounded px-2 py-1"
+                          onChange={e=> setBulk(s=> ({...s, repeatUntil:e.target.value}))}/>
+                      </label>
+                    </div>
+                    <button className="mt-2 px-3 py-1 rounded bg-blue-600 text-white"
+                      onClick={applyPattern}>Apply pattern</button>
+                  </details>
+                </div>
+
+                {/* Avoid list */}
+                <div className="mt-4">
                   <div className="text-sm font-medium mb-1">Avoid co-workers (backup list)</div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {users.filter(u=> u.id!==me.id).map(u=> (
+                    {users.filter(u=> me && u.id!==me.id).map(u=> (
                       <label key={u.id} className="inline-flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1">
                         <input type="checkbox" checked={avoid.has(u.id)} onChange={e=> setAvoid(u.id, e.target.checked)} />
                         {u.name}
@@ -344,6 +416,55 @@ function useStore(memberNo) {
                 </div>
               </div>
             </details>
+          </div>
+        );
+      }
+
+      // ---------- Supervisor week glance ----------
+      function SmallWeekBoard({ store }) {
+        const usersById = useMemo(()=>Object.fromEntries(store.users.map(u=>[u.id,u])), [store.users]);
+        const now = new Date(); const monday = new Date(now);
+        const day = (monday.getDay()+6)%7; monday.setDate(monday.getDate()-day);
+        const days=[]; for(let i=0;i<7;i++){ const d=new Date(monday); d.setDate(d.getDate()+i); days.push(d); }
+
+        function color(slot){
+          if(!slot?.assignees?.length) return "bg-red-100 border-red-300";
+          return slot.status==="approved" || slot.status==="locked" ? "bg-green-100 border-green-300" : "bg-yellow-100 border-yellow-300";
+        }
+
+        async function toggleLock(dateISO, half, locked){
+          await fetch(window.__API_BASE__+"/api/shift/status",{
+            method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ date:dateISO, half, status: locked ? "locked" : "proposed" })
+          });
+          // server WS will refresh everyone
+        }
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {days.map(d=>{
+              const k = toISODate(d);
+              const s = store.shifts[k] || { AM:{assignees:[],status:"unassigned"}, PM:{assignees:[],status:"unassigned"} };
+              return (
+                <div key={k} className="p-3 border rounded-xl">
+                  <div className="text-sm font-semibold mb-1">{d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</div>
+                  {["AM","PM"].map(h=>{
+                    const slot=s[h]; const locked = slot.status==="locked";
+                    return (
+                      <div key={h} className={"mt-1 p-2 rounded-lg border flex items-center justify-between "+color(slot)}>
+                        <div className="text-xs">
+                          <div className="font-medium">{h}</div>
+                          <div className="truncate">{slot.assignees?.map(id=>usersById[id]?.name).join(", ") || "Unassigned"}</div>
+                        </div>
+                        <label className="text-[11px] inline-flex items-center gap-1">
+                          <input type="checkbox" checked={locked} onChange={e=>toggleLock(k,h,e.target.checked)}/> Lock
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         );
       }
@@ -414,6 +535,11 @@ function useStore(memberNo) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow">
+              <div className="font-semibold mb-2">Week at a glance</div>
+              <SmallWeekBoard store={store} />
             </div>
           </div>
         );
