@@ -41,7 +41,7 @@
       });
     </script>
 
-    <script type="text/babel">
+<script type="text/babel" data-presets="react,env">
       const { useEffect, useMemo, useRef, useState } = React;
       const API_BASE = window.__API_BASE__ || "";
 
@@ -82,72 +82,90 @@
         return { memberNo, user, login, logout };
       }
 
-      // ---------- data store ----------
-      function useStore(memberNo){
-        const [users, setUsers] = useState([]);
-        const [availability, setAvailability] = useState({});
-        const [prefs, setPrefs] = useState({});
-        const [shifts, setShifts] = useState({});
-        const [connected, setConnected] = useState(false);
-        const wsRef = useRef(null);
+// ---------- data store ----------
+function useStore(memberNo) {
+  const [users, setUsers] = React.useState([]);
+  const [availability, setAvailability] = React.useState({});
+  const [prefs, setPrefs] = React.useState({});
+  const [shifts, setShifts] = React.useState({});
+  const [connected, setConnected] = React.useState(false);
+  const wsRef = React.useRef(null);
 
-        async function fetchUsers(){ const r = await fetch(API_BASE + "/api/users"); setUsers(await r.json()); }
-        async function fetchWindow(start, end){
-          const r = await fetch(API_BASE + "/api/state?start="+start+"&end="+end);
-          const j = await r.json();
-          setShifts(j.shifts||{}); setAvailability(j.availability||{}); setPrefs(j.prefs||{});
-        }
-        function openSocket(){
-          try{
-            const u = new URL(API_BASE);
-            u.protocol = (u.protocol==="https:")?"wss:":"ws:"; u.pathname="/ws"; u.search=""; u.hash="";
-            const ws = new WebSocket(u.toString()); wsRef.current = ws;
-            ws.addEventListener("open", ()=> setConnected(true));
-            ws.addEventListener("close", ()=> setConnected(false));
-            ws.addEventListener("message", ()=>{
-              const start = toISODate(new Date()); const end = toISODate(addDays(new Date(), 60));
-              fetchWindow(start,end); fetchUsers();
-            });
-          }catch{}
-        }
+  async function fetchUsers() {
+    const r = await fetch(API_BASE + "/api/users");
+    setUsers(await r.json());
+  }
 
-        // optimistic UI + 3s auto-commit
-        const pending = useRef(new Map());
-        async function setAvailabilityCell(userId, date, half, state){
-          setAvailability(prev => {
-            const p = { ...(prev[userId]||{}) };
-            const v = { AM:"unset", PM:"unset", ...(p[date]||{}) }; v[half]=state; p[date]=v;
-            return { ...prev, [userId]: p };
-          });
-          const key = userId+"|"+date+"|"+half;
-          if (pending.current.get(key)) clearTimeout(pending.current.get(key));
-          pending.current.set(key, setTimeout(async ()=>{
-            await fetch(API_BASE + "/api/availability", {
-              method:"POST",
-              headers:{ "Content-Type":"application/json", "x-member": memberNo||"" },
-              body: JSON.stringify({ userId, date, half, state })
-            });
-            pending.current.delete(key);
-          }, 3000));
-        }
+  async function fetchWindow(start, end) {
+    const r = await fetch(API_BASE + "/api/state?start=" + start + "&end=" + end);
+    const j = await r.json();
+    setShifts(j.shifts || {});
+    setAvailability(j.availability || {});
+    setPrefs(j.prefs || {});
+  }
 
-        async function savePrefs(userId, patch){
-          await fetch(API_BASE + "/api/prefs", {
-            method:"POST", headers:{ "Content-Type":"application/json", "x-member": memberNo||"" },
-            body: JSON.stringify({ userId, ...patch })
-          });
-        }
+  function openSocket() {
+    try {
+      const u = new URL(API_BASE);
+      u.protocol = (u.protocol === "https:") ? "wss:" : "ws:";
+      u.pathname = "/ws"; u.search = ""; u.hash = "";
+      const ws = new WebSocket(u.toString());
+      wsRef.current = ws;
+      ws.addEventListener("open", () => setConnected(true));
+      ws.addEventListener("close", () => setConnected(false));
+      ws.addEventListener("message", () => {
+        const start = toISODate(new Date());
+        const end = toISODate(addDays(new Date(), 60));
+        fetchWindow(start, end);
+        fetchUsers();
+      });
+    } catch {}
+  }
 
-        useEffect(()=>{
-          fetchUsers();
-          const start = toISODate(new Date()); const end = toISODate(addDays(new Date(), 60));
-          fetchWindow(start, end);
-          openSocket();
-          return ()=> wsRef.current?.close();
-        },[]);
+  // optimistic UI + 3s auto-commit
+  const pending = React.useRef(new Map());
+  async function setAvailabilityCell(userId, date, half, state) {
+    setAvailability(prev => {
+      const p = { ...(prev[userId] || {}) };
+      const v = { AM: "unset", PM: "unset", ...(p[date] || {}) };
+      v[half] = state; p[date] = v;
+      return { ...prev, [userId]: p };
+    });
+    const key = userId + "|" + date + "|" + half;
+    if (pending.current.get(key)) clearTimeout(pending.current.get(key));
+    pending.current.set(key, setTimeout(async () => {
+      await fetch(API_BASE + "/api/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-member": memberNo || "" },
+        body: JSON.stringify({ userId, date, half, state })
+      });
+      pending.current.delete(key);
+    }, 3000));
+  }
 
-        return { users, availability, prefs, shifts, connected, actions:{ setAvailabilityCell, savePrefs, fetchUsers, fetchWindow } };
-      }
+  async function savePrefs(userId, patch) {
+    await fetch(API_BASE + "/api/prefs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-member": memberNo || "" },
+      body: JSON.stringify({ userId, ...patch })
+    });
+  }
+
+  React.useEffect(() => {
+    fetchUsers();
+    const start = toISODate(new Date());
+    const end = toISODate(addDays(new Date(), 60));
+    fetchWindow(start, end);
+    openSocket();
+    return () => wsRef.current?.close();
+  }, []);
+
+  return {
+    users, availability, prefs, shifts, connected,
+    actions: { setAvailabilityCell, savePrefs, fetchUsers, fetchWindow }
+  };
+}
+
 
       // ---------- UI bits ----------
       function Month({ year, month, renderCell, headerRight }){
