@@ -1,14 +1,16 @@
-// src/index.ts — ShiftCommander hotfix: use sc_* tables to avoid legacy collisions.
-// Endpoints provided here:
-//   GET  /api/users                     (unchanged; reads existing `users` table)
-//   GET  /api/state?start=YYYY-MM-DD&end=YYYY-MM-DD   (uses sc_shifts, sc_availability, sc_prefs)
-//   POST /api/availability              (writes sc_availability)
-//   POST /api/shift/assign              (writes sc_shifts)
-//   POST /api/shift/status              (writes sc_shifts)
-//   POST /api/seed                      (fills sc_shifts for the next 60 days)
+/* src/index.js — ShiftCommander hotfix (pure JS)
+   Uses sc_* tables so we don't collide with legacy schemas.
+   Endpoints:
+     GET  /api/users
+     GET  /api/state?start=YYYY-MM-DD&end=YYYY-MM-DD
+     POST /api/availability   { userId, date, half:"AM"|"PM", state:"unset|prefer|available|no" }
+     POST /api/shift/assign   { date, half, userId }
+     POST /api/shift/status   { date, half, status:"unassigned|proposed|approved" }
+     POST /api/seed           (ensure next 60 days of AM/PM exist in sc_shifts)
+*/
 
 export default {
-  async fetch(request: Request, env: any): Promise<Response> {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     // CORS preflight
@@ -23,17 +25,17 @@ export default {
     }
 
     try {
-      // ----- USERS (unchanged) -----
+      // ----- USERS (unchanged: reads legacy `users`) -----
       if (url.pathname === "/api/users" && request.method === "GET") {
         const res = await env.DB.prepare("SELECT * FROM users ORDER BY name").all();
-        const list = (res.results || []).map((r: any) => ({
+        const list = (res.results || []).map(r => ({
           ...r,
           can_drive: safeParseJson(r.can_drive, [])
         }));
         return json(list);
       }
 
-      // ----- STATE (now reads sc_* tables) -----
+      // ----- STATE (reads sc_* tables) -----
       if (url.pathname === "/api/state" && request.method === "GET") {
         const start = url.searchParams.get("start") || "1970-01-01";
         const end   = url.searchParams.get("end")   || "2100-12-31";
@@ -44,14 +46,11 @@ export default {
           .bind(start, end)
           .all();
 
-        const shifts: Record<string, any> = {};
+        const shifts = {};
         for (const r of (s.results || [])) {
           const d = r.date;
           if (!shifts[d]) shifts[d] = {};
-          shifts[d][r.half] = {
-            assignees: safeParseJson(r.assignees, []),
-            status: r.status
-          };
+          shifts[d][r.half] = { assignees: safeParseJson(r.assignees, []), status: r.status };
         }
 
         // availability
@@ -60,7 +59,7 @@ export default {
           .bind(start, end)
           .all();
 
-        const availability: Record<string, any> = {};
+        const availability = {};
         for (const r of (a.results || [])) {
           if (!availability[r.user_id]) availability[r.user_id] = {};
           if (!availability[r.user_id][r.date]) availability[r.user_id][r.date] = { AM: "unset", PM: "unset" };
@@ -72,7 +71,7 @@ export default {
           .prepare("SELECT user_id, prefer24s, notes FROM sc_prefs")
           .all();
 
-        const prefs: Record<string, any> = {};
+        const prefs = {};
         for (const r of (p.results || [])) {
           prefs[r.user_id] = { prefer24s: !!r.prefer24s, notes: r.notes || "" };
         }
@@ -90,7 +89,6 @@ export default {
           "INSERT INTO sc_availability(user_id,date,half,state) VALUES(?,?,?,?) " +
           "ON CONFLICT(user_id,date,half) DO UPDATE SET state=excluded.state"
         ).bind(body.userId, body.date, body.half, body.state).run();
-
         return json({ ok: true });
       }
 
@@ -108,12 +106,12 @@ export default {
           .bind(body.date, body.half)
           .first();
 
-        const assignees: string[] = safeParseJson(row?.assignees, []);
+        const assignees = safeParseJson(row && row.assignees, []);
         const i = assignees.indexOf(body.userId);
         if (i >= 0) assignees.splice(i, 1); else assignees.push(body.userId);
 
         const nextStatus = assignees.length
-          ? (row?.status === "approved" ? "approved" : "proposed")
+          ? (row && row.status === "approved" ? "approved" : "proposed")
           : "unassigned";
 
         await env.DB
@@ -138,7 +136,7 @@ export default {
         return json({ ok: true });
       }
 
-      // ----- SEED (fills sc_shifts forward 60d) -----
+      // ----- SEED (ensure next 60d exist in sc_shifts) -----
       if (url.pathname === "/api/seed" && request.method === "POST") {
         const now = new Date();
         for (let i = 0; i < 60; i++) {
@@ -152,13 +150,13 @@ export default {
       }
 
       return json({ error: "not found" }, 404);
-    } catch (err: any) {
-      return json({ error: err?.message || String(err) }, 500);
+    } catch (err) {
+      return json({ error: (err && err.message) || String(err) }, 500);
     }
   }
 };
 
-function json(obj: any, status = 200) {
+function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: {
@@ -168,11 +166,11 @@ function json(obj: any, status = 200) {
   });
 }
 
-function safeParseJson(s: any, fallback: any) {
+function safeParseJson(s, fallback) {
   try { return JSON.parse(s ?? ""); } catch { return fallback; }
 }
 
-async function ensureScShift(DB: any, date: string, half: "AM"|"PM") {
+async function ensureScShift(DB, date, half) {
   const row = await DB
     .prepare("SELECT 1 FROM sc_shifts WHERE date=? AND half=?")
     .bind(date, half)
