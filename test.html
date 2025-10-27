@@ -1,0 +1,111 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ShiftCommander API smoke test</title>
+<style>
+  body { font-family: system-ui, Arial, sans-serif; padding: 16px; max-width: 900px; margin:auto; }
+  button { padding: 8px 12px; margin: 6px 6px 6px 0; }
+  pre { background:#111; color:#eee; padding:12px; overflow:auto; max-height: 50vh; }
+  label { display:inline-block; width:90px; }
+  input { padding:6px; margin-right:8px; }
+</style>
+
+<h1>ShiftCommander API smoke test</h1>
+
+<div>
+  <label>Base:</label>
+  <input id="base" size="60" value="https://adr-fr-scheduler-api.brian-9ac.workers.dev">
+</div>
+<div>
+  <label>UserId:</label>
+  <input id="uid" size="20" placeholder="e.g. uq2w4or">
+  <label>Date:</label>
+  <input id="date" size="12" value="2025-11-05">
+  <label>Half:</label>
+  <input id="half" size="4" value="AM">
+</div>
+
+<p>
+  <button onclick="loadState()">GET /api/state (7d)</button>
+  <button onclick="getUsers()">GET /api/users</button>
+</p>
+
+<p>
+  <button onclick="setAvail('prefer')">POST availability: prefer</button>
+  <button onclick="setAvail('available')">POST availability: available</button>
+  <button onclick="setAvail('no')">POST availability: no</button>
+</p>
+
+<p>
+  <button onclick="toggleAssign()">POST shift/assign (toggle)</button>
+  <button onclick="setStatus('approved')">POST shift/status: approved</button>
+</p>
+
+<h3>Output</h3>
+<pre id="out"></pre>
+
+<script>
+const $ = sel => document.querySelector(sel);
+function log(obj) { $("#out").textContent = JSON.stringify(obj, null, 2); }
+
+async function loadState() {
+  const base = $("#base").value;
+  const start = new Date($("#date").value);
+  const end = new Date(start); end.setDate(start.getDate()+6);
+  const s = start.toISOString().slice(0,10);
+  const e = end.toISOString().slice(0,10);
+  const res = await fetch(`${base}/api/state?start=${s}&end=${e}`);
+  log(await res.json());
+}
+
+async function getUsers() {
+  const base = $("#base").value;
+  const res = await fetch(`${base}/api/users`);
+  log(await res.json());
+}
+
+async function setAvail(state) {
+  const base = $("#base").value;
+  const body = {
+    userId: $("#uid").value,
+    date: $("#date").value,
+    half: $("#half").value,
+    state
+  };
+  const res = await fetch(`${base}/api/availability`, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+  log(await res.json());
+}
+
+async function toggleAssign() {
+  const base = $("#base").value;
+  const body = {
+    date: $("#date").value,
+    half: $("#half").value,
+    userId: $("#uid").value
+  };
+  const res = await fetch(`${base}/api/shift/assign`, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+  log(await res.json());
+}
+
+async function setStatus(status) {
+  const base = $("#base").value;
+  const body = {
+    date: $("#date").value,
+    half: $("#half").value,
+    status
+  };
+  const res = await fetch(`${base}/api/shift/status`, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+  log(await res.json());
+}
+</script>
