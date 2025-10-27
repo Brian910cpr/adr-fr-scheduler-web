@@ -1,543 +1,496 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>ShiftCommander UI — Calendar • Member • Supervisor</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  :root{
-    --bg:#0b1220; --panel:#0f172a; --card:#111827; --ink:#e5e7eb; --sub:#94a3b8;
-    --ok:#16a34a; --warn:#eab308; --bad:#ef4444; --muted:#64748b; --line:#1f2937;
-    --chip:#0b1425; --chip2:#0f1320; --hl:#93c5fd;
-  }
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
-  .wrap{max-width:1200px;margin:20px auto;padding:0 16px}
-  h1{margin:0 0 10px;font-size:20px}
-  .topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-  .topbar input,.topbar select,.topbar button{
-    background:#0d1426;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px
-  }
-  .tabs{display:flex;gap:8px;margin:14px 0}
-  .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#0d1426;cursor:pointer}
-  .tab.active{outline:2px solid #2b3a64}
-  .panes>section{display:none}
-  .panes>section.active{display:block}
-  /* Calendar */
-  .calbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
-  .legend{display:flex;gap:8px;align-items:center;margin:8px 0 12px}
-  .chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;background:#0d1426;color:var(--ink)}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .day{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:130px;display:flex;flex-direction:column;gap:8px}
-  .date{font-size:12px;color:var(--sub);display:flex;justify-content:space-between}
-  .pill{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0e1322}
-  .row{display:flex;justify-content:space-between;align-items:center}
-  .status{font-weight:700}
-  .unassigned{color:var(--muted)} .proposed{color:var(--warn)} .approved{color:var(--ok)}
-  .assignees{font-size:12px;color:#cbd5e1}
-  .miniBtns{display:flex;gap:6px}
-  .miniBtns button{background:#0d1426;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:4px 6px;font-size:12px}
-  /* Member */
-  .two{display:grid;grid-template-columns:340px 1fr;gap:12px}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
-  .panel h2{margin:0 0 8px;font-size:16px}
-  .small{font-size:12px;color:var(--sub)}
-  .formrow{display:flex;gap:8px;align-items:center;margin:6px 0}
-  .states{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-  .statechip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;background:#0d1426;font-size:12px;cursor:pointer}
-  .statechip.active{outline:2px solid #2b3a64}
-  .weekgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
-  .wkcell{background:#0e1322;border:1px solid var(--line);border-radius:8px;padding:8px}
-  .wkcell strong{font-size:12px}
-  .wkrow{display:flex;gap:6px;margin-top:6px}
-  .wkrow select{width:100%;background:#0d1426;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
-  .btn{background:#183055;border:1px solid var(--line);color:#e6eefc;border-radius:10px;padding:8px 10px;cursor:pointer}
-  .btn.alt{background:#0d1426}
-  .list{display:flex;flex-direction:column;gap:6px;max-height:380px;overflow:auto;margin-top:8px}
-  .listitem{display:flex;justify-content:space-between;align-items:center;background:#0e1322;border:1px solid var(--line);border-radius:8px;padding:8px}
-  /* Supervisor */
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
-  .big{font-size:20px;font-weight:800}
-  .muted{color:var(--sub)}
-  .table{width:100%;border-collapse:collapse;font-size:13px}
-  .table th,.table td{border-bottom:1px solid var(--line);padding:8px;text-align:left}
-  .bad{color:var(--bad)}
-  .ok{color:var(--ok)}
-  .warn{color:var(--warn)}
-  @media (max-width:1000px){ .two{grid-template-columns:1fr} .grid{grid-template-columns:repeat(2,1fr)} }
-  @media (max-width:640px) { .grid{grid-template-columns:1fr} }
-</style>
+  <meta charset="utf-8" />
+  <title>ShiftCommander</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Tailwind (CDN is fine for now; we can switch to build later) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .chip { @apply inline-block px-2 py-0.5 rounded text-xs font-medium; }
+    .chip-prefer { @apply bg-purple-100 text-purple-700; }
+    .chip-available { @apply bg-green-100 text-green-700; }
+    .chip-no { @apply bg-red-100 text-red-700; }
+    .seat { @apply w-full border rounded px-2 py-1 text-sm bg-white; }
+    .half-btn { @apply inline-flex items-center justify-center w-9 h-7 rounded border text-sm; }
+    .half-AM { @apply mr-1; }
+    .half-PM { @apply ml-1; }
+    .half-unset { @apply bg-gray-50 text-gray-500 border-gray-200; }
+    .half-prefer { @apply bg-purple-100 text-purple-700 border-purple-200; }
+    .half-available { @apply bg-green-100 text-green-700 border-green-200; }
+    .half-no { @apply bg-red-100 text-red-700 border-red-200; }
+    .status-pill { @apply text-[10px] px-2 py-0.5 rounded-full; }
+    .status-unassigned { @apply bg-gray-100 text-gray-500; }
+    .status-proposed { @apply bg-yellow-100 text-yellow-700; }
+    .status-approved { @apply bg-green-100 text-green-800; }
+    .precommit { @apply text-[10px] text-purple-600; }
+    .daycard { @apply border rounded-lg p-3 bg-white shadow-sm h-full; }
+    .ghost { opacity:.4; }
+  </style>
 </head>
-<body>
-<div class="wrap">
-  <h1>ShiftCommander — Calendar • Member • Supervisor</h1>
+<body class="bg-gray-50 text-gray-900">
+  <div class="max-w-6xl mx-auto p-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl font-semibold">ShiftCommander</h1>
+        <span id="live-dot" class="text-xs px-2 py-0.5 rounded bg-gray-200">Live</span>
+      </div>
 
-  <div class="topbar">
-    <label class="small">API base</label>
-    <input id="apiBase" size="52" value="https://adr-fr-scheduler-api.brian-9ac.workers.dev" />
-    <label class="small">Start</label>
-    <input id="winStart" type="date" />
-    <label class="small">Days</label>
-    <select id="winDays">
-      <option>14</option><option>21</option><option selected>28</option><option>35</option><option>56</option>
-    </select>
-    <button class="btn" id="btnLoad">Load</button>
-    <button class="btn alt" id="btnSeed" title="Backfill sc_shifts if empty">Seed server</button>
-    <span class="small muted" id="loadNote"></span>
+      <div class="flex items-center gap-2">
+        <select id="memberSelect" class="border rounded px-2 py-1 text-sm"></select>
+        <button id="btnUser" class="px-3 py-1 rounded bg-blue-600 text-white text-sm">User View</button>
+        <button id="btnSup" class="px-3 py-1 rounded border text-sm">Supervisor</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="flex items-center gap-3 text-xs mb-3">
+      <div class="chip chip-prefer">Prefer</div>
+      <div class="chip chip-available">Available</div>
+      <div class="chip chip-no">Do Not</div>
+      <div class="status-pill status-unassigned">Unassigned</div>
+      <div class="status-pill status-proposed">Proposed</div>
+      <div class="status-pill status-approved">Approved</div>
+      <div class="precommit">“Pre-commit” shown >4 weeks</div>
+    </div>
+
+    <!-- Month controls -->
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <button id="prevBtn" class="px-2 py-1 border rounded text-sm">Prev</button>
+        <div class="text-sm">Months</div>
+        <select id="monthsCount" class="border rounded px-2 py-1 text-sm">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+        <button id="nextBtn" class="px-2 py-1 border rounded text-sm">Next</button>
+      </div>
+      <div id="signedAs" class="text-sm"></div>
+    </div>
+
+    <!-- Views -->
+    <div id="userView"></div>
+    <div id="supView" class="hidden"></div>
+
+    <!-- Preferences curtain -->
+    <div class="mt-6">
+      <details class="bg-white rounded-lg border shadow-sm">
+        <summary class="px-4 py-3 cursor-pointer font-semibold">Preferences & bulk tools</summary>
+        <div class="p-4 space-y-5">
+          <div class="space-y-2">
+            <label class="flex items-center gap-2">
+              <input id="chkPrefer24" type="checkbox" class="h-4 w-4">
+              <span>Prefer 24s</span>
+            </label>
+            <div class="text-xs text-gray-500">AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4 items-end">
+            <div>
+              <label class="text-sm font-medium">From</label>
+              <input id="rangeFrom" type="date" class="block border rounded px-2 py-1 w-full">
+            </div>
+            <div>
+              <label class="text-sm font-medium">Until</label>
+              <input id="rangeUntil" type="date" class="block border rounded px-2 py-1 w-full">
+            </div>
+            <div class="sm:col-span-2">
+              <div class="flex items-center gap-5">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm">Set to:</span>
+                  <label class="flex items-center gap-1 text-sm">
+                    <input type="radio" name="bulkState" value="available" checked> Available
+                  </label>
+                  <label class="flex items-center gap-1 text-sm">
+                    <input type="radio" name="bulkState" value="prefer"> Prefer
+                  </label>
+                  <label class="flex items-center gap-1 text-sm">
+                    <input type="radio" name="bulkState" value="no"> Do Not
+                  </label>
+                </div>
+                <div class="flex items-center gap-3 text-sm">
+                  <span>Half-days:</span>
+                  <label class="flex items-center gap-1"><input id="bulkAM" type="checkbox" checked> AM</label>
+                  <label class="flex items-center gap-1"><input id="bulkPM" type="checkbox"> PM</label>
+                </div>
+                <button id="btnApplyBulk" class="ml-auto px-3 py-1 rounded bg-emerald-600 text-white text-sm">Apply</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">Avoid co-workers (backup list)</label>
+            <div id="avoidList" class="mt-2 grid sm:grid-cols-3 gap-2"></div>
+          </div>
+        </div>
+      </details>
+    </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="cal">Calendar</div>
-    <div class="tab" data-tab="member">Member view</div>
-    <div class="tab" data-tab="super">Supervisor</div>
-  </div>
+  <script>
+    // ===== CONFIG =====
+    const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    const PRECOMMIT_AFTER_DAYS = 28;
 
-  <div class="panes">
-    <!-- CALENDAR -->
-    <section id="pane-cal" class="active">
-      <div class="calbar">
-        <span class="small">Click “+ Assign” to add selected member to that half; “Approve” to lock.</span>
-        <span style="flex:1"></span>
-        <label class="small">Selected member</label>
-        <select id="calMember"></select>
-      </div>
-      <div class="legend">
-        <span class="chip"><b class="unassigned">●</b> unassigned</span>
-        <span class="chip"><b class="proposed">●</b> proposed</span>
-        <span class="chip"><b class="approved">●</b> approved</span>
-      </div>
-      <div id="calGrid" class="grid"></div>
-    </section>
+    // ===== STATE =====
+    let members = [];          // [{id,name,role,member_no,can_drive,notes}]
+    let memberById = {};
+    let currentUserId = null;
 
-    <!-- MEMBER -->
-    <section id="pane-member">
-      <div class="two">
-        <div class="panel">
-          <h2>Member controls</h2>
-          <div class="formrow">
-            <label class="small">Member</label>
-            <select id="mMember"></select>
-          </div>
-          <div class="formrow">
-            <label class="small">Window</label>
-            <input id="mStart" type="date" />
-            <select id="mDays">
-              <option>7</option><option selected>14</option><option>21</option><option>28</option>
-            </select>
-            <button class="btn" id="mLoad">Load days</button>
-          </div>
+    let windowStart = startOfMonth(new Date());
+    let monthsShown = 2;       // default UI selector
+    let stateCache = null;     // {shifts, availability, prefs} for current window
+    let commitTimers = {};     // debounce per (date, half)
 
-          <hr style="border-color:#1f2937;border-style:solid;border-width:1px 0 0;margin:10px 0" />
+    // ===== INIT =====
+    (async function init() {
+      // roster
+      members = await fetchJSON(BASE + "/api/users");
+      members.forEach(m => memberById[m.id] = m);
+      populateMemberSelect(members);
 
-          <h2>Set future dates to…</h2>
-          <div class="small">Choose a future start, an until date, and a weekly AM/PM pattern. We’ll apply across the range.</div>
-          <div class="formrow">
-            <label class="small">From</label><input id="fStart" type="date" />
-            <label class="small">Until</label><input id="fEnd" type="date" />
-          </div>
-          <div class="weekgrid" id="weekGrid"></div>
-          <div class="formrow">
-            <button class="btn" id="applyPattern">Apply weekly pattern</button>
-          </div>
+      // pick first user
+      currentUserId = members[0]?.id || null;
+      if (!currentUserId) {
+        document.getElementById("signedAs").textContent = "No members found.";
+        return;
+      }
+      document.getElementById("memberSelect").value = currentUserId;
+      document.getElementById("signedAs").textContent = "Logged in as: " + memberById[currentUserId].name;
 
-          <hr style="border-color:#1f2937;border-style:solid;border-width:1px 0 0;margin:10px 0" />
+      // hook UI
+      document.getElementById("btnUser").onclick = ()=> toggleView("user");
+      document.getElementById("btnSup").onclick  = ()=> toggleView("sup");
+      document.getElementById("prevBtn").onclick = ()=> { windowStart = addMonths(windowStart, -1); refresh(); };
+      document.getElementById("nextBtn").onclick = ()=> { windowStart = addMonths(windowStart, +1); refresh(); };
+      document.getElementById("monthsCount").onchange = (e)=> { monthsShown = +e.target.value; refresh(); };
+      document.getElementById("memberSelect").onchange = (e)=> {
+        currentUserId = e.target.value;
+        document.getElementById("signedAs").textContent = "Logged in as: " + memberById[currentUserId].name;
+        refresh();
+      };
 
-          <h2>Quick set (whole window)</h2>
-          <div class="formrow">
-            <label class="small">AM</label>
-            <select id="qAm">
-              <option value="unset">unset</option>
-              <option value="available">available</option>
-              <option value="prefer">prefer</option>
-              <option value="no">no</option>
-            </select>
-            <label class="small">PM</label>
-            <select id="qPm">
-              <option value="unset">unset</option>
-              <option value="available">available</option>
-              <option value="prefer">prefer</option>
-              <option value="no">no</option>
-            </select>
-            <button class="btn alt" id="applyQuick">Apply</button>
-          </div>
-        </div>
+      document.getElementById("chkPrefer24").onchange = onSavePrefs;
+      document.getElementById("btnApplyBulk").onclick = applyBulk;
 
-        <div class="panel">
-          <h2>Fine-tune this member’s days</h2>
-          <div class="small">Click a date, then pick AM/PM states. Changes save immediately.</div>
-          <div id="memberList" class="list"></div>
-        </div>
-      </div>
-    </section>
+      // avoid list checkboxes
+      renderAvoidList();
 
-    <!-- SUPERVISOR -->
-    <section id="pane-super">
-      <div class="panel">
-        <h2>Supervisor dashboard</h2>
-        <div class="stats">
-          <div class="card">
-            <div class="muted small">Days loaded</div>
-            <div id="sDays" class="big">0</div>
-          </div>
-          <div class="card">
-            <div class="muted small">Unassigned halves</div>
-            <div id="sUnassigned" class="big bad">0</div>
-          </div>
-          <div class="card">
-            <div class="muted small">Proposed halves</div>
-            <div id="sProposed" class="big warn">0</div>
-          </div>
-          <div class="card">
-            <div class="muted small">Approved halves</div>
-            <div id="sApproved" class="big ok">0</div>
-          </div>
-        </div>
+      // first draw
+      await refresh();
+    })();
 
-        <h3 class="small" style="margin:8px 0">At-a-glance (first 100 halves)</h3>
-        <table class="table" id="superTable">
-          <thead>
-            <tr><th>Date</th><th>Half</th><th>Status</th><th>Assignees</th><th>Actions</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="small muted" style="margin-top:8px">
-          “Lock” is an approve on the half; “Clear” removes all assignees (back to unassigned).
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
-
-<script>
-  // ---------- Utilities ----------
-  const $ = (id)=>document.getElementById(id);
-  const API = ()=> $('apiBase').value.trim().replace(/\/+$/,'');
-  const toISO = (d)=> d.toISOString().slice(0,10);
-  const addDays = (d,n)=>{ const z=new Date(d); z.setDate(z.getDate()+n); return z; };
-
-  function todayISO(){ return toISO(new Date()); }
-  function option(el, value, text){ const o=document.createElement('option'); o.value=value; o.textContent=text; el.appendChild(o); return o; }
-
-  // ---------- Tab wiring ----------
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.addEventListener('click',()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const key = t.dataset.tab;
-      document.querySelectorAll('.panes>section').forEach(s=>s.classList.remove('active'));
-      document.getElementById('pane-'+key).classList.add('active');
-    });
-  });
-
-  // ---------- Global state ----------
-  let users = [];             // [{id,name,role,member_no,...}]
-  let userMap = {};           // { id -> user }
-  let winState = {shifts:{}, availability:{}, prefs:{}};
-
-  // ---------- Initial dates ----------
-  (function initDates(){
-    $('winStart').value = todayISO();
-    $('mStart').value = todayISO();
-    const f = new Date(); f.setMonth(f.getMonth()+1);
-    $('fStart').value = toISO(addDays(new Date(), 14));
-    $('fEnd').value = toISO(f);
-  })();
-
-  // ---------- Seed button ----------
-  $('btnSeed').addEventListener('click', async ()=>{
-    const r = await fetch(API()+'/api/seed', {method:'POST'});
-    const t = await r.text().catch(()=> '');
-    alert('Seed response:\n'+t);
-    await loadAll(); // refresh
-  });
-
-  // ---------- Load button ----------
-  $('btnLoad').addEventListener('click', loadAll);
-
-  async function loadAll(){
-    $('loadNote').textContent = 'Loading…';
-    // users
-    users = await (await fetch(API()+'/api/users')).json();
-    userMap = {}; users.forEach(u=> userMap[u.id]=u);
-
-    // fill selectors
-    fillUserSelect($('calMember'));
-    fillUserSelect($('mMember'));
-
-    // state window
-    const start = $('winStart').value || todayISO();
-    const days = parseInt($('winDays').value,10)||28;
-    const end = toISO(addDays(new Date(start), days-1));
-
-    winState = await (await fetch(API()+`/api/state?start=${start}&end=${end}`)).json();
-
-    renderCalendar(start, days);
-    renderMemberList();  // uses mMember window (we keep it same as calendar by default)
-    renderSupervisor(start, days);
-    $('loadNote').textContent = `Loaded ${days} days`;
-  }
-
-  function fillUserSelect(sel){
-    const keep = sel.value;
-    sel.innerHTML = '';
-    users.forEach(u=> option(sel, u.id, `${u.name} — ${u.role}`));
-    if (keep) sel.value = keep;
-  }
-
-  // ---------- Calendar render ----------
-  function renderCalendar(startISO, days){
-    const grid = $('calGrid'); grid.innerHTML='';
-    for(let i=0;i<days;i++){
-      const date = toISO(addDays(new Date(startISO), i));
-      const box = document.createElement('div'); box.className='day';
-      const head = document.createElement('div'); head.className='date';
-      head.innerHTML = `<span>${date}</span>`;
-      box.appendChild(head);
-
-      box.appendChild(renderHalf(date,'AM'));
-      box.appendChild(renderHalf(date,'PM'));
-      grid.appendChild(box);
+    // ===== FETCH HELPERS =====
+    async function fetchJSON(url, opts) {
+      const r = await fetch(url, opts);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
     }
-  }
 
-  function renderHalf(date, half){
-    const obj = winState.shifts?.[date]?.[half] || {assignees:[],status:'unassigned'};
-    const pill = document.createElement('div'); pill.className='pill';
+    async function refresh() {
+      const startStr = toISO(windowStart);
+      const endStr = toISO(addMonths(windowStart, monthsShown, -1, 31)); // end of last month shown
+      stateCache = await fetchJSON(`${BASE}/api/state?start=${startStr}&end=${endStr}`);
 
-    const row = document.createElement('div'); row.className='row';
-    const left = document.createElement('div');
-    left.innerHTML = `<strong>${half}</strong> <span class="status ${obj.status}">${obj.status}</span>`;
-    const btns = document.createElement('div'); btns.className='miniBtns';
+      // load prefs for current user
+      const p = stateCache.prefs[currentUserId] || { prefer24s: false, notes: "" };
+      document.getElementById("chkPrefer24").checked = !!p.prefer24s;
 
-    // + Assign = toggle selected member into assignees
-    const bAssign = document.createElement('button'); bAssign.textContent = '+ Assign';
-    bAssign.addEventListener('click', async ()=>{
-      const uid = $('calMember').value;
-      await fetch(API()+'/api/shift/assign', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({date, half, userId: uid})
+      renderUserView();
+      renderSupervisorView();   // rendered but hidden until toggled
+    }
+
+    // ===== RENDER: USER VIEW (calendar months) =====
+    function renderUserView() {
+      const root = document.getElementById("userView");
+      root.innerHTML = "";
+
+      const monthsFrag = document.createDocumentFragment();
+      for (let i=0;i<monthsShown;i++) {
+        const first = addMonths(startOfMonth(windowStart), i);
+        monthsFrag.appendChild(renderMonth(first));
+      }
+
+      root.appendChild(monthsFrag);
+      // show user, hide sup
+      toggleView("user", true);
+    }
+
+    function renderMonth(firstDay) {
+      const monthWrap = el("div", "mb-6");
+      const monthTitle = firstDay.toLocaleString(undefined, { month: "long", year: "numeric" });
+      monthWrap.appendChild(el("div", "text-sm font-semibold mb-2", monthTitle));
+
+      // 7-col grid calendar
+      const grid = el("div", "grid grid-cols-7 gap-2");
+      const start = startOfWeek(firstDay);
+      const end = endOfMonth(firstDay);
+
+      // weekday headers
+      ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => {
+        grid.appendChild(el("div", "text-xs text-gray-500 px-1", d));
       });
-      await loadAll();
-    });
 
-    // Approve = set status approved
-    const bApprove = document.createElement('button'); bApprove.textContent='Approve';
-    bApprove.addEventListener('click', async ()=>{
-      await fetch(API()+'/api/shift/status', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({date, half, status:'approved'})
+      // days
+      const today = new Date();
+      const cutoff = addDays(new Date(), PRECOMMIT_AFTER_DAYS);
+
+      for (let d = start; d <= addDays(end, 6 - dayOfWeek(end)); d = addDays(d, 1)) {
+        const inMonth = d.getMonth() === firstDay.getMonth();
+        const key = toISO(d);
+        const dayCard = el("div", "daycard " + (!inMonth ? "ghost" : ""));
+
+        // title
+        const dd = el("div", "text-xs font-medium text-gray-700 mb-2",
+                      String(d.getDate()));
+        dayCard.appendChild(dd);
+
+        // halves
+        ["AM","PM"].forEach(half => {
+          const row = el("div","flex items-center justify-between mb-1");
+
+          // left: toggle buttons
+          const state = (stateCache.availability[currentUserId]?.[key]?.[half]) || "unset";
+          const precommit = d > cutoff;
+          const ampm = el("div");
+          const b = el("button", `half-btn half-${half} half-${state}`, half);
+          b.onclick = () => cycleHalf(key, half, precommit);
+          ampm.appendChild(b);
+          row.appendChild(ampm);
+
+          // right: assignment / status
+          const shift = stateCache.shifts[key]?.[half];
+          const pill = el("span","status-pill " + (shift ? ("status-"+shift.status) : "status-unassigned"),
+                          shift ? shift.status : "unassigned");
+          row.appendChild(pill);
+
+          if (precommit) {
+            row.appendChild(el("span","precommit ml-2","PRE-COMMIT"));
+          }
+
+          dayCard.appendChild(row);
+        });
+
+        grid.appendChild(dayCard);
+      }
+
+      monthWrap.appendChild(grid);
+      return monthWrap;
+    }
+
+    // Toggle state for a half and post it (debounced 3s)
+    function cycleHalf(dateKey, half, precommit) {
+      const avail = stateCache.availability[currentUserId] ||= {};
+      const day = avail[dateKey] ||= { AM: "unset", PM: "unset" };
+      const order = ["unset","available","prefer","no"];
+      const next = order[(order.indexOf(day[half])+1) % order.length];
+      day[half] = next; // optimistic
+
+      // redraw just this month
+      renderUserView();
+
+      // no precommit behavior change server-side yet; UI is informational
+      const key = dateKey + "|" + half;
+      clearTimeout(commitTimers[key]);
+      commitTimers[key] = setTimeout(async () => {
+        await fetchJSON(BASE + "/api/availability", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ userId: currentUserId, date: dateKey, half, state: next })
+        });
+        // refresh the shifts/prefs window to reflect any status changes
+        await refresh();
+      }, 3000);
+    }
+
+    // ===== RENDER: SUPERVISOR (week board) =====
+    function renderSupervisorView() {
+      const root = document.getElementById("supView");
+      root.innerHTML = "";
+
+      // 7 days board starting on current windowStart’s week
+      const weekStart = startOfWeek(windowStart);
+      const board = el("div","grid md:grid-cols-2 gap-4");
+      for (let i=0;i<7;i++) {
+        const d = addDays(weekStart, i);
+        const key = toISO(d);
+        const card = el("div","daycard");
+
+        const title = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+        card.appendChild(el("div","text-sm font-semibold mb-2", title));
+
+        ["AM","PM"].forEach(half => {
+          const wrap = el("div","mb-3");
+          wrap.appendChild(el("div","text-xs font-medium mb-1", half));
+
+          const seatRow = el("div","grid grid-cols-2 gap-2 items-center");
+          const s1 = el("input","seat", "");
+          const s2 = el("input","seat", "");
+          const shift = stateCache.shifts[key]?.[half];
+
+          // hydrate with current assignees (names)
+          const ids = shift?.assignees || [];
+          s1.value = memberById[ids[0]]?.name || "";
+          s2.value = memberById[ids[1]]?.name || "";
+
+          // lock checkbox -> approved status
+          const lockWrap = el("label","text-xs inline-flex items-center gap-2");
+          const lock = el("input","", null, {type:"checkbox"});
+          lock.checked = (shift?.status === "approved");
+          lock.onchange = async () => {
+            await fetchJSON(BASE + "/api/shift/status", {
+              method:"POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({ date:key, half, status: lock.checked ? "approved" : "proposed" })
+            });
+            await refresh();
+          };
+          lockWrap.appendChild(lock);
+          lockWrap.appendChild(document.createTextNode("Lock"));
+
+          // on blur, try to map name -> id and (de)assign
+          async function updateSeat(inp, seatIndex) {
+            const name = inp.value.trim();
+            // find id by case-insensitive name
+            const match = members.find(m => m.name.toLowerCase() === name.toLowerCase());
+            const id = match?.id;
+            const had = (stateCache.shifts[key]?.[half]?.assignees || []);
+            const current = had[seatIndex];
+
+            if (id && id !== current) {
+              await fetchJSON(BASE + "/api/shift/assign", {
+                method:"POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({ date:key, half, userId:id })
+              });
+              await refresh();
+            }
+          }
+
+          s1.onblur = () => updateSeat(s1, 0);
+          s2.onblur = () => updateSeat(s2, 1);
+
+          seatRow.appendChild(s1);
+          seatRow.appendChild(s2);
+          seatRow.appendChild(lockWrap);
+          wrap.appendChild(seatRow);
+          card.appendChild(wrap);
+        });
+
+        board.appendChild(card);
+      }
+
+      root.appendChild(board);
+    }
+
+    // ===== PREFERENCES / BULK =====
+    async function onSavePrefs() {
+      const prefer24s = document.getElementById("chkPrefer24").checked;
+      await fetchJSON(BASE + "/api/prefs", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ userId: currentUserId, prefer24s })
       });
-      await loadAll();
-    });
+      await refresh();
+    }
 
-    // Clear = remove all assignees (toggle each off)
-    const bClear = document.createElement('button'); bClear.textContent='Clear';
-    bClear.addEventListener('click', async ()=>{
-      const ass = (winState.shifts?.[date]?.[half]?.assignees)||[];
-      for (const uid of ass){
-        await fetch(API()+'/api/shift/assign', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({date, half, userId: uid})
+    async function applyBulk() {
+      const from = document.getElementById("rangeFrom").value;
+      const until = document.getElementById("rangeUntil").value;
+      if (!from || !until) return alert("Pick a date range.");
+
+      const state = document.querySelector('input[name="bulkState"]:checked').value;
+      const doAM = document.getElementById("bulkAM").checked;
+      const doPM = document.getElementById("bulkPM").checked;
+
+      const dates = enumerateDates(new Date(from), new Date(until));
+      for (const d of dates) {
+        const key = toISO(d);
+        if (doAM) await fetchJSON(BASE + "/api/availability", {
+          method:"POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ userId: currentUserId, date:key, half:"AM", state })
+        });
+        if (doPM) await fetchJSON(BASE + "/api/availability", {
+          method:"POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ userId: currentUserId, date:key, half:"PM", state })
         });
       }
-      await fetch(API()+'/api/shift/status', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({date, half, status:'unassigned'})
-      });
-      await loadAll();
-    });
-
-    btns.appendChild(bAssign); btns.appendChild(bApprove); btns.appendChild(bClear);
-    row.appendChild(left); row.appendChild(btns);
-
-    const names = (obj.assignees||[]).map(id => userMap[id]?.name || id).join(', ') || '—';
-    const who = document.createElement('div'); who.className='assignees'; who.textContent = names;
-
-    pill.appendChild(row); pill.appendChild(who);
-    return pill;
-  }
-
-  // ---------- Member view ----------
-  // Weekly pattern controls (Mon..Sun each AM/PM)
-  const weekday = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  function buildWeekPattern(){
-    const host = $('weekGrid'); host.innerHTML='';
-    for (let i=0;i<7;i++){
-      const cell = document.createElement('div'); cell.className='wkcell';
-      const label = document.createElement('strong'); label.textContent = weekday[i];
-      const row1 = document.createElement('div'); row1.className='wkrow';
-      const row2 = document.createElement('div'); row2.className='wkrow';
-      const amSel = makeStateSelect(); amSel.id = `wk-${i}-AM`;
-      const pmSel = makeStateSelect(); pmSel.id = `wk-${i}-PM`;
-      row1.appendChild(spanSmall('AM')); row1.appendChild(amSel);
-      row2.appendChild(spanSmall('PM')); row2.appendChild(pmSel);
-      cell.appendChild(label); cell.appendChild(row1); cell.appendChild(row2);
-      host.appendChild(cell);
+      await refresh();
     }
-  }
-  function spanSmall(t){ const s=document.createElement('span'); s.textContent=t; s.className='small'; s.style.width='28px'; return s; }
-  function makeStateSelect(){
-    const s = document.createElement('select');
-    ['unset','available','prefer','no'].forEach(v=>{
-      const o = document.createElement('option'); o.value=v; o.textContent=v; s.appendChild(o);
-    });
-    s.value='unset';
-    return s;
-  }
-  buildWeekPattern();
 
-  // Load member list (dates in mStart..mStart+mDays-1)
-  $('mLoad').addEventListener('click', renderMemberList);
-
-  function renderMemberList(){
-    const memberId = $('mMember').value || users[0]?.id;
-    const start = $('mStart').value || $('winStart').value || todayISO();
-    const days = parseInt($('mDays').value,10)||14;
-
-    const list = $('memberList'); list.innerHTML='';
-    for (let i=0;i<days;i++){
-      const date = toISO(addDays(new Date(start), i));
-      const current = (winState.availability?.[memberId]?.[date]) || {AM:'unset', PM:'unset'};
-      const li = document.createElement('div'); li.className='listitem';
-      const left = document.createElement('div');
-      left.innerHTML = `<div><b>${date}</b> — <span class="small">${users.find(u=>u.id===memberId)?.name||memberId}</span></div>`;
-      const right = document.createElement('div'); right.style.display='flex'; right.style.gap='8px';
-
-      const amSel = makeStateSelect(); amSel.value = current.AM || 'unset';
-      const pmSel = makeStateSelect(); pmSel.value = current.PM || 'unset';
-
-      amSel.addEventListener('change', ()=> setAvail(memberId, date, 'AM', amSel.value));
-      pmSel.addEventListener('change', ()=> setAvail(memberId, date, 'PM', pmSel.value));
-
-      right.appendChild(spanSmall('AM')); right.appendChild(amSel);
-      right.appendChild(spanSmall('PM')); right.appendChild(pmSel);
-
-      li.appendChild(left); li.appendChild(right);
-      list.appendChild(li);
+    function renderAvoidList() {
+      const box = document.getElementById("avoidList");
+      box.innerHTML = "";
+      members
+        .filter(m => m.id !== currentUserId)
+        .forEach(m => {
+          const row = el("label","flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1");
+          const c = el("input","",null,{type:"checkbox"});
+          // (future) wire to a /api/avoid endpoint
+          row.appendChild(c);
+          row.appendChild(document.createTextNode(m.name));
+          box.appendChild(row);
+        });
     }
-  }
 
-  async function setAvail(userId, date, half, state){
-    await fetch(API()+'/api/availability', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({userId, date, half, state})
-    });
-    // refresh window so other panes reflect
-    await loadAll();
-  }
-
-  // Apply weekly pattern From..Until for selected member
-  $('applyPattern').addEventListener('click', async ()=>{
-    const uid = $('mMember').value;
-    const from = new Date($('fStart').value || todayISO());
-    const until = new Date($('fEnd').value || toISO(addDays(new Date(),28)));
-    if (until < from){ alert('Until date must be on/after From'); return; }
-
-    const jobs = [];
-    for (let d = new Date(from); d <= until; d = addDays(d,1)){
-      const dow = d.getDay();
-      const am = $('wk-'+dow+'-AM').value;
-      const pm = $('wk-'+dow+'-PM').value;
-      const iso = toISO(d);
-      if (am) jobs.push({userId:uid, date:iso, half:'AM', state:am});
-      if (pm) jobs.push({userId:uid, date:iso, half:'PM', state:pm});
+    // ===== UTIL =====
+    function el(tag, cls, text, attrs) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined && text !== null) n.textContent = text;
+      if (attrs) for (const k in attrs) n.setAttribute(k, attrs[k]);
+      return n;
     }
-    // push sequentially (simpler)
-    for (const j of jobs){
-      await fetch(API()+'/api/availability', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(j)
+    function populateMemberSelect(list) {
+      const sel = document.getElementById("memberSelect");
+      sel.innerHTML = "";
+      list.forEach(m => {
+        const o = document.createElement("option");
+        o.value = m.id;
+        o.textContent = `${m.name} (${m.role})`;
+        sel.appendChild(o);
       });
     }
-    await loadAll();
-    alert(`Applied pattern to ${jobs.length} half-shifts.`);
-  });
-
-  // Quick set across current member window
-  $('applyQuick').addEventListener('click', async ()=>{
-    const uid = $('mMember').value;
-    const start = $('mStart').value || todayISO();
-    const days = parseInt($('mDays').value,10)||14;
-    const am = $('qAm').value, pm = $('qPm').value;
-
-    const jobs=[];
-    for (let i=0;i<days;i++){
-      const iso = toISO(addDays(new Date(start),i));
-      if (am) jobs.push({userId:uid,date:iso,half:'AM',state:am});
-      if (pm) jobs.push({userId:uid,date:iso,half:'PM',state:pm});
-    }
-    for (const j of jobs){
-      await fetch(API()+'/api/availability', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(j)
-      });
-    }
-    await loadAll();
-    alert(`Quick-set applied to ${jobs.length} half-shifts.`);
-  });
-
-  // ---------- Supervisor ----------
-  function renderSupervisor(startISO, days){
-    const halves = []; // flatten first ~100 halves for table
-    let un=0, pr=0, ap=0;
-
-    for (let i=0;i<days;i++){
-      const d = toISO(addDays(new Date(startISO),i));
-      for (const half of ['AM','PM']){
-        const s = winState.shifts?.[d]?.[half] || {status:'unassigned', assignees:[]};
-        if (s.status==='unassigned') un++;
-        else if (s.status==='proposed') pr++;
-        else if (s.status==='approved') ap++;
-        if (halves.length<100){
-          halves.push({date:d,half,status:s.status,assignees:s.assignees||[]});
-        }
+    function toggleView(which, force) {
+      const user = document.getElementById("userView");
+      const sup  = document.getElementById("supView");
+      if (which === "user") {
+        user.classList.remove("hidden");
+        sup.classList.add("hidden");
+      } else if (which === "sup") {
+        sup.classList.remove("hidden");
+        user.classList.add("hidden");
+      } else if (!force) {
+        // toggle
+        const supVisible = !sup.classList.contains("hidden");
+        if (supVisible) { user.classList.remove("hidden"); sup.classList.add("hidden"); }
+        else { sup.classList.remove("hidden"); user.classList.add("hidden"); }
       }
     }
-    $('sDays').textContent = days;
-    $('sUnassigned').textContent = un;
-    $('sProposed').textContent = pr;
-    $('sApproved').textContent = ap;
-
-    const tb = $('superTable').querySelector('tbody');
-    tb.innerHTML='';
-    for (const h of halves){
-      const tr = document.createElement('tr');
-      const tdD = document.createElement('td'); tdD.textContent=h.date;
-      const tdH = document.createElement('td'); tdH.textContent=h.half;
-      const tdS = document.createElement('td'); tdS.innerHTML = `<b class="${h.status}">${h.status}</b>`;
-      const tdA = document.createElement('td'); tdA.textContent = (h.assignees||[]).map(id=>userMap[id]?.name||id).join(', ')||'—';
-      const tdX = document.createElement('td');
-      const lock = document.createElement('button'); lock.textContent='Lock (Approve)'; lock.className='btn alt';
-      lock.style.padding='4px 8px'; lock.style.fontSize='12px';
-      lock.addEventListener('click', async ()=>{
-        await fetch(API()+'/api/shift/status', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({date:h.date,half:h.half,status:'approved'})
-        });
-        await loadAll();
-      });
-      const clear = document.createElement('button'); clear.textContent='Clear'; clear.className='btn alt';
-      clear.style.padding='4px 8px'; clear.style.marginLeft='6px'; clear.style.fontSize='12px';
-      clear.addEventListener('click', async ()=>{
-        const ass = (winState.shifts?.[h.date]?.[h.half]?.assignees)||[];
-        for (const uid of ass){
-          await fetch(API()+'/api/shift/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:h.date,half:h.half,userId:uid})});
-        }
-        await fetch(API()+'/api/shift/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:h.date,half:h.half,status:'unassigned'})});
-        await loadAll();
-      });
-      tdX.appendChild(lock); tdX.appendChild(clear);
-
-      tr.appendChild(tdD); tr.appendChild(tdH); tr.appendChild(tdS); tr.appendChild(tdA); tr.appendChild(tdX);
-      tb.appendChild(tr);
+    function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+    function endOfMonth(d) { return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+    function startOfWeek(d) {
+      const day = (d.getDay()+6)%7; // Mon=0
+      const out = new Date(d); out.setDate(d.getDate()-day); out.setHours(0,0,0,0); return out;
     }
-  }
-
-  // ---------- Kick things off ----------
-  (async function boot(){
-    await loadAll();
-  })();
-
-</script>
+    function dayOfWeek(d){ return (d.getDay()+6)%7; } // Mon=0
+    function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function addMonths(d, n, forceLastDay = 0, setDayOverride = null) {
+      const x = new Date(d); const day = x.getDate();
+      x.setMonth(x.getMonth()+n);
+      if (setDayOverride) x.setDate(setDayOverride);
+      if (forceLastDay && x.getDate() < day) x.setDate(0);
+      return x;
+    }
+    function toISO(d) { return d.toISOString().slice(0,10); }
+    function enumerateDates(a,b){
+      const out=[]; let d=new Date(a); d.setHours(12,0,0,0);
+      const end=new Date(b); end.setHours(12,0,0,0);
+      while(d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1); }
+      return out;
+    }
+  </script>
 </body>
 </html>
