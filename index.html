@@ -1,236 +1,285 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ADR-FR Scheduler</title>
-
-  <!-- Existing site styles -->
-  <link rel="stylesheet" href="/style.css">
-
-  <style>
-    body {
-      background: linear-gradient(to bottom right, #0b1b2a, #102b45);
-      color: #fff;
-      font-family: "Segoe UI", Arial, sans-serif;
-      margin: 0;
-    }
-    nav {
-      background: rgba(0, 0, 0, 0.3);
-      padding: 0.5rem 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    nav img {
-      height: 42px;
-    }
-    nav .links a {
-      color: #fff;
-      margin-left: 1.2rem;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    nav .links a:hover {
-      text-decoration: underline;
-    }
-
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-      gap: 1rem;
-      padding: 1.5rem;
-    }
-
-    .shift-card {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 0.8rem 1rem;
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
-      transition: 0.25s;
-    }
-
-    .shift-card.green { background: rgba(0, 255, 0, 0.18); }
-    .shift-card.yellow { background: rgba(255, 255, 0, 0.18); }
-    .shift-card.red { background: rgba(255, 0, 0, 0.18); }
-
-    .shift-card h3 {
-      margin: 0;
-      font-size: 1.05rem;
-      letter-spacing: 0.5px;
-      color: #aad6ff;
-    }
-
-    .half-row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 0.4rem;
-    }
-
-    .half-row button {
-      flex: 1;
-      margin: 0 0.2rem;
-      padding: 0.4rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .half-row button.green { background: #16a34a; }
-    .half-row button.yellow { background: #eab308; }
-    .half-row button.blank { background: #374151; }
-    .half-row button.red { background: #dc2626; }
-
-    .note-line {
-      margin-top: 0.4rem;
-      width: 100%;
-    }
-    .note-line input {
-      width: 100%;
-      border-radius: 5px;
-      border: 1px solid #333;
-      background: rgba(255,255,255,0.08);
-      color: #fff;
-      padding: 4px 6px;
-      font-size: 0.9rem;
-    }
-
-    footer {
-      text-align: center;
-      color: #aaa;
-      padding: 1rem;
-      font-size: 0.8rem;
-    }
-
-    .blurb {
-      font-size: 0.85rem;
-      color: #ccc;
-      margin-top: 0.3rem;
-    }
-
-  </style>
+<meta charset="utf-8"/>
+<title>ShiftCommander — Member</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#f6f7f9;margin:0}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:10}
+  .brand{font-weight:700}
+  .toolbar{display:flex;gap:8px;align-items:center}
+  .btn{border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer}
+  .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .month{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:12px}
+  .day{background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;padding:8px 8px 10px}
+  .dow{font-size:12px;color:#6b7280;margin:0 12px 6px}
+  .date{font-size:12px;color:#6b7280;margin-bottom:6px}
+  .chip{display:inline-flex;align-items:center;justify-content:center;width:44px;height:28px;border-radius:8px;border:1px solid #d1d5db;background:#fff;font-weight:600;margin-right:6px;cursor:pointer;user-select:none}
+  .chip.pref{background:#e9f8ee;border-color:#34d399}
+  .chip.avail{background:#fff6e6;border-color:#f59e0b}
+  .chip.block{background:#fee2e2;border-color:#ef4444}
+  .blurb{display:block;font-size:11px;color:#6b7280;margin-top:6px;min-height:14px}
+  .assignees{font-size:11px;color:#374151;margin-top:4px}
+  .legend{display:flex;gap:14px;align-items:center;font-size:12px;color:#6b7280}
+  .legend i{display:inline-block;width:14px;height:10px;border-radius:4px;margin-right:6px;border:1px solid #d1d5db}
+  i.c1{background:#e9f8ee;border-color:#34d399} i.c2{background:#fff6e6;border-color:#f59e0b} i.c3{background:#fee2e2;border-color:#ef4444}
+  .panel{background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin:12px;padding:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input.note{width:220px;border:1px solid #d1d5db;border-radius:8px;padding:6px 8px}
+  dialog{border:none;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.2);padding:0}
+  .sheet{padding:16px 18px;min-width:380px}
+  .sheet h3{margin:0 0 8px 0}
+  .sheet .row{margin-top:8px}
+</style>
 </head>
-
 <body>
-  <nav>
-    <img src="/images/adr-logo.png" alt="ADR-FR Logo">
-    <div class="links">
-      <a href="/">Home</a>
-      <a href="/join">Join</a>
-      <a href="/schedule">Schedule</a>
-      <a href="/resources">Resources</a>
+<header>
+  <div class="brand">ShiftCommander</div>
+  <div class="toolbar">
+    <div>Logged in as: <b id="who">Member</b></div>
+    <button class="btn" id="swapBtn">Frictionless Shift Swap</button>
+    <div class="legend"><i class="c1"></i>Prefer <i class="c2"></i>Available <i class="c3"></i>Do-Not</div>
+  </div>
+</header>
+
+<section class="month">
+  <div class="row" style="justify-content:space-between;margin:6px 6px 12px">
+    <div>
+      <button class="btn" id="prev">Prev</button>
+      <span style="margin:0 10px" id="monthLabel"></span>
+      <button class="btn" id="next">Next</button>
     </div>
-  </nav>
+    <div>
+      Member #: <input id="memberNo" class="btn" style="width:90px" value="1001"/>
+      <button class="btn primary" id="signIn">Sign in</button>
+    </div>
+  </div>
+  <div class="grid" id="cal"></div>
+</section>
 
-  <main>
-    <h2 style="text-align:center;margin-top:1rem;">Active Scheduling Window</h2>
-    <div class="calendar" id="calendar"></div>
-  </main>
+<section class="panel">
+  <h3>Preferences & bulk tools</h3>
+  <div class="row">
+    <label><input type="checkbox" id="pref24"> Prefer 24s</label>
+    <span style="opacity:.6">•</span>
+    <label><input type="checkbox" id="inactive"> Inactive (block new scheduling)</label>
+    <span style="opacity:.6">•</span>
+    <label><input type="checkbox" id="typeIII" disabled> Type-III driver approved (supervisor-set)</label>
+  </div>
 
-  <footer>ADR-FR Scheduler • connected to Cloudflare Worker API</footer>
+  <div class="row" style="margin-top:10px">
+    From <input type="date" id="bulkFrom" class="btn">
+    Until <input type="date" id="bulkUntil" class="btn">
+    Set to:
+    <select id="bulkState" class="btn">
+      <option value="available">Available</option>
+      <option value="prefer">Prefer</option>
+      <option value="no">Do-Not</option>
+      <option value="unset">Clear</option>
+    </select>
+    Half-days:
+    <label><input type="checkbox" id="bulkAM" checked> AM</label>
+    <label><input type="checkbox" id="bulkPM" checked> PM</label>
+    Repeat weekly (select days):
+    <label><input type="checkbox" class="wd" value="1"> Mon</label>
+    <label><input type="checkbox" class="wd" value="2"> Tue</label>
+    <label><input type="checkbox" class="wd" value="3"> Wed</label>
+    <label><input type="checkbox" class="wd" value="4"> Thu</label>
+    <label><input type="checkbox" class="wd" value="5"> Fri</label>
+    <label><input type="checkbox" class="wd" value="6"> Sat</label>
+    <label><input type="checkbox" class="wd" value="0"> Sun</label>
+    <button class="btn primary" id="applyBulk">Apply</button>
+  </div>
+</section>
 
-  <script>
-    const API_BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    const USER_ID = "uq2w4or"; // for now (replace with authenticated user id)
-    let lastUpdate = 0;
-    let timer = null;
+<dialog id="swapDlg">
+  <div class="sheet">
+    <h3>Frictionless Shift Swap</h3>
+    <div class="row">
+      <label>Date <input type="date" id="swapDate" class="btn"></label>
+      <label>Half
+        <select id="swapHalf" class="btn"><option>AM</option><option>PM</option></select>
+      </label>
+    </div>
+    <div class="row">
+      <label>Proposed replacement
+        <select id="swapTo" class="btn"></select>
+      </label>
+    </div>
+    <div class="row">
+      <button class="btn" id="swapCancel">Cancel</button>
+      <button class="btn primary" id="swapSubmit">Submit</button>
+    </div>
+  </div>
+</dialog>
 
-    async function loadWindow(start, end) {
-      const res = await fetch(`${API_BASE}/api/state?start=${start}&end=${end}`);
-      return res.json();
-    }
+<script>
+const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+let me = null; // user id
+let roster = []; // [{id,name,...}]
+let windowStart, windowEnd, cache={};
 
-    async function setAvailability(userId, date, half, nextState) {
-      const body = JSON.stringify({ userId, date, half, state: nextState });
-      await fetch(`${API_BASE}/api/availability`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body
-      });
-      // debounce refresh
-      clearTimeout(timer);
-      timer = setTimeout(renderCalendar, 3000);
-    }
+const STATES = ["prefer","available","unset","no"];
+function nextState(s){ return STATES[(STATES.indexOf(s)+1)%STATES.length]; }
+function chipClass(s){ return s==="prefer"?"chip pref":s==="available"?"chip avail":s==="no"?"chip block":"chip"; }
 
-    async function setNote(userId, date, half, note) {
-      const body = JSON.stringify({ userId, date, half, state: "available", note });
-      await fetch(`${API_BASE}/api/availability`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body
-      });
-      clearTimeout(timer);
-      timer = setTimeout(renderCalendar, 3000);
-    }
+document.getElementById('signIn').onclick = async () => {
+  const num = document.getElementById('memberNo').value.trim();
+  const users = await (await fetch(API+"/api/users")).json();
+  roster = users;
+  const found = users.find(u=>u.member_no===num) || users[0];
+  me = found.id;
+  document.getElementById('who').textContent = found.name;
+  await loadMonth(new Date());
+  // load profile flags
+  const pf = await (await fetch(API+"/api/profile/"+me)).json();
+  document.getElementById('inactive').checked = !!pf.inactive;
+  document.getElementById('typeIII').checked = !!pf.typeIII;
+};
 
-    const STATES = ["prefer", "available", "unset", "no"];
-    const COLORS = { prefer: "green", available: "yellow", unset: "blank", no: "red" };
+document.getElementById('prev').onclick = ()=> loadMonth(addMonths(windowStart||new Date(), -1));
+document.getElementById('next').onclick = ()=> loadMonth(addMonths(windowStart||new Date(), +1));
+document.getElementById('applyBulk').onclick = applyBulk;
+document.getElementById('swapBtn').onclick = openSwap;
+document.getElementById('swapCancel').onclick = ()=> document.getElementById('swapDlg').close();
+document.getElementById('swapSubmit').onclick = submitSwap;
+document.getElementById('inactive').onchange = saveProfile;
+document.getElementById('pref24').onchange = async (e)=>{
+  if(!me) return;
+  await fetch(API+"/api/profile",{method:"POST",headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({userId:me, prefer24s: e.target.checked})}); // stored in sc_prefs if you wire it; safe to ignore
+};
 
-    function nextState(current) {
-      const i = STATES.indexOf(current);
-      return STATES[(i + 1) % STATES.length];
-    }
+async function saveProfile(){
+  if(!me) return;
+  const inactive = document.getElementById('inactive').checked;
+  const typeIII  = document.getElementById('typeIII').checked; // read-only for members, shows state
+  await fetch(API+"/api/profile",{method:"POST",headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({userId:me, inactive, typeIII})});
+}
 
-    async function renderCalendar() {
-      const today = new Date();
-      const start = today.toISOString().split("T")[0];
-      const end = new Date(today.getTime() + 6 * 86400000).toISOString().split("T")[0];
-      const data = await loadWindow(start, end);
+async function loadMonth(anchorDate){
+  const first = new Date(Date.UTC(anchorDate.getFullYear(), anchorDate.getMonth(), 1));
+  const last  = new Date(Date.UTC(anchorDate.getFullYear(), anchorDate.getMonth()+1, 0));
+  windowStart = first; windowEnd = last;
+  const start = iso(first), end = iso(last);
+  const state = await (await fetch(`${API}/api/state?start=${start}&end=${end}`)).json();
+  cache = state;
+  renderCalendar(first, last, state);
+}
 
-      const cal = document.getElementById("calendar");
-      cal.innerHTML = "";
-
-      for (const [date, halves] of Object.entries(data.scores)) {
-        const card = document.createElement("div");
-        card.className = `shift-card ${halves.AM.color}`;
-        const header = document.createElement("h3");
-        header.textContent = date;
-        card.appendChild(header);
-
-        for (const half of ["AM", "PM"]) {
-          const row = document.createElement("div");
-          row.className = "half-row";
-
-          const state = data.availability?.[USER_ID]?.[date]?.[half]?.state || "unset";
-          const btn = document.createElement("button");
-          btn.textContent = half;
-          btn.className = COLORS[state];
-          btn.addEventListener("click", () => {
-            const ns = nextState(state);
-            btn.className = COLORS[ns];
-            setAvailability(USER_ID, date, half, ns);
-          });
-
-          row.appendChild(btn);
-          card.appendChild(row);
-
-          const blurb = document.createElement("div");
-          blurb.className = "blurb";
-          blurb.textContent = halves[half].blurb;
-          card.appendChild(blurb);
-
-          // note line
-          const noteDiv = document.createElement("div");
-          noteDiv.className = "note-line";
-          const input = document.createElement("input");
-          input.placeholder = "In at 10am";
-          input.value = data.availability?.[USER_ID]?.[date]?.[half]?.note || "";
-          input.addEventListener("blur", () => {
-            if (input.value.trim() !== "") {
-              setNote(USER_ID, date, half, input.value.trim());
-            }
-          });
-          noteDiv.appendChild(input);
-          card.appendChild(noteDiv);
+function renderCalendar(first,last,data){
+  document.getElementById('monthLabel').textContent =
+    first.toLocaleString(undefined,{month:'long',year:'numeric'});
+  const grid = document.getElementById('cal'); grid.innerHTML="";
+  const offset = (first.getUTCDay()+6)%7; // make Monday first (optional)
+  for(let i=0;i<offset;i++){ const d=document.createElement('div'); grid.appendChild(d); }
+  const days = last.getUTCDate();
+  for(let day=1; day<=days; day++){
+    const d = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), day));
+    const key = iso(d);
+    const card = document.createElement('div'); card.className="day";
+    card.innerHTML = `<div class="date">${d.toLocaleDateString(undefined,{weekday:'short', day:'numeric'})}</div>
+      <div class="row">
+        <span class="chip" data-k="${key}|AM">AM</span>
+        <span class="chip" data-k="${key}|PM">PM</span>
+        <input class="note" placeholder="In at 10am" data-note="${key}">
+      </div>
+      <small class="assignees" id="asg-${key}"></small>
+      <small class="blurb" id="blurb-${key}"></small>`;
+    grid.appendChild(card);
+  }
+  // decorate chips with current state for ME and attach handlers
+  for(const el of grid.querySelectorAll('.chip')){
+    const [date,half] = el.dataset.k.split('|');
+    const s = data.availability?.[me]?.[date]?.[half] || "unset";
+    el.className = chipClass(s);
+    el.onclick = ()=> cycle(date,half,el);
+  }
+  // show assignees & blurbs returned by API
+  Object.entries(data.shifts||{}).forEach(([date, halves])=>{
+    const namesAM = halves.AM?.assignees?.map(a=>a.name).join(', ')||'';
+    const namesPM = halves.PM?.assignees?.map(a=>a.name).join(', ')||'';
+    const asg = document.getElementById('asg-'+date);
+    if (asg) asg.textContent = [namesAM?`AM: ${namesAM}`:"", namesPM?`PM: ${namesPM}`:""].filter(Boolean).join("  •  ");
+    const bl = document.getElementById('blurb-'+date);
+    if (bl) bl.textContent = halves.AM?.blurb || halves.PM?.blurb || ""; // if your API supplies these
+  });
+  // preload notes if present
+  Object.entries(data.notes||{}).forEach(([k,arr])=>{
+    const [date] = k.split('|');
+    const inp = grid.querySelector(`input[data-note="${date}"]`);
+    if (inp && arr.find(n=>n.userId===me)) inp.value = arr.find(n=>n.userId===me).text;
+  });
+  // note save (debounced)
+  grid.querySelectorAll('input.note').forEach(inp=>{
+    let t=null;
+    inp.oninput = ()=>{
+      clearTimeout(t);
+      t = setTimeout(async ()=>{
+        if(!me) return;
+        const date = inp.dataset.note;
+        for (const half of ["AM","PM"]) {
+          await fetch(API+"/api/note",{method:"POST",headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ userId:me, date, half, text: inp.value.trim() })});
         }
+      }, 800);
+    };
+  });
+}
 
-        cal.appendChild(card);
-      }
-    }
+async function cycle(date,half,el){
+  if(!me) return;
+  const cur = (cache.availability?.[me]?.[date]?.[half]) || "unset";
+  const nxt = nextState(cur);
+  el.className = chipClass(nxt);
+  // optimistic write; server scoring happens there
+  await fetch(API+"/api/availability",{method:"POST",headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ userId:me, date, half, state:nxt })});
+  // re-pull that single day to update blurb/assignees if your API returns them
+  const s = await (await fetch(`${API}/api/state?start=${date}&end=${date}`)).json();
+  cache.shifts[date] = s.shifts[date];
+  const bl = document.getElementById('blurb-'+date);
+  if (bl) bl.textContent = (s.shifts[date].AM?.blurb || s.shifts[date].PM?.blurb || "");
+  const asg = document.getElementById('asg-'+date);
+  const halves = s.shifts[date];
+  const namesAM = halves.AM?.assignees?.map(a=>a.name).join(', ')||'';
+  const namesPM = halves.PM?.assignees?.map(a=>a.name).join(', ')||'';
+  if (asg) asg.textContent = [namesAM?`AM: ${namesAM}`:"", namesPM?`PM: ${namesPM}`:""].filter(Boolean).join("  •  ");
+}
 
-    renderCalendar();
-  </script>
+async function applyBulk(){
+  if(!me) return;
+  const start = document.getElementById('bulkFrom').value;
+  const end   = document.getElementById('bulkUntil').value;
+  const state = document.getElementById('bulkState').value;
+  const halves = []; if (document.getElementById('bulkAM').checked) halves.push("AM"); if (document.getElementById('bulkPM').checked) halves.push("PM");
+  const weekdays = [...document.querySelectorAll('.wd:checked')].map(x=>+x.value);
+  await fetch(API+"/api/availability/bulk",{method:"POST",headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ userId:me, start, end, halves, state, weekdays })});
+  await loadMonth(windowStart);
+}
+
+function openSwap(){
+  if (!roster.length) return;
+  const sel = document.getElementById('swapTo');
+  sel.innerHTML = roster.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  document.getElementById('swapDlg').showModal();
+}
+async function submitSwap(){
+  const date = document.getElementById('swapDate').value;
+  const half = document.getElementById('swapHalf').value;
+  const to   = document.getElementById('swapTo').value;
+  await fetch(API+"/api/swap/request",{method:"POST",headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ date, half, fromUser:me, toUser:to })});
+  document.getElementById('swapDlg').close();
+}
+
+function iso(d){ return new Date(d).toISOString().slice(0,10); }
+function addMonths(d,m){ const x=new Date(d); x.setMonth(x.getMonth()+m); return x; }
+</script>
 </body>
 </html>
