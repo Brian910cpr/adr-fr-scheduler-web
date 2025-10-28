@@ -1,40 +1,54 @@
-<!-- wallboard.html (public display) -->
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
+<!-- wallboard.html — 4 seats per day, bold Nudge, big weekday + date -->
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ShiftCommander · Wallboard</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  :root{--bg:#0b0f14;--ink:#e6edf3;--muted:#9aa4af;--panel:#0f141a;--line:#1f2730;--pill:#1b2430;--accent:#58a6ff}
-  html,body{background:var(--bg);color:var(--ink);margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1400px;margin:10px auto;padding:0 10px}
-  .board{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .col{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-  .col h3{margin:0;padding:10px 12px;background:#111823;border-bottom:1px solid var(--line);font-size:18px}
-  .day{padding:10px 12px;border-top:1px dashed var(--line)}
-  .date{font-weight:800;font-size:20px;margin-bottom:8px}
-  .slot{display:flex;gap:6px;align-items:center;margin:6px 0}
-  .slot b{display:inline-block;width:42px;text-align:center;background:var(--pill);border:1px solid var(--line);border-radius:999px;padding:4px 0}
-  .names{font-weight:700}
-  .empty{color:var(--muted);font-style:italic}
+:root{--bg:#0b0f14;--ink:#e6edf3;--muted:#9aa4af;--panel:#0f141a;--line:#1f2730;--pill:#1b2430;--accent:#f0b429}
+html,body{background:var(--bg);color:var(--ink);margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial}
+.wrap{max-width:1500px;margin:10px auto;padding:0 10px}
+.header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.header h1{margin:0;font-size:22px}
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.col h3{margin:0;padding:8px 10px;background:#111823;border-bottom:1px solid var(--line);font-size:18px}
+.day{padding:10px 12px;border-top:1px dashed var(--line)}
+.dateBig{font-weight:900;font-size:22px;margin-bottom:6px}
+.slot{margin:6px 0}
+.badge{display:inline-block;min-width:44px;text-align:center;background:var(--pill);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-weight:800;margin-right:8px}
+.seat{display:inline-block;min-width:70px;padding:2px 6px;border-radius:8px;margin:2px 2px;border:1px solid var(--line);background:#121922}
+.empty{color:var(--muted);font-style:italic}
+.nudge{color:var(--accent);font-weight:900;margin-top:6px}
 </style>
-</head>
-<body>
-<div class="wrap">
+</head><body><div class="wrap">
+  <div class="header"><h1>ShiftCommander Wallboard</h1></div>
   <div id="board" class="board"></div>
 </div>
 <script>
 const API=(p)=>`https://adr-fr-scheduler-api.brian-9ac.workers.dev${p}`;
-function fmtDate(d){return d.toISOString().slice(0,10)}
-function label(d){return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}
+function fmt(d){return d.toISOString().slice(0,10)}
+function dow(d){return d.toLocaleDateString(undefined,{weekday:'short'})}
+function label(d){return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}
 
 async function getUsers(){ const r=await fetch(API('/api/users')); return await r.json(); }
-
 async function getWindow(){
   const start=new Date(); const end=new Date(); end.setDate(start.getDate()+13);
-  const qs=`?start=${fmtDate(start)}&end=${fmtDate(end)}`;
-  const r=await fetch(API('/api/state'+qs)); return await r.json();
+  const r=await fetch(API(`/api/state?start=${fmt(start)}&end=${fmt(end)}`)); return await r.json();
+}
+
+function seats(names){
+  // up to 4 seats
+  const arr = (names||[]).slice(0,4);
+  const pads = 4 - arr.length;
+  return arr.map(n=>`<span class="seat">${n}</span>`).join('') +
+         (pads>0 ? Array.from({length:pads}).map(()=>`<span class="seat empty">—</span>`).join('') : '');
+}
+
+function needNudge(amNames, pmNames){
+  // example: if either list missing ALS/EMT context, we just show generic "NEED ALS & EMT" when both empty
+  if ((amNames.length===0) && (pmNames.length===0)) return "NEED ALS & EMT";
+  if (amNames.length===0 && pmNames.length>0) return "AM needs crew";
+  if (pmNames.length===0 && amNames.length>0) return "PM needs crew";
+  return "";
 }
 
 (async function(){
@@ -45,22 +59,27 @@ async function getWindow(){
 
   for(let i=0;i<14;i++){
     const d=new Date(start); d.setDate(start.getDate()+i);
-    const ymd = fmtDate(d);
-    const day = data.shifts?.[ymd] || {};
-    const am = (day.AM?.assignees||[]).map(id=>id2name[id]).join(", ");
-    const pm = (day.PM?.assignees||[]).map(id=>id2name[id]).join(", ");
+    const ymd = fmt(d);
+    const s = data.shifts?.[ymd] || {};
+    const amIds = (s.AM?.assignees||[]);
+    const pmIds = (s.PM?.assignees||[]);
+    const amNames = amIds.map(id=>id2name[id]);
+    const pmNames = pmIds.map(id=>id2name[id]);
+    const nudge = needNudge(amNames, pmNames);
+
     const html = `
       <div class="day">
-        <div class="date">${label(d)}</div>
-        <div class="slot"><b>AM</b> <span class="names">${am || '<span class="empty">—</span>'}</span></div>
-        <div class="slot"><b>PM</b> <span class="names">${pm || '<span class="empty">—</span>'}</span></div>
+        <div class="dateBig">${dow(d)} · ${label(d)}</div>
+        <div class="slot"><span class="badge">AM</span>${seats(amNames)}</div>
+        <div class="slot"><span class="badge">PM</span>${seats(pmNames)}</div>
+        ${ nudge ? `<div class="nudge">${nudge}</div>` : `` }
       </div>`;
-    cols[(d.getDay()+6)%7].push(html); // Mon-first
+    cols[(d.getDay()+6)%7].push(html);
   }
 
   const board = document.getElementById('board');
-  const dow=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  board.innerHTML = dow.map((w,i)=>`
+  const dowLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  board.innerHTML = dowLabels.map((w,i)=>`
     <div class="col">
       <h3>${w}</h3>
       ${cols[i].join('')}
@@ -68,5 +87,4 @@ async function getWindow(){
   `).join('');
 })();
 </script>
-</body>
-</html>
+</body></html>
