@@ -249,10 +249,19 @@
 
   let windowData = { availability:{}, prefs:{}, notes:{} }; // notes optional
 
-  // Basic fetch with error surfacing
-  async function jget(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+' → '+r.status); return r.json(); }
-  async function jpost(url, body){ const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw new Error(url+' → '+r.status); return r.json().catch(()=>({ok:true})); }
-
+  async function jget(url){
+    const r = await fetch(url);
+    const t = await r.text();
+    if(!r.ok) throw new Error(url+' → '+r.status);
+    if(t.startsWith('<')) throw new Error('API returned HTML');
+    return JSON.parse(t);
+  }
+  async function jpost(url, body){
+    const r = await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const t = await r.text();
+    if(!r.ok) throw new Error(url+' → '+r.status);
+    return t ? JSON.parse(t) : {ok:true};
+  }
   function flash(t){ msg.textContent=t; clearTimeout(flash.t); flash.t=setTimeout(()=>msg.textContent='',1600); }
 
   async function loadUsers(){
@@ -266,13 +275,12 @@
   async function loadWindow(){
     const start = startOfCalendar(anchor);
     const end = addDays(start,41);
-    // base state
     windowData = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
-    // optional notes fetch (ignore if endpoint missing)
+    // Optional notes (ignore if endpoint missing)
     try{
       const notes = await jget(`${API}/api/notes?user_id=${encodeURIComponent(currentUser)}&start=${iso(start)}&end=${iso(end)}`);
       windowData.notes = notes?.notes || {};
-    }catch(e){ /* ok if 404 */ }
+    }catch(_){}
     hydratePrefs();
     render();
   }
@@ -332,7 +340,8 @@
           const nxt = nextState(el.dataset.state);
           el.dataset.state = nxt; el.className = pillClass(nxt);
           try{
-            await jpost(API + '/api/availability', { user_id: currentUser, date: dateISO, half, state: nxt });
+            // IMPORTANT: use userId (camelCase) – this is what the Worker requires
+            await jpost(API + '/api/availability', { userId: currentUser, date: dateISO, half, state: nxt });
           }catch(e){ flash('Save failed'); }
         });
 
@@ -351,33 +360,32 @@
 
   function openNote(dateISO, half, buttonEl){
     noteCtx = {dateISO, half, buttonEl};
-    noteMeta.textContent = `${dateISO} • ${half}`;
+    document.getElementById('noteMeta').textContent = `${dateISO} • ${half}`;
     const existing = windowData.notes?.[currentUser]?.[dateISO]?.[half] || '';
-    noteText.value = existing;
-    noteModal.classList.add('show');
+    document.getElementById('noteText').value = existing;
+    document.getElementById('noteModal').classList.add('show');
   }
-  noteClose.addEventListener('click', ()=> noteModal.classList.remove('show'));
-  noteSave.addEventListener('click', async ()=>{
+  document.getElementById('noteClose').addEventListener('click', ()=> document.getElementById('noteModal').classList.remove('show'));
+  document.getElementById('noteSave').addEventListener('click', async ()=>{
     if(!noteCtx || !currentUser) return;
-    const text = noteText.value.trim();
+    const text = document.getElementById('noteText').value.trim();
     try{
-      await jpost(API + '/api/note', { user_id: currentUser, date: noteCtx.dateISO, half: noteCtx.half, note: text });
-      // update local cache so the button style reflects presence
+      // Accept both keys for compatibility
+      await jpost(API + '/api/note', { userId: currentUser, user_id: currentUser, date: noteCtx.dateISO, half: noteCtx.half, note: text });
       windowData.notes ||= {};
       windowData.notes[currentUser] ||= {};
       windowData.notes[currentUser][noteCtx.dateISO] ||= {};
       windowData.notes[currentUser][noteCtx.dateISO][noteCtx.half] = text;
-      if(noteCtx.buttonEl){
-        if(text) noteCtx.buttonEl.classList.add('has'); else noteCtx.buttonEl.classList.remove('has');
-      }
-      flash('Note saved'); noteModal.classList.remove('show');
+      if(noteCtx.buttonEl){ noteCtx.buttonEl.classList.toggle('has', !!text); }
+      flash('Note saved');
+      document.getElementById('noteModal').classList.remove('show');
     }catch(e){ flash('Note save failed'); }
   });
 
   // Tools actions
   document.getElementById('savePrefs').addEventListener('click', async ()=>{
     try{
-      await jpost(API + '/api/prefs', { user_id: currentUser, prefer24s: !!pref24.checked, type3_driver: !!type3.checked, inactive: !!inactive.checked });
+      await jpost(API + '/api/prefs', { userId: currentUser, prefer24s: !!pref24.checked, type3_driver: !!type3.checked, inactive: !!inactive.checked });
       flash('Preferences saved');
     }catch(e){ flash('Save failed'); }
   });
@@ -388,7 +396,7 @@
     const halves=[bulkAM.checked&&'AM', bulkPM.checked&&'PM'].filter(Boolean);
     if(!halves.length) return flash('Select AM and/or PM');
     try{
-      await jpost(API + '/api/bulk-set', { user_id: currentUser, from, until, state: bulkState.value, halves });
+      await jpost(API + '/api/bulk-set', { userId: currentUser, from, until, state: bulkState.value, halves });
       flash('Bulk applied'); await loadWindow();
     }catch(e){ flash('Bulk failed'); }
   });
@@ -401,13 +409,13 @@
     const halves=[patAM.checked&&'AM', patPM.checked&&'PM'].filter(Boolean);
     if(!halves.length) return flash('Select AM and/or PM');
     try{
-      await jpost(API + '/api/weekly-pattern', { user_id: currentUser, start: from, until, days, state: patternState.value, halves });
+      await jpost(API + '/api/weekly-pattern', { userId: currentUser, start: from, until, days, state: patternState.value, halves });
       flash('Pattern applied'); await loadWindow();
     }catch(e){ flash('Pattern failed'); }
   });
 
   document.getElementById('saveAvoid').addEventListener('click', async ()=>{
-    try{ await jpost(API + '/api/avoid', { user_id: currentUser, avoid: avoidList.value }); flash('Avoid list saved'); }
+    try{ await jpost(API + '/api/avoid', { userId: currentUser, avoid: avoidList.value }); flash('Avoid list saved'); }
     catch(e){ flash('Save failed'); }
   });
 
