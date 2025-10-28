@@ -1,496 +1,334 @@
+<!-- FILE: web/index.html  (single-page UI)
+     Talks to: https://adr-fr-scheduler-api.brian-9ac.workers.dev
+     Features:
+      • 2-month calendar
+      • AM/PM 4-way toggle (Prefer, Available, Unset, Do not)
+      • Per-shift note (click the tiny 📝 icon)
+      • Supervisor mode: set Type III / Inactive, approve notes, and quick assign
+      • Frictionless Swap: pick your assigned shift → suggest or select replacement
+-->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>ShiftCommander</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Tailwind (CDN is fine for now; we can switch to build later) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .chip { @apply inline-block px-2 py-0.5 rounded text-xs font-medium; }
-    .chip-prefer { @apply bg-purple-100 text-purple-700; }
-    .chip-available { @apply bg-green-100 text-green-700; }
-    .chip-no { @apply bg-red-100 text-red-700; }
-    .seat { @apply w-full border rounded px-2 py-1 text-sm bg-white; }
-    .half-btn { @apply inline-flex items-center justify-center w-9 h-7 rounded border text-sm; }
-    .half-AM { @apply mr-1; }
-    .half-PM { @apply ml-1; }
-    .half-unset { @apply bg-gray-50 text-gray-500 border-gray-200; }
-    .half-prefer { @apply bg-purple-100 text-purple-700 border-purple-200; }
-    .half-available { @apply bg-green-100 text-green-700 border-green-200; }
-    .half-no { @apply bg-red-100 text-red-700 border-red-200; }
-    .status-pill { @apply text-[10px] px-2 py-0.5 rounded-full; }
-    .status-unassigned { @apply bg-gray-100 text-gray-500; }
-    .status-proposed { @apply bg-yellow-100 text-yellow-700; }
-    .status-approved { @apply bg-green-100 text-green-800; }
-    .precommit { @apply text-[10px] text-purple-600; }
-    .daycard { @apply border rounded-lg p-3 bg-white shadow-sm h-full; }
-    .ghost { opacity:.4; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ShiftCommander</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0e1726; --panel:#121c2d; --ink:#e6eefc; --mut:#9db1d1; --green:#34d399; --yellow:#fbbf24; --red:#ef4444; --line:#1f2a40; --pill:#1a2438; --blue:#3b82f6; }
+  * { box-sizing:border-box; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif }
+  body { margin:0; background:linear-gradient(180deg,#0b1423,#0e1726); color:var(--ink); }
+  header { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:14px 18px; background:#0a1320; position:sticky; top:0; z-index:2; border-bottom:1px solid #0f1a2a;}
+  .brand { font-weight:700; letter-spacing:.2px; }
+  .row { display:flex; gap:12px; align-items:center }
+  select, input, button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+  button { background:#1e293b; cursor:pointer }
+  main { max-width:1100px; margin:18px auto; padding:0 12px; }
+  .legend { display:flex; gap:14px; align-items:center; font-size:12px; color:var(--mut); margin:10px 0 18px }
+  .legend i { display:inline-block; width:16px; height:16px; border-radius:6px; border:1px solid var(--line); margin-right:6px; vertical-align:-3px }
+  .g { background:var(--green,.8) } .y{ background:var(--yellow)} .r{ background:var(--red)} .u{ background:var(--pill)}
+  .grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
+  .month { margin-top:14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; min-height:96px; position:relative }
+  .dow { color:var(--mut); font-size:12px; margin:0 0 6px 2px }
+  .date { position:absolute; top:8px; right:10px; color:var(--mut); font-size:12px }
+  .pills { display:flex; gap:8px; margin-top:18px }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border:1px solid var(--line); border-radius:999px; background:var(--pill); font-size:12px; cursor:pointer; user-select:none }
+  .pill.g { background:rgba(52,211,153,.18); border-color:rgba(52,211,153,.4) }
+  .pill.y { background:rgba(251,191,36,.18); border-color:rgba(251,191,36,.4) }
+  .pill.r { background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.4) }
+  .pill small { color:var(--mut) }
+  .note { position:absolute; bottom:8px; right:8px; color:var(--mut); font-size:12px; cursor:pointer }
+  .warn { color:var(--yellow); font-size:12px; }
+  .section { margin-top:22px; border-top:1px dashed #20304a; padding-top:16px }
+  .stack { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .tag { padding:4px 8px; border-radius:999px; background:#17243a; border:1px solid var(--line); font-size:12px }
+  details { border:1px solid var(--line); background:#101a2b; border-radius:12px; padding:10px 12px }
+  details summary { cursor:pointer; color:var(--ink) }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td, th { border-bottom:1px solid var(--line); padding:8px 6px; text-align:left }
+  .btn { background:var(--blue); border-color:transparent }
+  .mut { color:var(--mut) }
+</style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <div class="max-w-6xl mx-auto p-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-2">
-        <h1 class="text-xl font-semibold">ShiftCommander</h1>
-        <span id="live-dot" class="text-xs px-2 py-0.5 rounded bg-gray-200">Live</span>
-      </div>
+<body>
 
-      <div class="flex items-center gap-2">
-        <select id="memberSelect" class="border rounded px-2 py-1 text-sm"></select>
-        <button id="btnUser" class="px-3 py-1 rounded bg-blue-600 text-white text-sm">User View</button>
-        <button id="btnSup" class="px-3 py-1 rounded border text-sm">Supervisor</button>
-      </div>
-    </div>
+<header>
+  <div class="brand">ShiftCommander</div>
+  <div class="row">
+    <label class="mut">Member&nbsp;#</label><input id="memberNo" style="width:90px" placeholder="1001" />
+    <button id="signIn" class="btn">Sign in</button>
+    <button id="userView">User View</button>
+    <button id="superView">Supervisor</button>
+  </div>
+</header>
 
-    <!-- Legend -->
-    <div class="flex items-center gap-3 text-xs mb-3">
-      <div class="chip chip-prefer">Prefer</div>
-      <div class="chip chip-available">Available</div>
-      <div class="chip chip-no">Do Not</div>
-      <div class="status-pill status-unassigned">Unassigned</div>
-      <div class="status-pill status-proposed">Proposed</div>
-      <div class="status-pill status-approved">Approved</div>
-      <div class="precommit">“Pre-commit” shown >4 weeks</div>
-    </div>
-
-    <!-- Month controls -->
-    <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center gap-2">
-        <button id="prevBtn" class="px-2 py-1 border rounded text-sm">Prev</button>
-        <div class="text-sm">Months</div>
-        <select id="monthsCount" class="border rounded px-2 py-1 text-sm">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-        <button id="nextBtn" class="px-2 py-1 border rounded text-sm">Next</button>
-      </div>
-      <div id="signedAs" class="text-sm"></div>
-    </div>
-
-    <!-- Views -->
-    <div id="userView"></div>
-    <div id="supView" class="hidden"></div>
-
-    <!-- Preferences curtain -->
-    <div class="mt-6">
-      <details class="bg-white rounded-lg border shadow-sm">
-        <summary class="px-4 py-3 cursor-pointer font-semibold">Preferences & bulk tools</summary>
-        <div class="p-4 space-y-5">
-          <div class="space-y-2">
-            <label class="flex items-center gap-2">
-              <input id="chkPrefer24" type="checkbox" class="h-4 w-4">
-              <span>Prefer 24s</span>
-            </label>
-            <div class="text-xs text-gray-500">AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
-          </div>
-
-          <div class="grid sm:grid-cols-2 gap-4 items-end">
-            <div>
-              <label class="text-sm font-medium">From</label>
-              <input id="rangeFrom" type="date" class="block border rounded px-2 py-1 w-full">
-            </div>
-            <div>
-              <label class="text-sm font-medium">Until</label>
-              <input id="rangeUntil" type="date" class="block border rounded px-2 py-1 w-full">
-            </div>
-            <div class="sm:col-span-2">
-              <div class="flex items-center gap-5">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm">Set to:</span>
-                  <label class="flex items-center gap-1 text-sm">
-                    <input type="radio" name="bulkState" value="available" checked> Available
-                  </label>
-                  <label class="flex items-center gap-1 text-sm">
-                    <input type="radio" name="bulkState" value="prefer"> Prefer
-                  </label>
-                  <label class="flex items-center gap-1 text-sm">
-                    <input type="radio" name="bulkState" value="no"> Do Not
-                  </label>
-                </div>
-                <div class="flex items-center gap-3 text-sm">
-                  <span>Half-days:</span>
-                  <label class="flex items-center gap-1"><input id="bulkAM" type="checkbox" checked> AM</label>
-                  <label class="flex items-center gap-1"><input id="bulkPM" type="checkbox"> PM</label>
-                </div>
-                <button id="btnApplyBulk" class="ml-auto px-3 py-1 rounded bg-emerald-600 text-white text-sm">Apply</button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">Avoid co-workers (backup list)</label>
-            <div id="avoidList" class="mt-2 grid sm:grid-cols-3 gap-2"></div>
-          </div>
-        </div>
-      </details>
-    </div>
+<main>
+  <div class="legend">
+    <span><i class="g"></i>Prefer</span>
+    <span><i class="y"></i>Available</span>
+    <span><i class="u"></i>Unset</span>
+    <span><i class="r"></i>Do not</span>
   </div>
 
-  <script>
-    // ===== CONFIG =====
-    const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    const PRECOMMIT_AFTER_DAYS = 28;
+  <div id="months"></div>
 
-    // ===== STATE =====
-    let members = [];          // [{id,name,role,member_no,can_drive,notes}]
-    let memberById = {};
-    let currentUserId = null;
+  <div class="section">
+    <details>
+      <summary>Frictionless Shift Swap</summary>
+      <div class="stack" style="margin-top:10px">
+        <input id="swapDate" type="date">
+        <select id="swapHalf">
+          <option>AM</option><option>PM</option>
+        </select>
+        <button id="swapSuggest">Suggest replacement(s)</button>
+      </div>
+      <div id="swapOut" class="section"></div>
+    </details>
+  </div>
 
-    let windowStart = startOfMonth(new Date());
-    let monthsShown = 2;       // default UI selector
-    let stateCache = null;     // {shifts, availability, prefs} for current window
-    let commitTimers = {};     // debounce per (date, half)
+  <div class="section" id="superPanel" style="display:none">
+    <h3>Supervisor tools</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Type III</th><th>Inactive</th><th>Save</th></tr></thead>
+      <tbody id="superRows"></tbody>
+    </table>
+    <p class="mut">Per-shift notes appear on cards; approve them in place using the 📝 dialog.</p>
+  </div>
+</main>
 
-    // ===== INIT =====
-    (async function init() {
-      // roster
-      members = await fetchJSON(BASE + "/api/users");
-      members.forEach(m => memberById[m.id] = m);
-      populateMemberSelect(members);
+<script>
+const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+let me = null;           // current user row
+let users = {};          // id -> {name,role,type3_driver,inactive}
+let stateCache = null;   // /api/state payload
+let debounceTimers = new Map(); // key "uid|date|half" => timer
 
-      // pick first user
-      currentUserId = members[0]?.id || null;
-      if (!currentUserId) {
-        document.getElementById("signedAs").textContent = "No members found.";
-        return;
-      }
-      document.getElementById("memberSelect").value = currentUserId;
-      document.getElementById("signedAs").textContent = "Logged in as: " + memberById[currentUserId].name;
+document.getElementById("signIn").onclick = async () => {
+  const no = (document.getElementById("memberNo").value || "").trim();
+  if (!no) return alert("Enter your member number");
+  const list = await fetch(API+"/api/users").then(r=>r.json());
+  me = list.find(u => u.member_no === no);
+  if (!me) return alert("No user with that member #");
+  await reload();
+};
 
-      // hook UI
-      document.getElementById("btnUser").onclick = ()=> toggleView("user");
-      document.getElementById("btnSup").onclick  = ()=> toggleView("sup");
-      document.getElementById("prevBtn").onclick = ()=> { windowStart = addMonths(windowStart, -1); refresh(); };
-      document.getElementById("nextBtn").onclick = ()=> { windowStart = addMonths(windowStart, +1); refresh(); };
-      document.getElementById("monthsCount").onchange = (e)=> { monthsShown = +e.target.value; refresh(); };
-      document.getElementById("memberSelect").onchange = (e)=> {
-        currentUserId = e.target.value;
-        document.getElementById("signedAs").textContent = "Logged in as: " + memberById[currentUserId].name;
-        refresh();
-      };
+document.getElementById("userView").onclick = () => {
+  document.getElementById("superPanel").style.display = "none";
+};
+document.getElementById("superView").onclick = () => {
+  document.getElementById("superPanel").style.display = "";
+  buildSupervisor();
+};
 
-      document.getElementById("chkPrefer24").onchange = onSavePrefs;
-      document.getElementById("btnApplyBulk").onclick = applyBulk;
+async function reload() {
+  const now = new Date();
+  const m1 = new Date(now.getFullYear(), now.getMonth(), 1);
+  const m2 = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const start = toKey(m1); const end = toKey(m2);
+  stateCache = await fetch(`${API}/api/state?start=${start}&end=${end}`).then(r=>r.json());
+  users = stateCache.users || {};
+  renderMonths(m1, m2);
+  buildSupervisor();
+}
 
-      // avoid list checkboxes
-      renderAvoidList();
+function renderMonths(m1, m2) {
+  const root = document.getElementById("months");
+  root.innerHTML = "";
+  root.appendChild(monthBlock(m1));
+  const m2Start = new Date(m1.getFullYear(), m1.getMonth()+1, 1);
+  root.appendChild(monthBlock(m2Start));
+}
+function monthBlock(d0) {
+  const wrap = document.createElement("div"); wrap.className = "month";
+  const title = document.createElement("h3");
+  title.textContent = d0.toLocaleString(undefined,{month:"long", year:"numeric"});
+  wrap.appendChild(title);
+  const grid = document.createElement("div"); grid.className = "grid";
+  // headers
+  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(h=>{
+    const s = document.createElement("div"); s.className="mut"; s.textContent=h; grid.appendChild(s);
+  });
 
-      // first draw
-      await refresh();
-    })();
+  // compute first Monday grid
+  const first = new Date(d0.getFullYear(), d0.getMonth(), 1);
+  const startOffset = (first.getDay() + 6) % 7; // Mon=0
+  let day = new Date(first); day.setDate(first.getDate() - startOffset);
+  for (let i=0;i<42;i++) {
+    grid.appendChild(dayCard(new Date(day)));
+    day.setDate(day.getDate()+1);
+  }
 
-    // ===== FETCH HELPERS =====
-    async function fetchJSON(url, opts) {
-      const r = await fetch(url, opts);
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }
+  wrap.appendChild(grid);
+  return wrap;
+}
 
-    async function refresh() {
-      const startStr = toISO(windowStart);
-      const endStr = toISO(addMonths(windowStart, monthsShown, -1, 31)); // end of last month shown
-      stateCache = await fetchJSON(`${BASE}/api/state?start=${startStr}&end=${endStr}`);
+function dayCard(d) {
+  const k = toKey(d);
+  const inMonth = (d.getMonth() === (new Date(stateCache ? Object.keys(stateCache.shifts||{})[0]||k : k)).getMonth());
+  const card = document.createElement("div"); card.className="card";
+  const date = document.createElement("div"); date.className="date"; date.textContent=d.getDate(); card.appendChild(date);
+  const p = document.createElement("div"); p.className="pills";
 
-      // load prefs for current user
-      const p = stateCache.prefs[currentUserId] || { prefer24s: false, notes: "" };
-      document.getElementById("chkPrefer24").checked = !!p.prefer24s;
+  ["AM","PM"].forEach(half=>{
+    const pill = document.createElement("div"); pill.className="pill"; pill.innerHTML = `<strong>${half}</strong>`;
+    setPillColor(pill, getMyState(k, half));
+    pill.onclick = () => cycleState(k, half, pill);
+    p.appendChild(pill);
 
-      renderUserView();
-      renderSupervisorView();   // rendered but hidden until toggled
-    }
+    const n = getMyNote(k, half);
+    const noteBtn = document.createElement("div");
+    noteBtn.className = "note";
+    noteBtn.textContent = "📝";
+    noteBtn.title = n?.note ? (n.note + (n.note_approved ? "" : " (pending)")) : "Add note";
+    noteBtn.onclick = () => editNote(k, half);
+    const shell = document.createElement("div");
+    shell.style.position="relative"; shell.appendChild(pill); shell.appendChild(noteBtn);
+    p.appendChild(shell);
+  });
 
-    // ===== RENDER: USER VIEW (calendar months) =====
-    function renderUserView() {
-      const root = document.getElementById("userView");
-      root.innerHTML = "";
+  // warning text if shift is yellow/red (very light heuristic demo)
+  const sh = (stateCache.shifts||{})[k];
+  if (sh && (sh.AM || sh.PM)) {
+    ["AM","PM"].forEach(half=>{
+      const box = document.createElement("div"); box.style.marginTop="6px"; box.style.fontSize="12px";
+      const s = sh[half];
+      if (!s) return;
+      const tip = briefTip(k, half, s.assignees || []);
+      if (tip) { box.className="warn"; box.textContent = half+": "+tip; card.appendChild(box); }
+    })
+  }
 
-      const monthsFrag = document.createDocumentFragment();
-      for (let i=0;i<monthsShown;i++) {
-        const first = addMonths(startOfMonth(windowStart), i);
-        monthsFrag.appendChild(renderMonth(first));
-      }
+  card.appendChild(p);
+  return card;
+}
 
-      root.appendChild(monthsFrag);
-      // show user, hide sup
-      toggleView("user", true);
-    }
+// brief suggestion to clear condition (server-side scoring would be richer)
+function briefTip(date, half, assignees) {
+  // collect roles of current assignees
+  const roles = assignees.map(id => (users[id]?.role || "").toUpperCase());
+  if (roles.length === 0) return "Needs crew";
+  if (!roles.includes("ALS")) return "Needs ALS";
+  if (!roles.includes("EMT")) return "Needs EMT";
+  return "";
+}
 
-    function renderMonth(firstDay) {
-      const monthWrap = el("div", "mb-6");
-      const monthTitle = firstDay.toLocaleString(undefined, { month: "long", year: "numeric" });
-      monthWrap.appendChild(el("div", "text-sm font-semibold mb-2", monthTitle));
+function setPillColor(el, st) {
+  el.classList.remove("g","y","r");
+  if (st === "prefer") el.classList.add("g");
+  else if (st === "available") el.classList.add("y");
+  else if (st === "no") el.classList.add("r");
+}
 
-      // 7-col grid calendar
-      const grid = el("div", "grid grid-cols-7 gap-2");
-      const start = startOfWeek(firstDay);
-      const end = endOfMonth(firstDay);
+function getMyState(date, half) {
+  if (!me || !stateCache) return "unset";
+  const a = (stateCache.availability||{})[me.id];
+  const rec = a ? a[date] : null;
+  const v = rec ? rec[half] : null;
+  return v ? (v.state || "unset") : "unset";
+}
+function getMyNote(date, half) {
+  if (!me || !stateCache) return null;
+  const a = (stateCache.availability||{})[me.id];
+  const rec = a ? a[date] : null;
+  return rec ? rec[half] : null;
+}
 
-      // weekday headers
-      ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => {
-        grid.appendChild(el("div", "text-xs text-gray-500 px-1", d));
+function cycleState(date, half, pillEl) {
+  if (!me) { alert("Sign in first."); return; }
+  const cur = getMyState(date, half);
+  const next = cur === "prefer" ? "available" : cur === "available" ? "unset" : cur === "unset" ? "no" : "prefer";
+  setPillColor(pillEl, next);
+  // debounce auto-commit
+  const key = me.id+"|"+date+"|"+half;
+  clearTimeout(debounceTimers.get(key));
+  debounceTimers.set(key, setTimeout(async ()=>{
+    await fetch(API+"/api/availability", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ userId: me.id, date, half, state: next })
+    });
+    // lazy refresh for subsequent cards
+    stateCache.availability ||= {};
+    (stateCache.availability[me.id] ||= {});
+    (stateCache.availability[me.id][date] ||= { AM:null, PM:null })[half] = { state: next, note:"", note_approved:true };
+  }, 3000));
+}
+
+async function editNote(date, half) {
+  if (!me) { alert("Sign in first."); return; }
+  const cur = getMyNote(date, half);
+  const val = prompt("Enter a super brief note (e.g. 'In at 10am'):", cur?.note || "");
+  if (val === null) return;
+  await fetch(API+"/api/availability", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ userId: me.id, date, half, state: getMyState(date,half), note: val })
+  });
+  await reload();
+}
+
+// ---------- Supervisor ----------
+function buildSupervisor() {
+  const tbody = document.getElementById("superRows");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  const list = Object.entries(users).map(([id,u])=>({ id, ...u }))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  for (const u of list) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${u.name}</td>
+      <td>${u.role}</td>
+      <td><input type="checkbox" ${u.type3_driver?"checked":""} data-k="t3"></td>
+      <td><input type="checkbox" ${u.inactive?"checked":""} data-k="in"></td>
+      <td><button class="btn">Save</button></td>
+    `;
+    tr.querySelector("button").onclick = async ()=>{
+      const t3 = tr.querySelector('input[data-k="t3"]').checked;
+      const ina = tr.querySelector('input[data-k="in"]').checked;
+      await fetch(API+"/api/user/flags", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ userId: u.id, type3_driver: t3, inactive: ina })
       });
+      await reload();
+    };
+    tbody.appendChild(tr);
+  }
+}
 
-      // days
-      const today = new Date();
-      const cutoff = addDays(new Date(), PRECOMMIT_AFTER_DAYS);
+// ---------- Swap ----------
+document.getElementById("swapSuggest").onclick = async ()=>{
+  if (!me) return alert("Sign in first.");
+  const date = document.getElementById("swapDate").value;
+  const half = document.getElementById("swapHalf").value;
+  if (!date) return alert("Choose a date");
+  const out = document.getElementById("swapOut"); out.innerHTML = "…";
+  const res = await fetch(API+"/api/shift/swap", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ userId: me.id, date, half })
+  }).then(r=>r.json());
+  if (res.error) { out.textContent = res.error; return; }
+  const frag = document.createElement("div");
+  frag.className="stack";
+  (res.suggestions||[]).forEach(s=>{
+    const b = document.createElement("button");
+    b.textContent = `${s.name} (${s.role})`;
+    b.onclick = async ()=>{
+      const ok = confirm(`Swap yourself with ${s.name} on ${date} ${half}?`);
+      if (!ok) return;
+      const done = await fetch(API+"/api/shift/swap", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ userId: me.id, date, half, replacementId: s.id })
+      }).then(r=>r.json());
+      if (done.error) alert(done.error); else { alert("Swap approved."); await reload(); }
+    };
+    frag.appendChild(b);
+  });
+  out.innerHTML = "";
+  out.appendChild(frag);
+};
 
-      for (let d = start; d <= addDays(end, 6 - dayOfWeek(end)); d = addDays(d, 1)) {
-        const inMonth = d.getMonth() === firstDay.getMonth();
-        const key = toISO(d);
-        const dayCard = el("div", "daycard " + (!inMonth ? "ghost" : ""));
-
-        // title
-        const dd = el("div", "text-xs font-medium text-gray-700 mb-2",
-                      String(d.getDate()));
-        dayCard.appendChild(dd);
-
-        // halves
-        ["AM","PM"].forEach(half => {
-          const row = el("div","flex items-center justify-between mb-1");
-
-          // left: toggle buttons
-          const state = (stateCache.availability[currentUserId]?.[key]?.[half]) || "unset";
-          const precommit = d > cutoff;
-          const ampm = el("div");
-          const b = el("button", `half-btn half-${half} half-${state}`, half);
-          b.onclick = () => cycleHalf(key, half, precommit);
-          ampm.appendChild(b);
-          row.appendChild(ampm);
-
-          // right: assignment / status
-          const shift = stateCache.shifts[key]?.[half];
-          const pill = el("span","status-pill " + (shift ? ("status-"+shift.status) : "status-unassigned"),
-                          shift ? shift.status : "unassigned");
-          row.appendChild(pill);
-
-          if (precommit) {
-            row.appendChild(el("span","precommit ml-2","PRE-COMMIT"));
-          }
-
-          dayCard.appendChild(row);
-        });
-
-        grid.appendChild(dayCard);
-      }
-
-      monthWrap.appendChild(grid);
-      return monthWrap;
-    }
-
-    // Toggle state for a half and post it (debounced 3s)
-    function cycleHalf(dateKey, half, precommit) {
-      const avail = stateCache.availability[currentUserId] ||= {};
-      const day = avail[dateKey] ||= { AM: "unset", PM: "unset" };
-      const order = ["unset","available","prefer","no"];
-      const next = order[(order.indexOf(day[half])+1) % order.length];
-      day[half] = next; // optimistic
-
-      // redraw just this month
-      renderUserView();
-
-      // no precommit behavior change server-side yet; UI is informational
-      const key = dateKey + "|" + half;
-      clearTimeout(commitTimers[key]);
-      commitTimers[key] = setTimeout(async () => {
-        await fetchJSON(BASE + "/api/availability", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: currentUserId, date: dateKey, half, state: next })
-        });
-        // refresh the shifts/prefs window to reflect any status changes
-        await refresh();
-      }, 3000);
-    }
-
-    // ===== RENDER: SUPERVISOR (week board) =====
-    function renderSupervisorView() {
-      const root = document.getElementById("supView");
-      root.innerHTML = "";
-
-      // 7 days board starting on current windowStart’s week
-      const weekStart = startOfWeek(windowStart);
-      const board = el("div","grid md:grid-cols-2 gap-4");
-      for (let i=0;i<7;i++) {
-        const d = addDays(weekStart, i);
-        const key = toISO(d);
-        const card = el("div","daycard");
-
-        const title = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
-        card.appendChild(el("div","text-sm font-semibold mb-2", title));
-
-        ["AM","PM"].forEach(half => {
-          const wrap = el("div","mb-3");
-          wrap.appendChild(el("div","text-xs font-medium mb-1", half));
-
-          const seatRow = el("div","grid grid-cols-2 gap-2 items-center");
-          const s1 = el("input","seat", "");
-          const s2 = el("input","seat", "");
-          const shift = stateCache.shifts[key]?.[half];
-
-          // hydrate with current assignees (names)
-          const ids = shift?.assignees || [];
-          s1.value = memberById[ids[0]]?.name || "";
-          s2.value = memberById[ids[1]]?.name || "";
-
-          // lock checkbox -> approved status
-          const lockWrap = el("label","text-xs inline-flex items-center gap-2");
-          const lock = el("input","", null, {type:"checkbox"});
-          lock.checked = (shift?.status === "approved");
-          lock.onchange = async () => {
-            await fetchJSON(BASE + "/api/shift/status", {
-              method:"POST",
-              headers: {"Content-Type":"application/json"},
-              body: JSON.stringify({ date:key, half, status: lock.checked ? "approved" : "proposed" })
-            });
-            await refresh();
-          };
-          lockWrap.appendChild(lock);
-          lockWrap.appendChild(document.createTextNode("Lock"));
-
-          // on blur, try to map name -> id and (de)assign
-          async function updateSeat(inp, seatIndex) {
-            const name = inp.value.trim();
-            // find id by case-insensitive name
-            const match = members.find(m => m.name.toLowerCase() === name.toLowerCase());
-            const id = match?.id;
-            const had = (stateCache.shifts[key]?.[half]?.assignees || []);
-            const current = had[seatIndex];
-
-            if (id && id !== current) {
-              await fetchJSON(BASE + "/api/shift/assign", {
-                method:"POST",
-                headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({ date:key, half, userId:id })
-              });
-              await refresh();
-            }
-          }
-
-          s1.onblur = () => updateSeat(s1, 0);
-          s2.onblur = () => updateSeat(s2, 1);
-
-          seatRow.appendChild(s1);
-          seatRow.appendChild(s2);
-          seatRow.appendChild(lockWrap);
-          wrap.appendChild(seatRow);
-          card.appendChild(wrap);
-        });
-
-        board.appendChild(card);
-      }
-
-      root.appendChild(board);
-    }
-
-    // ===== PREFERENCES / BULK =====
-    async function onSavePrefs() {
-      const prefer24s = document.getElementById("chkPrefer24").checked;
-      await fetchJSON(BASE + "/api/prefs", {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ userId: currentUserId, prefer24s })
-      });
-      await refresh();
-    }
-
-    async function applyBulk() {
-      const from = document.getElementById("rangeFrom").value;
-      const until = document.getElementById("rangeUntil").value;
-      if (!from || !until) return alert("Pick a date range.");
-
-      const state = document.querySelector('input[name="bulkState"]:checked').value;
-      const doAM = document.getElementById("bulkAM").checked;
-      const doPM = document.getElementById("bulkPM").checked;
-
-      const dates = enumerateDates(new Date(from), new Date(until));
-      for (const d of dates) {
-        const key = toISO(d);
-        if (doAM) await fetchJSON(BASE + "/api/availability", {
-          method:"POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: currentUserId, date:key, half:"AM", state })
-        });
-        if (doPM) await fetchJSON(BASE + "/api/availability", {
-          method:"POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: currentUserId, date:key, half:"PM", state })
-        });
-      }
-      await refresh();
-    }
-
-    function renderAvoidList() {
-      const box = document.getElementById("avoidList");
-      box.innerHTML = "";
-      members
-        .filter(m => m.id !== currentUserId)
-        .forEach(m => {
-          const row = el("label","flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1");
-          const c = el("input","",null,{type:"checkbox"});
-          // (future) wire to a /api/avoid endpoint
-          row.appendChild(c);
-          row.appendChild(document.createTextNode(m.name));
-          box.appendChild(row);
-        });
-    }
-
-    // ===== UTIL =====
-    function el(tag, cls, text, attrs) {
-      const n = document.createElement(tag);
-      if (cls) n.className = cls;
-      if (text !== undefined && text !== null) n.textContent = text;
-      if (attrs) for (const k in attrs) n.setAttribute(k, attrs[k]);
-      return n;
-    }
-    function populateMemberSelect(list) {
-      const sel = document.getElementById("memberSelect");
-      sel.innerHTML = "";
-      list.forEach(m => {
-        const o = document.createElement("option");
-        o.value = m.id;
-        o.textContent = `${m.name} (${m.role})`;
-        sel.appendChild(o);
-      });
-    }
-    function toggleView(which, force) {
-      const user = document.getElementById("userView");
-      const sup  = document.getElementById("supView");
-      if (which === "user") {
-        user.classList.remove("hidden");
-        sup.classList.add("hidden");
-      } else if (which === "sup") {
-        sup.classList.remove("hidden");
-        user.classList.add("hidden");
-      } else if (!force) {
-        // toggle
-        const supVisible = !sup.classList.contains("hidden");
-        if (supVisible) { user.classList.remove("hidden"); sup.classList.add("hidden"); }
-        else { sup.classList.remove("hidden"); user.classList.add("hidden"); }
-      }
-    }
-    function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-    function endOfMonth(d) { return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-    function startOfWeek(d) {
-      const day = (d.getDay()+6)%7; // Mon=0
-      const out = new Date(d); out.setDate(d.getDate()-day); out.setHours(0,0,0,0); return out;
-    }
-    function dayOfWeek(d){ return (d.getDay()+6)%7; } // Mon=0
-    function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function addMonths(d, n, forceLastDay = 0, setDayOverride = null) {
-      const x = new Date(d); const day = x.getDate();
-      x.setMonth(x.getMonth()+n);
-      if (setDayOverride) x.setDate(setDayOverride);
-      if (forceLastDay && x.getDate() < day) x.setDate(0);
-      return x;
-    }
-    function toISO(d) { return d.toISOString().slice(0,10); }
-    function enumerateDates(a,b){
-      const out=[]; let d=new Date(a); d.setHours(12,0,0,0);
-      const end=new Date(b); end.setHours(12,0,0,0);
-      while(d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1); }
-      return out;
-    }
-  </script>
+function toKey(d) { const dt = new Date(d); return dt.toISOString().slice(0,10); }
+</script>
 </body>
 </html>
