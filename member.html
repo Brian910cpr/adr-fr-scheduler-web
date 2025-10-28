@@ -1,305 +1,305 @@
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>ShiftCommander · Member</title>
-  <style>
-    :root{
-      --bg:#0b0c0f;--panel:#111319;--ink:#e8e8ea;--muted:#a4a7ae;
-      --brand:#0a84ff;--ok:#30d158;--warn:#ffd60a;--bad:#ff453a;--pill:#2a2e37;
-      --card:#151824;--line:#2a2e37;--shadow:0 10px 30px rgba(0,0,0,.35);
-      --radius:16px
-    }
-    @media (prefers-color-scheme: light){
-      :root{--bg:#f7f8fb;--panel:#ffffff;--ink:#0b0c0f;--muted:#60636b;--card:#ffffff;--line:#e9ebf0;--pill:#eef1f7;--shadow:0 10px 30px rgba(0,0,0,.1)}
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
-    .bar{position:sticky;top:0;z-index:10;backdrop-filter:saturate(180%) blur(20px);background:color-mix(in oklab, var(--panel), transparent 25%);border-bottom:1px solid var(--line)}
-    .wrap{max-width:1100px;margin:0 auto;padding:16px}
-    .brand{display:flex;gap:10px;align-items:center}
-    .chip{padding:6px 10px;border-radius:999px;background:var(--pill);color:var(--muted);font-weight:600;font-size:12px}
-    .title{font-weight:800;letter-spacing:.2px}
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(7,1fr)}
-    .head{display:grid;grid-template-columns:repeat(7,1fr);color:var(--muted);padding:8px 4px}
-    .day{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:140px}
-    .day header{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:700}
-    .sub{font-size:12px;color:var(--muted)}
-    .toggles{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
-    .toggle{
-      display:flex;align-items:center;gap:8px;padding:10px;border-radius:12px;border:1px solid var(--line);cursor:pointer;user-select:none;touch-action:manipulation;transition:.15s transform;
-    }
-    .toggle:active{transform:scale(.98)}
-    .am{grid-column:1/2}.pm{grid-column:2/3}
-    .state{width:10px;height:10px;border-radius:3px;border:1px solid var(--line);background:transparent}
-    .state.prefer{background:var(--ok)}
-    .state.available{background:var(--warn)}
-    .state.no{background:var(--bad)}
-    .note{border-top:1px dashed var(--line);padding:8px 10px}
-    .note input{width:100%;border:0;background:transparent;color:var(--ink);padding:8px;border-radius:10px;outline:0}
-    .foot{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
-    .pill{font-size:12px;color:var(--muted);background:var(--pill);padding:4px 8px;border-radius:999px}
-    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-    .btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
-    .btn.primary{background:var(--brand);border-color:var(--brand);color:white}
-    .legend{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
-    .swatch{width:12px;height:12px;border-radius:3px;border:1px solid var(--line)}
-    .s-ok{background:var(--ok)}.s-warn{background:var(--warn)}.s-bad{background:var(--bad)}.s-blank{background:transparent}
-    .calwrap{padding:16px}
-    .overline{font-size:12px;color:var(--muted);margin:6px 0 2px}
-    .hidden{display:none}
-    .toast{position:fixed;bottom:16px;left:50%;translate:-50% 0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow)}
-    @media (max-width:900px){.grid,.head{grid-template-columns:repeat(7,minmax(100px,1fr));overflow:auto}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ShiftCommander • Member</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#141a22; --muted:#7e8ca0; --ink:#e8eef7; --ink-soft:#c5cfdb;
+    --ring:#314056; --card:#10161d; --card2:#0f141b; --ok:#18a957; --avail:#2e86ff;
+    --warn:#d9a400; --no:#d34b4b; --note:#9aa6b2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
+  h1{margin:0;font-size:18px;font-weight:700}
+  .tabs{margin-left:auto;display:flex;gap:6px}
+  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:var(--ink-soft);text-decoration:none}
+  .tab.active{background:var(--ring);color:var(--ink)}
+  .controls{display:flex;gap:10px;align-items:center;padding:10px 16px}
+  select, button{background:var(--card2);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 10px}
+  button.icon{padding:6px 8px}
+  .cal-wrap{padding:8px 16px}
+  .cal{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:10px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 10px 4px}
+  .month-title{font-weight:700}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:0 4px 8px 4px;color:var(--muted);font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .day{position:relative;background:var(--card);border:1px dashed #2b394b;border-radius:12px;min-height:98px;padding:8px;overflow:hidden}
+  .day.dim{opacity:0.35}
+  .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted)}
+  .shifts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:18px}
+  .pill{display:flex;align-items:center;justify-content:center;height:28px;border-radius:999px;border:1px solid var(--ring);color:var(--ink-soft);cursor:pointer;user-select:none;transition:transform .05s}
+  .pill:active{transform:scale(.98)}
+  .AM::before,.PM::before{content:attr(data-label);font-weight:700;margin-right:6px;color:var(--ink)}
+  .AM[data-label="AM"]::before{}
+  .PM[data-label="PM"]::before{}
+  .state-prefer{background:color-mix(in srgb, var(--ok) 18%, transparent);border-color:color-mix(in srgb, var(--ok) 55%, var(--ring));color:var(--ink)}
+  .state-available{background:color-mix(in srgb, var(--avail) 16%, transparent);border-color:color-mix(in srgb, var(--avail) 55%, var(--ring));color:var(--ink)}
+  .state-unset{background:transparent}
+  .state-no{background:color-mix(in srgb, var(--no) 16%, transparent);border-color:color-mix(in srgb, var(--no) 55%, var(--ring));color:var(--ink)}
+  .note-btn{position:absolute;left:8px;top:6px;font-size:12px;color:var(--note);background:transparent;border:0;cursor:pointer}
+  .note-pop{position:absolute;inset:0;background:rgba(7,10,14,.97);border:1px solid var(--ring);border-radius:12px;padding:10px;display:none}
+  .note-pop.show{display:block}
+  .note-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .note-head label{display:flex;gap:6px;align-items:center;color:var(--ink-soft);font-size:12px}
+  textarea{width:100%;height:56px;background:var(--card2);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:8px;resize:vertical;min-height:56px}
+  .note-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .legend{display:flex;gap:14px;align-items:center;color:var(--ink-soft);font-size:12px;padding:10px 2px}
+  .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
+  .dot.prefer{background:var(--ok)}
+  .dot.avail{background:var(--avail)}
+  .dot.none{background:#2b394b}
+  .dot.no{background:var(--no)}
+  .sr{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
+  .msg{color:var(--no);padding:0 16px}
+</style>
 </head>
 <body>
-  <div class="bar">
-    <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-      <div class="brand">
-        <div class="chip">ShiftCommander</div>
-        <div class="title">Member</div>
+  <header>
+    <h1>ShiftCommander <span style="color:var(--muted);font-weight:600;margin-left:6px;">Member</span></h1>
+    <nav class="tabs">
+      <a class="tab active" href="member.html">Member</a>
+      <a class="tab" href="supervisor.html">Supervisor</a>
+      <a class="tab" href="wallboard.html">Wallboard</a>
+    </nav>
+  </header>
+
+  <div class="controls">
+    <label>
+      Member #
+      <select id="memberSelect"></select>
+    </label>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="icon" id="prevBtn" aria-label="Previous month">◀</button>
+      <button class="icon" id="nextBtn" aria-label="Next month">▶</button>
+    </div>
+  </div>
+
+  <div class="cal-wrap">
+    <div class="cal">
+      <div class="cal-head">
+        <div class="month-title" id="monthTitle">Month YYYY</div>
       </div>
+      <div class="dow">
+        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+      </div>
+      <div class="grid" id="grid"></div>
       <div class="legend">
-        <span class="overline">Tap to cycle:</span>
-        <span class="swatch s-ok"></span> Prefer
-        <span class="swatch s-warn"></span> Available
-        <span class="swatch s-blank"></span> Unset
-        <span class="swatch s-bad"></span> Do-Not-Schedule
+        <span><span class="dot prefer"></span>Prefer</span>
+        <span><span class="dot avail"></span>Available</span>
+        <span><span class="dot none"></span>Unset</span>
+        <span><span class="dot no"></span>Do Not</span>
       </div>
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="controls">
-      <button class="btn" id="prevBtn">‹ Prev</button>
-      <button class="btn" id="nextBtn">Next ›</button>
-      <button class="btn primary" id="thisMonthBtn">This Month</button>
-      <div class="pill" id="userPill">Signed in: <strong id="who">Brian</strong></div>
-      <div class="pill">Tap AM/PM tiles to paint. Long-press day number to paint both.</div>
-    </div>
-  </div>
+  <div class="msg" id="msg"></div>
 
-  <div class="wrap calwrap">
-    <div class="head" id="dowHead"></div>
-    <div class="grid" id="calGrid" aria-live="polite"></div>
-  </div>
+<script>
+(() => {
+  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const memberSel = document.getElementById('memberSelect');
+  const grid = document.getElementById('grid');
+  const monthTitle = document.getElementById('monthTitle');
+  const msg = document.getElementById('msg');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
 
-  <div class="toast hidden" id="toast">Saved</div>
+  let users = [];
+  let currentUser = null;
+  let anchor = new Date(); // first day shown belongs to this month
+  anchor.setDate(1);
 
-  <script>
-    // CONFIG
-    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    // Demo sign-in (replace with your auth later)
-    const CURRENT_USER = { id: "uq2w4or", name: "Brian" };
+  // --- utilities
+  const iso = d => d.toISOString().slice(0,10);
+  const addDays = (d,n) => { const c=new Date(d); c.setDate(c.getDate()+n); return c; };
+  const startOfCalendar = (d) => {
+    // Monday-based start
+    const day = (d.getDay()+6)%7; // 0..6 with Mon=0
+    const first = new Date(d);
+    first.setDate(1);
+    const shift = (day === 0) ? 0 : day;
+    const calStart = new Date(first);
+    calStart.setDate(first.getDate() - shift);
+    return calStart;
+  };
 
-    // Utilities
-    const fmt = d => d.toISOString().slice(0,10);
-    const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x}
-    const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
-    const endOfMonth   = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
+  const STATES = ['unset','prefer','available','no'];
+  const nextState = (s) => {
+    const i = STATES.indexOf(s);
+    return STATES[(i+1)%STATES.length];
+  };
 
-    // State
-    let viewStart, viewEnd, state=null;
-
-    // DOM
-    const calGrid = document.getElementById('calGrid');
-    const dowHead = document.getElementById('dowHead');
-    const toast = document.getElementById('toast');
-    const who = document.getElementById('who');
-    who.textContent = CURRENT_USER.name;
-
-    // DOW header
-    const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    dowHead.innerHTML = dows.map(d=>`<div class="sub" style="padding:0 6px">${d}</div>`).join("");
-
-    function cycleState(curr){
-      // order: prefer (green) → available (yellow) → unset (blank) → no (red) → prefer…
-      const order = ["prefer","available","unset","no"];
-      const i = order.indexOf(curr);
-      return order[(i+1)%order.length];
+  const pillClassFor = (s) => {
+    switch(s){
+      case 'prefer': return 'pill state-prefer';
+      case 'available': return 'pill state-available';
+      case 'no': return 'pill state-no';
+      default: return 'pill state-unset';
     }
+  };
 
-    function stateToClass(s){ return s==="prefer"?"prefer":(s==="available"?"available":(s==="no"?"no":"")) }
+  // --- data cache for visible window
+  let windowData = { availability:{}, prefs:{} };
 
-    async function fetchState(a,b){
-      const url = `${API}/api/state?start=${fmt(a)}&end=${fmt(b)}`;
-      const res = await fetch(url);
-      if(!res.ok){ throw new Error("state fetch failed") }
-      return res.json();
-    }
+  async function loadUsers() {
+    const r = await fetch(API + '/api/users');
+    if(!r.ok) throw new Error('users fetch failed');
+    users = await r.json();
+    memberSel.innerHTML = users.map(u => `<option value="${u.id}">${u.member_no || ''} ${u.name}</option>`).join('');
+    currentUser = users[0]?.id || null;
+    if(currentUser) memberSel.value = currentUser;
+  }
 
-    async function saveAvailability(user_id, date, half, state){
-      const res = await fetch(`${API}/api/availability`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ user_id, date, half, state })
+  async function loadWindow() {
+    // 6 weeks view
+    const start = startOfCalendar(anchor);
+    const end = addDays(start, 6*7-1);
+    const qs = `?start=${iso(start)}&end=${iso(end)}`;
+    const r = await fetch(API + '/api/state' + qs);
+    if(!r.ok) throw new Error('state fetch failed');
+    windowData = await r.json();
+    render();
+  }
+
+  function render() {
+    monthTitle.textContent = anchor.toLocaleString(undefined, { month:'long', year:'numeric' });
+
+    const start = startOfCalendar(anchor);
+    grid.innerHTML = '';
+    for(let i=0;i<42;i++){
+      const d = addDays(start,i);
+      const dateISO = iso(d);
+      const inMonth = d.getMonth() === anchor.getMonth();
+
+      const dayDiv = document.createElement('div');
+      dayDiv.className = 'day' + (inMonth?'':' dim');
+
+      const dnum = document.createElement('div');
+      dnum.className = 'dnum';
+      dnum.textContent = d.getDate();
+      dayDiv.appendChild(dnum);
+
+      // note button (opt-in popover)
+      const nb = document.createElement('button');
+      nb.className = 'note-btn';
+      nb.textContent = '📝';
+      nb.title = 'Add a note to this date';
+      dayDiv.appendChild(nb);
+
+      // shifts
+      const shifts = document.createElement('div');
+      shifts.className = 'shifts';
+      const sAM = makePill('AM', dateISO, 'AM');
+      const sPM = makePill('PM', dateISO, 'PM');
+      shifts.append(sAM, sPM);
+      dayDiv.appendChild(shifts);
+
+      // popover (stays overlay, cell size constant)
+      const pop = document.createElement('div');
+      pop.className = 'note-pop';
+      pop.innerHTML = `
+        <div class="note-head">
+          <strong>Notes – ${dateISO}</strong>
+          <label><input type="checkbox" id="enable-${dateISO}"> activate notes</label>
+        </div>
+        <textarea id="ta-${dateISO}" placeholder="Optional note for this date (kept small to avoid clutter)"></textarea>
+        <div class="note-actions">
+          <button data-act="close">Close</button>
+          <button data-act="save">Save</button>
+        </div>
+      `;
+      pop.addEventListener('click', async (e) => {
+        const act = e.target?.dataset?.act;
+        if(act === 'close'){ pop.classList.remove('show'); return; }
+        if(act === 'save'){
+          const enabled = pop.querySelector(`#enable-${dateISO}`).checked;
+          const txt = pop.querySelector(`#ta-${dateISO}`).value.trim();
+          if(!enabled){ pop.classList.remove('show'); return; }
+          if(!currentUser) return;
+          try{
+            await fetch(API + '/api/note', {
+              method:'POST',
+              headers:{'content-type':'application/json'},
+              body: JSON.stringify({ user_id: currentUser, date: dateISO, note: txt })
+            });
+            flash('Note saved.');
+            pop.classList.remove('show');
+          }catch{ flash('Note save failed.'); }
+        }
       });
-      if(!res.ok){ console.warn("saveAvailability failed"); }
+      dayDiv.appendChild(pop);
+
+      nb.addEventListener('click', () => pop.classList.add('show'));
+
+      grid.appendChild(dayDiv);
     }
+  }
 
-    async function saveNote(user_id, date, note){
-      const res = await fetch(`${API}/api/note`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ user_id, date, note })
-      });
-      if(!res.ok){ console.warn("saveNote failed"); }
-    }
+  function makePill(label, dateISO, half) {
+    // current user’s state for this date/half
+    const userMap = windowData.availability[currentUser] || {};
+    const dayMap = userMap[dateISO] || {};
+    const state = dayMap[half] || 'unset';
 
-    function showToast(msg="Saved"){
-      toast.textContent = msg;
-      toast.classList.remove("hidden");
-      clearTimeout(showToast.t);
-      showToast.t = setTimeout(()=>toast.classList.add("hidden"), 900);
-    }
+    const el = document.createElement('div');
+    el.className = pillClassFor(state);
+    el.dataset.state = state;
+    el.dataset.label = label;
+    el.classList.add(label); // AM/PM class
+    el.setAttribute('data-label', label);
+    el.textContent = ''; // label rendered via ::before
 
-    function renderMonth(d){
-      const start = startOfMonth(d);
-      const end   = endOfMonth(d);
-      // Extend to full weeks for a neat grid
-      const gridStart = addDays(start, -start.getDay());
-      const gridEnd = addDays(end, 6 - end.getDay());
-      viewStart = gridStart; viewEnd = gridEnd;
-
-      // draw shell; data fill happens after fetch
-      calGrid.innerHTML = "";
-      let cursor = new Date(gridStart);
-      const days = [];
-      while(cursor<=gridEnd){ days.push(new Date(cursor)); cursor=addDays(cursor,1) }
-      for(const day of days){
-        const ds = fmt(day);
-        const outMonth = day.getMonth()!==d.getMonth();
-        const title = day.toLocaleString([], { month:"short", day:"numeric" });
-        calGrid.insertAdjacentHTML("beforeend", `
-          <div class="day" data-date="${ds}" ${outMonth?'style="opacity:.45"':''}>
-            <header>
-              <div>${title}</div>
-              <div class="pill nudge" data-date="${ds}">Needs EMT</div>
-            </header>
-            <div class="toggles">
-              <div class="toggle am" data-date="${ds}" data-half="AM">
-                <div class="state"></div><div><strong>AM</strong><div class="sub">Tap to cycle</div></div>
-              </div>
-              <div class="toggle pm" data-date="${ds}" data-half="PM">
-                <div class="state"></div><div><strong>PM</strong><div class="sub">Tap to cycle</div></div>
-              </div>
-            </div>
-            <div class="note">
-              <div class="sub">Note (shows to supervisors):</div>
-              <input class="noteInput" data-date="${ds}" placeholder="In at 10am" maxlength="60"/>
-            </div>
-            <div class="foot">
-              <div class="sub assignees" data-date="${ds}">—</div>
-              <div class="pill score" data-date="${ds}">Score 0</div>
-            </div>
-          </div>
-        `);
+    el.addEventListener('click', async () => {
+      const next = nextState(el.dataset.state);
+      el.className = pillClassFor(next) + ' ' + label;
+      el.dataset.state = next;
+      // optimistic save
+      try{
+        await fetch(API + '/api/availability', {
+          method:'POST',
+          headers:{'content-type':'application/json'},
+          body: JSON.stringify({ user_id: currentUser, date: dateISO, half, state: next })
+        });
+      }catch{
+        flash('Save failed'); // leave optimistic UI
       }
+    });
+    return el;
+  }
+
+  function flash(text){
+    msg.textContent = text;
+    clearTimeout(flash._t);
+    flash._t = setTimeout(()=> msg.textContent='', 1600);
+  }
+
+  // --- events
+  memberSel.addEventListener('change', async () => {
+    currentUser = memberSel.value;
+    await loadWindow();
+  });
+  prevBtn.addEventListener('click', async () => {
+    anchor.setMonth(anchor.getMonth()-1);
+    await loadWindow();
+  });
+  nextBtn.addEventListener('click', async () => {
+    anchor.setMonth(anchor.getMonth()+1);
+    await loadWindow();
+  });
+
+  // init
+  (async () => {
+    try{
+      await loadUsers();
+      await loadWindow();
+    }catch(e){
+      msg.textContent = 'API error: ' + (e?.message || e);
     }
-
-    function bindInteractions(){
-      // Tap to cycle AM/PM
-      calGrid.addEventListener("click", async (e)=>{
-        const t = e.target.closest(".toggle");
-        if(!t) return;
-        const date = t.dataset.date, half = t.dataset.half;
-        const curr = (state?.availability?.[CURRENT_USER.id]?.[date]?.[half]) || "unset";
-        const next = cycleState(curr);
-
-        // optimistic UI
-        state.availability ||= {};
-        state.availability[CURRENT_USER.id] ||= {};
-        state.availability[CURRENT_USER.id][date] ||= {};
-        state.availability[CURRENT_USER.id][date][half] = next;
-        decorateFromState(date);
-
-        // save
-        saveAvailability(CURRENT_USER.id, date, half, next).then(()=>showToast()).catch(()=>{});
-      });
-
-      // Long-press day number to paint both halves
-      calGrid.addEventListener("pointerdown", e=>{
-        const header = e.target.closest("header");
-        if(!header) return;
-        const date = header.parentElement.dataset.date;
-        const timeout = setTimeout(async ()=>{
-          for(const half of ["AM","PM"]){
-            const curr = (state?.availability?.[CURRENT_USER.id]?.[date]?.[half]) || "unset";
-            const next = cycleState(curr);
-            state.availability[CURRENT_USER.id] ||= {};
-            state.availability[CURRENT_USER.id][date] ||= {};
-            state.availability[CURRENT_USER.id][date][half] = next;
-            saveAvailability(CURRENT_USER.id, date, half, next).catch(()=>{});
-          }
-          decorateFromState(date);
-          showToast("Painted AM/PM");
-        }, 350);
-        const up = ()=>{ clearTimeout(timeout); window.removeEventListener("pointerup", up, { once:true }); };
-        window.addEventListener("pointerup", up, { once:true });
-      });
-
-      // Notes autosave (debounced 800ms)
-      let noteTimer=null, lastTarget=null;
-      calGrid.addEventListener("input", e=>{
-        const i = e.target;
-        if(!(i.classList && i.classList.contains("noteInput"))) return;
-        clearTimeout(noteTimer);
-        lastTarget=i;
-        noteTimer=setTimeout(()=>{
-          const date=i.dataset.date, val=i.value.trim().slice(0,60);
-          saveNote(CURRENT_USER.id, date, val).then(()=>showToast("Note saved")).catch(()=>{});
-        }, 800);
-      });
-    }
-
-    function decorateFromState(date){
-      // If date provided, only decorate that card
-      const apply = (el, ds)=>{
-        const amEl = el.querySelector('.toggle.am .state');
-        const pmEl = el.querySelector('.toggle.pm .state');
-        const av = state.availability?.[CURRENT_USER.id]?.[ds] || {};
-        amEl.className = "state " + stateToClass(av.AM||"unset");
-        pmEl.className = "state " + stateToClass(av.PM||"unset");
-
-        // “assignees” and score nudges (very simple placeholders)
-        const asg = state.shifts?.[ds];
-        const names = [];
-        if(asg?.AM?.assignees?.length) names.push(`AM: ${asg.AM.assignees.length}`);
-        if(asg?.PM?.assignees?.length) names.push(`PM: ${asg.PM.assignees.length}`);
-        el.querySelector(".assignees").textContent = names.join(" · ") || "—";
-
-        // fake score (you’ll plug your scoring later)
-        const score = (av.AM==="prefer"?2:av.AM==="available"?1:0) + (av.PM==="prefer"?2:av.PM==="available"?1:0);
-        el.querySelector(".score").textContent = `Score ${score}`;
-
-        // nudge example
-        const nudge = el.querySelector(".nudge");
-        nudge.textContent = "Nudge: Needs EMT";
-      };
-
-      if(date){
-        const card = calGrid.querySelector(`.day[data-date="${date}"]`);
-        if(card) apply(card, date);
-        return;
-      }
-      calGrid.querySelectorAll('.day').forEach(el=>apply(el, el.dataset.date));
-    }
-
-    async function loadAndRender(forDate=new Date()){
-      renderMonth(forDate);
-      state = await fetchState(viewStart, viewEnd);
-      decorateFromState();
-    }
-
-    // Paging controls
-    let base = new Date();
-    document.getElementById('prevBtn').onclick = ()=>{ base = new Date(base.getFullYear(), base.getMonth()-1, 1); loadAndRender(base) }
-    document.getElementById('nextBtn').onclick = ()=>{ base = new Date(base.getFullYear(), base.getMonth()+1, 1); loadAndRender(base) }
-    document.getElementById('thisMonthBtn').onclick = ()=>{ base = new Date(); loadAndRender(base) }
-
-    bindInteractions();
-    loadAndRender(base);
-  </script>
+  })();
+})();
+</script>
 </body>
 </html>
