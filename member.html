@@ -1,265 +1,305 @@
-<!-- member.html (4-state cycling: prefer → available → unset → no) -->
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ShiftCommander · Member</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <style>
-    .chip{display:inline-block;padding:.25rem .5rem;border-radius:.5rem;font-size:.8rem;margin-right:.5rem}
-    .chip.green{background:#e8f7ef;color:#0f5132;border:1px solid #badbcc}
-    .chip.yellow{background:#fff3cd;color:#664d03;border:1px solid #ffecb5}
-    .chip.gray{background:#eef2f7;color:#374151;border:1px solid #cfd8e3}
-    .chip.red{background:#f8d7da;color:#842029;border:1px solid #f5c2c7}
-
-    .pill{border:1px solid #d1d5db;border-radius:.5rem;padding:.25rem .6rem;margin:.125rem;cursor:pointer;user-select:none}
-    .pill.prefer{background:#e8f7ef;border-color:#0f5132;color:#0f5132}
-    .pill.available{background:#fff3cd;border-color:#664d03;color:#664d03}
-    .pill.unset{background:#eef2f7;border-color:#cfd8e3;color:#374151}
-    .pill.no{background:#f8d7da;border-color:#842029;color:#842029}
-
-    .daycard{border:1px solid #e5e7eb;border-radius:.75rem;padding:.5rem;margin:.25rem;min-width:9rem;background:#fff}
-    .halfrow{display:flex;gap:.5rem;align-items:center;margin-top:.25rem}
-    .halfrow .label{width:2.25rem;opacity:.75}
-    .grid-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));gap:.5rem}
-    .badge{padding:.15rem .4rem;border-radius:.5rem;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-size:.75rem}
-    #apiError{display:none}
+    :root{
+      --bg:#0b0c0f;--panel:#111319;--ink:#e8e8ea;--muted:#a4a7ae;
+      --brand:#0a84ff;--ok:#30d158;--warn:#ffd60a;--bad:#ff453a;--pill:#2a2e37;
+      --card:#151824;--line:#2a2e37;--shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:16px
+    }
+    @media (prefers-color-scheme: light){
+      :root{--bg:#f7f8fb;--panel:#ffffff;--ink:#0b0c0f;--muted:#60636b;--card:#ffffff;--line:#e9ebf0;--pill:#eef1f7;--shadow:0 10px 30px rgba(0,0,0,.1)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+    .bar{position:sticky;top:0;z-index:10;backdrop-filter:saturate(180%) blur(20px);background:color-mix(in oklab, var(--panel), transparent 25%);border-bottom:1px solid var(--line)}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .chip{padding:6px 10px;border-radius:999px;background:var(--pill);color:var(--muted);font-weight:600;font-size:12px}
+    .title{font-weight:800;letter-spacing:.2px}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(7,1fr)}
+    .head{display:grid;grid-template-columns:repeat(7,1fr);color:var(--muted);padding:8px 4px}
+    .day{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:140px}
+    .day header{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:700}
+    .sub{font-size:12px;color:var(--muted)}
+    .toggles{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+    .toggle{
+      display:flex;align-items:center;gap:8px;padding:10px;border-radius:12px;border:1px solid var(--line);cursor:pointer;user-select:none;touch-action:manipulation;transition:.15s transform;
+    }
+    .toggle:active{transform:scale(.98)}
+    .am{grid-column:1/2}.pm{grid-column:2/3}
+    .state{width:10px;height:10px;border-radius:3px;border:1px solid var(--line);background:transparent}
+    .state.prefer{background:var(--ok)}
+    .state.available{background:var(--warn)}
+    .state.no{background:var(--bad)}
+    .note{border-top:1px dashed var(--line);padding:8px 10px}
+    .note input{width:100%;border:0;background:transparent;color:var(--ink);padding:8px;border-radius:10px;outline:0}
+    .foot{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
+    .pill{font-size:12px;color:var(--muted);background:var(--pill);padding:4px 8px;border-radius:999px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--brand);border-color:var(--brand);color:white}
+    .legend{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
+    .swatch{width:12px;height:12px;border-radius:3px;border:1px solid var(--line)}
+    .s-ok{background:var(--ok)}.s-warn{background:var(--warn)}.s-bad{background:var(--bad)}.s-blank{background:transparent}
+    .calwrap{padding:16px}
+    .overline{font-size:12px;color:var(--muted);margin:6px 0 2px}
+    .hidden{display:none}
+    .toast{position:fixed;bottom:16px;left:50%;translate:-50% 0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow)}
+    @media (max-width:900px){.grid,.head{grid-template-columns:repeat(7,minmax(100px,1fr));overflow:auto}}
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <header class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-    <div class="text-xl font-semibold">ShiftCommander <span class="badge">Member</span></div>
-    <nav class="space-x-2">
-      <a class="pill unset" href="/supervisor.html">Supervisor</a>
-      <a class="pill unset" href="/wallboard.html">Wallboard</a>
-    </nav>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 pb-20">
-    <div id="apiError" class="mb-3 p-3 rounded-md border border-red-300 bg-red-50 text-red-800 text-sm"></div>
-
-    <section class="mb-4 flex items-center gap-3">
-      <div>Member #</div>
-      <select id="memberSelect" class="border rounded px-2 py-1"></select>
-      <div id="apiStatus" class="chip gray">Connecting…</div>
-    </section>
-
-    <section class="mb-4 flex items-center gap-2">
-      <button id="prevBtn" class="pill unset">Prev</button>
-      <label>Months</label>
-      <select id="monthsSel" class="border rounded px-2 py-1">
-        <option value="1">1</option>
-        <option value="2" selected>2</option>
-        <option value="3">3</option>
-      </select>
-      <button id="nextBtn" class="pill unset">Next</button>
-      <div class="ml-auto text-sm">
-        <span class="chip green">Prefer</span>
-        <span class="chip yellow">Available</span>
-        <span class="chip gray">If needed</span>
-        <span class="chip red">Do Not</span>
+<body>
+  <div class="bar">
+    <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div class="brand">
+        <div class="chip">ShiftCommander</div>
+        <div class="title">Member</div>
       </div>
-    </section>
+      <div class="legend">
+        <span class="overline">Tap to cycle:</span>
+        <span class="swatch s-ok"></span> Prefer
+        <span class="swatch s-warn"></span> Available
+        <span class="swatch s-blank"></span> Unset
+        <span class="swatch s-bad"></span> Do-Not-Schedule
+      </div>
+    </div>
+  </div>
 
-    <section class="mb-6">
-      <details class="bg-white rounded-lg border p-3">
-        <summary class="cursor-pointer font-medium">Preferences & bulk tools</summary>
-        <div class="mt-3 grid md:grid-cols-2 gap-3">
-          <label class="inline-flex items-center gap-2"><input type="checkbox" id="reserveChk"> Reserve mode (never auto-assign me)</label>
-          <label class="inline-flex items-center gap-2"><input type="checkbox" id="inactiveChk"> Inactive</label>
+  <div class="wrap">
+    <div class="controls">
+      <button class="btn" id="prevBtn">‹ Prev</button>
+      <button class="btn" id="nextBtn">Next ›</button>
+      <button class="btn primary" id="thisMonthBtn">This Month</button>
+      <div class="pill" id="userPill">Signed in: <strong id="who">Brian</strong></div>
+      <div class="pill">Tap AM/PM tiles to paint. Long-press day number to paint both.</div>
+    </div>
+  </div>
 
-          <div class="flex items-center gap-3 md:col-span-2 flex-wrap">
-            <span>Bulk from</span><input id="bulkFrom" type="date" class="border rounded px-2 py-1">
-            <span>to</span><input id="bulkTo" type="date" class="border rounded px-2 py-1">
-            <span class="ml-2">Set to:</span>
-            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="prefer"> Prefer</label>
-            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="available" checked> Available</label>
-            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="unset"> If needed</label>
-            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="no"> Do Not</label>
-            <label class="inline-flex items-center gap-1 ml-2"><input type="checkbox" id="bulkAM" checked> AM</label>
-            <label class="inline-flex items-center gap-1"><input type="checkbox" id="bulkPM" checked> PM</label>
-            <button id="bulkApply" class="pill available">Apply</button>
-          </div>
-        </div>
-      </details>
-      <p class="text-xs text-gray-500 mt-1">AM/PM toggles auto-commit after ~3 seconds. Dates &gt; 4 weeks show “Pre-commit”.</p>
-    </section>
+  <div class="wrap calwrap">
+    <div class="head" id="dowHead"></div>
+    <div class="grid" id="calGrid" aria-live="polite"></div>
+  </div>
 
-    <section id="calendar"></section>
-  </main>
+  <div class="toast hidden" id="toast">Saved</div>
 
   <script>
-    const API_BASE = new URLSearchParams(location.search).get('api') || "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-
-    async function api(path, opts={}) {
-      const res = await fetch(API_BASE + path, { headers:{ "Content-Type":"application/json" }, ...opts });
-      if (!res.ok) { const t = await res.text().catch(()=>res.statusText); throw new Error(`HTTP ${res.status} ${path}: ${t}`); }
-      return res.json();
-    }
-    function showApiError(msg){
-      const el = document.getElementById('apiError');
-      el.textContent = "API error: " + msg;
-      el.style.display = 'block';
-      const st = document.getElementById('apiStatus');
-      st.className = 'chip red'; st.textContent = 'API error';
-    }
+    // CONFIG
+    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    // Demo sign-in (replace with your auth later)
+    const CURRENT_USER = { id: "uq2w4or", name: "Brian" };
 
     // Utilities
-    function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function addMonths(d,n){ return new Date(d.getFullYear(), d.getMonth()+n, 1); }
-    function fmtISO(d){ return d.toISOString().slice(0,10); }
-    function rangeFor(start, months){ const end = addDays(addMonths(start, months), -1); return {startISO:fmtISO(start), endISO:fmtISO(end)}; }
+    const fmt = d => d.toISOString().slice(0,10);
+    const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x}
+    const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
+    const endOfMonth   = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
 
-    // 4-state cycle
-    const STATES = ["prefer","available","unset","no"];
-    function nextState(s){ const i = STATES.indexOf(s); return STATES[(i+1) % STATES.length]; }
-    function stateLabel(s){
-      return s==="prefer"?"Prefer":s==="available"?"Available":s==="no"?"Do Not":"If needed";
+    // State
+    let viewStart, viewEnd, state=null;
+
+    // DOM
+    const calGrid = document.getElementById('calGrid');
+    const dowHead = document.getElementById('dowHead');
+    const toast = document.getElementById('toast');
+    const who = document.getElementById('who');
+    who.textContent = CURRENT_USER.name;
+
+    // DOW header
+    const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    dowHead.innerHTML = dows.map(d=>`<div class="sub" style="padding:0 6px">${d}</div>`).join("");
+
+    function cycleState(curr){
+      // order: prefer (green) → available (yellow) → unset (blank) → no (red) → prefer…
+      const order = ["prefer","available","unset","no"];
+      const i = order.indexOf(curr);
+      return order[(i+1)%order.length];
     }
 
-    let users = [];
-    let currentUser = null;
-    let startDate = firstOfMonth(new Date());
-    let monthsSpan = 2;
-    let autoCommitTimer = null;
+    function stateToClass(s){ return s==="prefer"?"prefer":(s==="available"?"available":(s==="no"?"no":"")) }
 
-    async function loadUsers(){
-      const list = await api("/api/users");
-      users = list;
-      const sel = document.getElementById('memberSelect');
-      sel.innerHTML = "";
-      for(const u of users){
-        const o = document.createElement('option');
-        o.value = u.id;
-        o.textContent = `${u.member_no ? u.member_no+" · " : ""}${u.name}`;
-        sel.appendChild(o);
-      }
-      if(users.length){ currentUser = users[0].id; sel.value = currentUser; }
-      const st = document.getElementById('apiStatus');
-      st.className = 'chip green'; st.textContent = 'Connected to Worker API';
+    async function fetchState(a,b){
+      const url = `${API}/api/state?start=${fmt(a)}&end=${fmt(b)}`;
+      const res = await fetch(url);
+      if(!res.ok){ throw new Error("state fetch failed") }
+      return res.json();
     }
 
-    function buildCalendar(){
-      const host = document.getElementById('calendar');
-      host.innerHTML = "";
-      const {startISO, endISO} = rangeFor(startDate, monthsSpan);
-      const title = document.createElement('div');
-      title.className = "mb-2 text-sm text-gray-600";
-      title.textContent = `${startISO} — ${endISO}`;
-      host.appendChild(title);
-
-      const grid = document.createElement('div'); grid.className = "grid-days"; host.appendChild(grid);
-      for(let d=new Date(startDate); d<=addDays(addMonths(startDate, monthsSpan), -1); d=addDays(d,1)){
-        const iso = fmtISO(d);
-
-        const card = document.createElement('div'); card.className="daycard"; card.dataset.date=iso;
-
-        const head = document.createElement('div'); head.className="text-sm font-medium";
-        head.textContent = d.toDateString().slice(0,10) + "  " + iso;
-        card.appendChild(head);
-
-        // AM
-        card.appendChild(buildHalfRow("AM", iso));
-
-        // PM
-        card.appendChild(buildHalfRow("PM", iso));
-
-        const note = document.createElement('input');
-        note.type = "text"; note.placeholder = "In at 10am";
-        note.className = "mt-2 w-full border rounded px-2 py-1 text-sm";
-        note.dataset.date = iso;
-        note.addEventListener('change', () => commitNote(iso, note.value));
-        card.appendChild(note);
-
-        grid.appendChild(card);
-      }
-    }
-
-    function buildHalfRow(half, iso){
-      const row = document.createElement('div'); row.className="halfrow";
-      const lbl = document.createElement('div'); lbl.className="label"; lbl.textContent=half; row.appendChild(lbl);
-
-      const btn = document.createElement('button');
-      btn.className = "pill unset";
-      btn.dataset.half = half;
-      btn.dataset.state = "unset";
-      btn.textContent = stateLabel("unset");
-      btn.addEventListener('click', () => {
-        clearTimeout(autoCommitTimer);
-        const next = nextState(btn.dataset.state);
-        btn.dataset.state = next;
-        btn.className = `pill ${next}`;
-        btn.textContent = stateLabel(next);
-        const date = btn.closest('.daycard').dataset.date;
-        autoCommitTimer = setTimeout(() => commitAvailability(date, half, next).catch(err=>showApiError(err.message)), 800);
-      });
-      row.appendChild(btn);
-      return row;
-    }
-
-    async function hydrateAvailability(){
-      if(!currentUser) return;
-      const {startISO, endISO} = rangeFor(startDate, monthsSpan);
-      const state = await api(`/api/state?start=${startISO}&end=${endISO}`);
-      const mine = state.availability[currentUser] || {};
-
-      for(const [date, halves] of Object.entries(mine)){
-        const card = document.querySelector(`.daycard[data-date="${date}"]`);
-        if(!card) continue;
-        for(const [half, val] of Object.entries(halves)){
-          const btn = card.querySelector(`button.pill[data-half="${half}"]`);
-          if(btn){
-            const v = val || "unset";
-            btn.dataset.state = v;
-            btn.className = `pill ${v}`;
-            btn.textContent = stateLabel(v);
-          }
-        }
-      }
-    }
-
-    async function commitAvailability(date, half, state){
-      if(!currentUser) return;
-      await api("/api/availability", {
+    async function saveAvailability(user_id, date, half, state){
+      const res = await fetch(`${API}/api/availability`, {
         method:"POST",
-        body: JSON.stringify({ userId: currentUser, date, half, state })
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ user_id, date, half, state })
+      });
+      if(!res.ok){ console.warn("saveAvailability failed"); }
+    }
+
+    async function saveNote(user_id, date, note){
+      const res = await fetch(`${API}/api/note`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ user_id, date, note })
+      });
+      if(!res.ok){ console.warn("saveNote failed"); }
+    }
+
+    function showToast(msg="Saved"){
+      toast.textContent = msg;
+      toast.classList.remove("hidden");
+      clearTimeout(showToast.t);
+      showToast.t = setTimeout(()=>toast.classList.add("hidden"), 900);
+    }
+
+    function renderMonth(d){
+      const start = startOfMonth(d);
+      const end   = endOfMonth(d);
+      // Extend to full weeks for a neat grid
+      const gridStart = addDays(start, -start.getDay());
+      const gridEnd = addDays(end, 6 - end.getDay());
+      viewStart = gridStart; viewEnd = gridEnd;
+
+      // draw shell; data fill happens after fetch
+      calGrid.innerHTML = "";
+      let cursor = new Date(gridStart);
+      const days = [];
+      while(cursor<=gridEnd){ days.push(new Date(cursor)); cursor=addDays(cursor,1) }
+      for(const day of days){
+        const ds = fmt(day);
+        const outMonth = day.getMonth()!==d.getMonth();
+        const title = day.toLocaleString([], { month:"short", day:"numeric" });
+        calGrid.insertAdjacentHTML("beforeend", `
+          <div class="day" data-date="${ds}" ${outMonth?'style="opacity:.45"':''}>
+            <header>
+              <div>${title}</div>
+              <div class="pill nudge" data-date="${ds}">Needs EMT</div>
+            </header>
+            <div class="toggles">
+              <div class="toggle am" data-date="${ds}" data-half="AM">
+                <div class="state"></div><div><strong>AM</strong><div class="sub">Tap to cycle</div></div>
+              </div>
+              <div class="toggle pm" data-date="${ds}" data-half="PM">
+                <div class="state"></div><div><strong>PM</strong><div class="sub">Tap to cycle</div></div>
+              </div>
+            </div>
+            <div class="note">
+              <div class="sub">Note (shows to supervisors):</div>
+              <input class="noteInput" data-date="${ds}" placeholder="In at 10am" maxlength="60"/>
+            </div>
+            <div class="foot">
+              <div class="sub assignees" data-date="${ds}">—</div>
+              <div class="pill score" data-date="${ds}">Score 0</div>
+            </div>
+          </div>
+        `);
+      }
+    }
+
+    function bindInteractions(){
+      // Tap to cycle AM/PM
+      calGrid.addEventListener("click", async (e)=>{
+        const t = e.target.closest(".toggle");
+        if(!t) return;
+        const date = t.dataset.date, half = t.dataset.half;
+        const curr = (state?.availability?.[CURRENT_USER.id]?.[date]?.[half]) || "unset";
+        const next = cycleState(curr);
+
+        // optimistic UI
+        state.availability ||= {};
+        state.availability[CURRENT_USER.id] ||= {};
+        state.availability[CURRENT_USER.id][date] ||= {};
+        state.availability[CURRENT_USER.id][date][half] = next;
+        decorateFromState(date);
+
+        // save
+        saveAvailability(CURRENT_USER.id, date, half, next).then(()=>showToast()).catch(()=>{});
+      });
+
+      // Long-press day number to paint both halves
+      calGrid.addEventListener("pointerdown", e=>{
+        const header = e.target.closest("header");
+        if(!header) return;
+        const date = header.parentElement.dataset.date;
+        const timeout = setTimeout(async ()=>{
+          for(const half of ["AM","PM"]){
+            const curr = (state?.availability?.[CURRENT_USER.id]?.[date]?.[half]) || "unset";
+            const next = cycleState(curr);
+            state.availability[CURRENT_USER.id] ||= {};
+            state.availability[CURRENT_USER.id][date] ||= {};
+            state.availability[CURRENT_USER.id][date][half] = next;
+            saveAvailability(CURRENT_USER.id, date, half, next).catch(()=>{});
+          }
+          decorateFromState(date);
+          showToast("Painted AM/PM");
+        }, 350);
+        const up = ()=>{ clearTimeout(timeout); window.removeEventListener("pointerup", up, { once:true }); };
+        window.addEventListener("pointerup", up, { once:true });
+      });
+
+      // Notes autosave (debounced 800ms)
+      let noteTimer=null, lastTarget=null;
+      calGrid.addEventListener("input", e=>{
+        const i = e.target;
+        if(!(i.classList && i.classList.contains("noteInput"))) return;
+        clearTimeout(noteTimer);
+        lastTarget=i;
+        noteTimer=setTimeout(()=>{
+          const date=i.dataset.date, val=i.value.trim().slice(0,60);
+          saveNote(CURRENT_USER.id, date, val).then(()=>showToast("Note saved")).catch(()=>{});
+        }, 800);
       });
     }
-    async function commitNote(date, text){ console.log("note change", {date,text}); }
 
-    async function doBulkApply(){
-      if(!currentUser) return;
-      const from = document.getElementById('bulkFrom').value;
-      const to   = document.getElementById('bulkTo').value;
-      const st   = document.querySelector('input[name="bulkState"]:checked')?.value || "available";
-      const am   = document.getElementById('bulkAM').checked;
-      const pm   = document.getElementById('bulkPM').checked;
-      if(!from || !to || (!am && !pm)) return;
+    function decorateFromState(date){
+      // If date provided, only decorate that card
+      const apply = (el, ds)=>{
+        const amEl = el.querySelector('.toggle.am .state');
+        const pmEl = el.querySelector('.toggle.pm .state');
+        const av = state.availability?.[CURRENT_USER.id]?.[ds] || {};
+        amEl.className = "state " + stateToClass(av.AM||"unset");
+        pmEl.className = "state " + stateToClass(av.PM||"unset");
 
-      for(let d=new Date(from); d<=new Date(to); d=addDays(d,1)){
-        const iso = fmtISO(d);
-        if(am) await commitAvailability(iso,"AM",st);
-        if(pm) await commitAvailability(iso,"PM",st);
+        // “assignees” and score nudges (very simple placeholders)
+        const asg = state.shifts?.[ds];
+        const names = [];
+        if(asg?.AM?.assignees?.length) names.push(`AM: ${asg.AM.assignees.length}`);
+        if(asg?.PM?.assignees?.length) names.push(`PM: ${asg.PM.assignees.length}`);
+        el.querySelector(".assignees").textContent = names.join(" · ") || "—";
+
+        // fake score (you’ll plug your scoring later)
+        const score = (av.AM==="prefer"?2:av.AM==="available"?1:0) + (av.PM==="prefer"?2:av.PM==="available"?1:0);
+        el.querySelector(".score").textContent = `Score ${score}`;
+
+        // nudge example
+        const nudge = el.querySelector(".nudge");
+        nudge.textContent = "Nudge: Needs EMT";
+      };
+
+      if(date){
+        const card = calGrid.querySelector(`.day[data-date="${date}"]`);
+        if(card) apply(card, date);
+        return;
       }
-      await hydrateAvailability();
+      calGrid.querySelectorAll('.day').forEach(el=>apply(el, el.dataset.date));
     }
 
-    // Wire up
-    document.getElementById('prevBtn').addEventListener('click', async ()=>{ startDate = addMonths(startDate, -monthsSpan); buildCalendar(); try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('nextBtn').addEventListener('click', async ()=>{ startDate = addMonths(startDate,  monthsSpan); buildCalendar(); try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('monthsSel').addEventListener('change', async (e)=>{ monthsSpan = parseInt(e.target.value,10)||2; buildCalendar(); try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('memberSelect').addEventListener('change', async (e)=>{ currentUser = e.target.value; try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('bulkApply').addEventListener('click', ()=>{ doBulkApply().catch(e=>showApiError(e.message)); });
+    async function loadAndRender(forDate=new Date()){
+      renderMonth(forDate);
+      state = await fetchState(viewStart, viewEnd);
+      decorateFromState();
+    }
 
-    (async function init(){
-      try{
-        await loadUsers();
-        buildCalendar();
-        await hydrateAvailability();
-      }catch(e){ showApiError(e.message); }
-    })();
+    // Paging controls
+    let base = new Date();
+    document.getElementById('prevBtn').onclick = ()=>{ base = new Date(base.getFullYear(), base.getMonth()-1, 1); loadAndRender(base) }
+    document.getElementById('nextBtn').onclick = ()=>{ base = new Date(base.getFullYear(), base.getMonth()+1, 1); loadAndRender(base) }
+    document.getElementById('thisMonthBtn').onclick = ()=>{ base = new Date(); loadAndRender(base) }
+
+    bindInteractions();
+    loadAndRender(base);
   </script>
 </body>
 </html>

@@ -1,101 +1,72 @@
-<!-- wallboard.html -->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>ShiftCommander · Wallboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <style>
-    .pill{border:1px solid #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin:.125rem;cursor:pointer}
-    .day{border:1px solid #e5e7eb;border-radius:.5rem;padding:.5rem;margin:.25rem}
-    .grid-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.5rem}
-    .badge{padding:.15rem .4rem;border-radius:.5rem;background:#ecfeff;color:#155e75;border:1px solid #a5f3fc;font-size:.75rem}
-    #apiError{display:none}
-    .seat{border:1px dashed #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin-top:.25rem}
+    :root{--bg:#0b0c0f;--panel:#0f1117;--ink:#e8e8ea;--muted:#a4a7ae;--line:#2a2e37;--card:#151824;--ok:#30d158;--warn:#ffd60a;--bad:#ff453a}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .head{display:flex;justify-content:space-between;align-items:center}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(7,1fr);margin-top:12px}
+    .cell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:110px}
+    .sub{color:var(--muted);font-size:12px}
+    .row{display:flex;gap:10px;align-items:center}
+    .dot{width:8px;height:8px;border-radius:50%}
+    .ok{background:var(--ok)}.warn{background:var(--warn)}.bad{background:var(--bad)}
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <header class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-    <div class="text-xl font-semibold">ShiftCommander <span class="badge">Public (read-only)</span></div>
-    <nav class="space-x-2">
-      <a class="pill" href="/member.html">Member</a>
-      <a class="pill" href="/supervisor.html">Supervisor</a>
-    </nav>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 pb-20">
-    <div id="apiError" class="mb-3 p-3 rounded-md border border-red-300 bg-red-50 text-red-800 text-sm"></div>
-
-    <section class="mb-4 flex items-center gap-2">
-      <button id="prevBtn" class="pill">Prev</button>
-      <label>Months</label>
-      <select id="monthsSel" class="border rounded px-2 py-1">
-        <option value="1">1</option>
-        <option value="2" selected>2</option>
-        <option value="3">3</option>
-      </select>
-      <button id="nextBtn" class="pill">Next</button>
-      <div id="rangeTxt" class="ml-3 text-sm text-gray-600"></div>
-    </section>
-
-    <section id="board" class="grid-days"></section>
-  </main>
-
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h1 style="margin:0;font-weight:800">ShiftCommander · Wallboard</h1>
+      <div class="sub" id="when"></div>
+    </div>
+    <div id="grid" class="grid" aria-live="polite"></div>
+  </div>
   <script>
-    const API_BASE = new URLSearchParams(location.search).get('api') || "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    async function api(path, opts={}) {
-      const res = await fetch(API_BASE + path, { headers:{ "Content-Type":"application/json" }, ...opts });
-      if(!res.ok){ const t=await res.text().catch(()=>res.statusText); throw new Error(`HTTP ${res.status} ${path}: ${t}`); }
-      return res.json();
-    }
-    function showApiError(msg){ const el=document.getElementById('apiError'); el.textContent="API error: "+msg; el.style.display='block'; }
+    const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    const fmt= d=>d.toISOString().slice(0,10);
+    const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x}
+    const startOfMonth=d=>new Date(d.getFullYear(),d.getMonth(),1);
+    const endOfMonth=d=>new Date(d.getFullYear(),d.getMonth()+1,0);
+    let base=new Date();
 
-    function firstOfMonth(d){ return new Date(d.getFullYear(),d.getMonth(),1); }
-    function addMonths(d,n){ return new Date(d.getFullYear(), d.getMonth()+n, 1); }
-    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function fmtISO(d){ return d.toISOString().slice(0,10); }
+    function names(ids, users){ return ids.map(id=>users.find(u=>u.id===id)?.name||id).join(", ") || "—" }
 
-    let start = firstOfMonth(new Date());
-    let months = 2;
+    async function render(){
+      const start=startOfMonth(base), end=endOfMonth(base);
+      document.getElementById('when').textContent = start.toLocaleString([], {month:"long", year:"numeric"});
+      const [state, users] = await Promise.all([
+        fetch(`${API}/api/state?start=${fmt(start)}&end=${fmt(end)}`).then(r=>r.json()),
+        fetch(`${API}/api/users`).then(r=>r.json())
+      ]);
+      const days=[]; let c=new Date(start); c.setDate(1-c.getDay());
+      const last=new Date(end); last.setDate(last.getDate()+(6-last.getDay()));
+      while(c<=last){ days.push(new Date(c)); c=addDays(c,1) }
 
-    function paintRange(){
-      const end = addDays(addMonths(start, months), -1);
-      document.getElementById('rangeTxt').textContent = fmtISO(start) + " — " + fmtISO(end);
-    }
-
-    async function loadRange(){
-      const end = addDays(addMonths(start, months), -1);
-      const state = await api(`/api/state?start=${fmtISO(start)}&end=${fmtISO(end)}`);
-
-      const host = document.getElementById('board'); host.innerHTML="";
-      const days = [];
-      for(let d=new Date(start); d<=end; d=addDays(d,1)) days.push(new Date(d));
-
+      const g=document.getElementById('grid'); g.innerHTML="";
       for(const d of days){
-        const iso = fmtISO(d);
-        const s = state.shifts[iso] || {};
-        const AM = s.AM || {assignees:[],status:"unassigned"};
-        const PM = s.PM || {assignees:[],status:"unassigned"};
-
-        const card = document.createElement('div');
-        card.className="day bg-white";
-        card.innerHTML = `
-          <div class="font-medium mb-1">${d.toDateString().slice(0,10)} • ${iso}</div>
-          <div class="seat"><div class="text-xs text-gray-500">AM • ${AM.status}</div><div>${(AM.assignees||[]).join(", ")||"—"}</div></div>
-          <div class="seat"><div class="text-xs text-gray-500">PM • ${PM.status}</div><div>${(PM.assignees||[]).join(", ")||"—"}</div></div>
-        `;
-        host.appendChild(card);
+        const ds=fmt(d);
+        const am=state.shifts?.[ds]?.AM||{assignees:[]};
+        const pm=state.shifts?.[ds]?.PM||{assignees:[]};
+        g.insertAdjacentHTML("beforeend",`
+          <div class="cell">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>${d.toLocaleString([], {month:"short",day:"numeric"})}</div>
+              <div class="sub">Nudge: Needs EMT</div>
+            </div>
+            <div class="row sub" style="margin-top:6px"><div class="dot ok"></div><div>AM</div><div>${names(am.assignees,users)}</div></div>
+            <div class="row sub" style="margin-top:6px"><div class="dot warn"></div><div>PM</div><div>${names(pm.assignees,users)}</div></div>
+          </div>
+        `);
       }
+
+      // Auto-return to current month after 20s if someone scrolled away
+      setTimeout(()=>{ base=new Date(); render() }, 20000);
     }
-
-    document.getElementById('prevBtn').addEventListener('click', async ()=>{ start = addMonths(start, -months); paintRange(); try{ await loadRange(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('nextBtn').addEventListener('click', async ()=>{ start = addMonths(start, months); paintRange(); try{ await loadRange(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('monthsSel').addEventListener('change', async (e)=>{ months = parseInt(e.target.value,10)||2; paintRange(); try{ await loadRange(); }catch(e){ showApiError(e.message); } });
-
-    (async function init(){
-      try{ paintRange(); await loadRange(); } catch(e){ showApiError(e.message); }
-    })();
+    render();
   </script>
 </body>
 </html>

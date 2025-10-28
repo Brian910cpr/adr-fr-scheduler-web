@@ -1,120 +1,216 @@
-<!-- supervisor.html -->
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ShiftCommander · Supervisor</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <style>
-    .pill{border:1px solid #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin:.125rem;cursor:pointer}
-    .day{border:1px solid #e5e7eb;border-radius:.5rem;padding:.5rem;margin:.25rem}
-    .grid-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.5rem}
-    .badge{padding:.15rem .4rem;border-radius:.5rem;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-size:.75rem}
-    #apiError{display:none}
-    .seat{border:1px dashed #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin-top:.25rem}
+    /* same design tokens as member for visual continuity */
+    :root{--bg:#0b0c0f;--panel:#111319;--ink:#e8e8ea;--muted:#a4a7ae;--brand:#0a84ff;--ok:#30d158;--warn:#ffd60a;--bad:#ff453a;--pill:#2a2e37;--card:#151824;--line:#2a2e37;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:16px}
+    @media (prefers-color-scheme: light){:root{--bg:#f7f8fb;--panel:#ffffff;--ink:#0b0c0f;--muted:#60636b;--card:#ffffff;--line:#e9ebf0;--pill:#eef1f7;--shadow:0 10px 30px rgba(0,0,0,.1)}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+    .bar{position:sticky;top:0;z-index:10;backdrop-filter:saturate(180%) blur(20px);background:color-mix(in oklab, var(--panel), transparent 25%);border-bottom:1px solid var(--line)}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .chip{padding:6px 10px;border-radius:999px;background:var(--pill);color:var(--muted);font-weight:600;font-size:12px}
+    .title{font-weight:800;letter-spacing:.2px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--brand);border-color:var(--brand);color:white}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(7,1fr)}
+    .head{display:grid;grid-template-columns:repeat(7,1fr);color:var(--muted);padding:8px 4px}
+    .day{background:var(--card);border:2px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;min-height:120px}
+    .day.committed{border-color:var(--ink)}
+    .day header{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:700}
+    .row{display:flex;gap:10px;padding:10px;border-bottom:1px dashed var(--line);align-items:center}
+    .pill{font-size:12px;color:var(--muted);background:var(--pill);padding:4px 8px;border-radius:999px}
+    .rank{display:flex;gap:6px;align-items:center}
+    .names{font-size:13px;color:var(--muted)}
+    .flags{display:flex;gap:14px;align-items:center;margin-top:8px}
+    .toast{position:fixed;bottom:16px;left:50%;translate:-50% 0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow)}
+    .hidden{display:none}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center}
+    .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:900px;width:95%;max-height:80vh;overflow:auto;box-shadow:var(--shadow);padding:16px}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <header class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-    <div class="text-xl font-semibold">ShiftCommander <span class="badge">Supervisor</span></div>
-    <nav class="space-x-2">
-      <a class="pill" href="/member.html">Member</a>
-      <a class="pill" href="/wallboard.html">Wallboard</a>
-    </nav>
-  </header>
+<body>
+  <div class="bar">
+    <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div class="brand">
+        <div class="chip">ShiftCommander</div>
+        <div class="title">Supervisor</div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="prevBtn">‹</button>
+        <button class="btn" id="nextBtn">›</button>
+        <button class="btn primary" id="thisBtn">This Month</button>
+        <button class="btn" id="uglyBtn">Ranked “Ugly List”</button>
+      </div>
+    </div>
+  </div>
 
-  <main class="max-w-6xl mx-auto px-4 pb-20">
-    <div id="apiError" class="mb-3 p-3 rounded-md border border-red-300 bg-red-50 text-red-800 text-sm"></div>
+  <div class="wrap">
+    <div class="head" id="dowHead"></div>
+    <div class="grid" id="calGrid"></div>
 
-    <section class="mb-4 flex items-center gap-2">
-      <button id="prevBtn" class="pill">Prev week</button>
-      <button id="nextBtn" class="pill">Next week</button>
-      <div id="rangeTxt" class="ml-3 text-sm text-gray-600"></div>
-    </section>
+    <h3 style="margin:18px 6px 8px">Roster Flags</h3>
+    <div id="roster" class="wrap" style="padding:0">
+      <!-- filled from /api/users -->
+    </div>
+  </div>
 
-    <section id="board" class="grid-days"></section>
+  <div class="modal" id="uglyModal" role="dialog" aria-modal="true">
+    <div class="sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <h2>Ranked Candidates (preview)</h2>
+        <button class="btn" onclick="uglyClose()">Close</button>
+      </div>
+      <p class="pill">Shows Prefer › Available › Unset › No (penalized). Add another truck? This preview shows depth.</p>
+      <div id="uglyTable"></div>
+    </div>
+  </div>
 
-    <section class="mt-6 bg-white rounded-lg border p-3">
-      <div class="font-medium mb-2">Roster admin</div>
-      <div class="text-sm text-gray-600">Use “Inactive” to hide a member and “Type III” to mark approvals. “Reserve” stops auto-assign but lets them volunteer.</div>
-      <div id="roster" class="mt-3 grid md:grid-cols-2 gap-2"></div>
-    </section>
-  </main>
+  <div class="toast hidden" id="toast">Saved</div>
 
   <script>
-    const API_BASE = new URLSearchParams(location.search).get('api') || "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    async function api(path, opts={}) {
-      const res = await fetch(API_BASE + path, { headers:{ "Content-Type":"application/json" }, ...opts });
-      if(!res.ok){ const t=await res.text().catch(()=>res.statusText); throw new Error(`HTTP ${res.status} ${path}: ${t}`); }
-      return res.json();
-    }
-    function showApiError(msg){ const el=document.getElementById('apiError'); el.textContent="API error: "+msg; el.style.display='block'; }
+    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const fmt = d => d.toISOString().slice(0,10);
+    const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x}
+    const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
+    const endOfMonth   = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
 
-    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function fmtISO(d){ return d.toISOString().slice(0,10); }
+    let viewStart, viewEnd, base=new Date(), state=null, users=[];
 
-    let weekStart = (d=>{ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; })(new Date());
-    function paintRange(){ document.getElementById('rangeTxt').textContent = fmtISO(weekStart)+" — "+fmtISO(addDays(weekStart,6)); }
+    // Head row
+    document.getElementById('dowHead').innerHTML = dows.map(d=>`<div class="pill" style="background:transparent;color:var(--muted)">${d}</div>`).join("");
 
-    async function loadRoster(){
-      const list = await api("/api/users");
-      const host = document.getElementById('roster'); host.innerHTML="";
-      for(const u of list){
-        const row = document.createElement('div');
-        row.className="flex items-center justify-between border rounded px-2 py-1";
-        row.innerHTML = `<div>${u.name} <span class="text-xs text-gray-500">(${u.role}${u.member_no? ", #"+u.member_no:""})</span></div>
-          <div class="text-sm">
-            <label class="mr-3"><input type="checkbox" ${u.reserve? "checked":""} data-reserve="${u.id}"> Reserve</label>
-            <label class="mr-3"><input type="checkbox" ${u.type3_driver? "checked":""} data-type3="${u.id}"> Type III</label>
-            <label><input type="checkbox" ${u.inactive? "checked":""} data-inactive="${u.id}"> Inactive</label>
-          </div>`;
-        host.appendChild(row);
+    async function fetchState(a,b){ const r=await fetch(`${API}/api/state?start=${fmt(a)}&end=${fmt(b)}`); return r.json() }
+    async function fetchUsers(){ const r=await fetch(`${API}/api/users`); return r.json() }
+
+    function renderMonth(d){
+      const start = startOfMonth(d);
+      const end   = endOfMonth(d);
+      const gridStart = addDays(start, -start.getDay());
+      const gridEnd   = addDays(end, 6 - end.getDay());
+      viewStart = gridStart; viewEnd = gridEnd;
+
+      const days=[]; let c=new Date(gridStart);
+      while(c<=gridEnd){ days.push(new Date(c)); c=addDays(c,1) }
+
+      const cal = document.getElementById('calGrid');
+      cal.innerHTML = "";
+      for(const day of days){
+        const ds = fmt(day);
+        const title = day.toLocaleString([], { month:"short", day:"numeric" });
+        const committed = false; // placeholder: flip true after commit date if you track it
+        const AM = (state?.shifts?.[ds]?.AM)||{assignees:[],status:"unassigned"};
+        const PM = (state?.shifts?.[ds]?.PM)||{assignees:[],status:"unassigned"};
+        const amNames = AM.assignees.map(id => (users.find(u=>u.id===id)?.name)||id).join(", ") || "—";
+        const pmNames = PM.assignees.map(id => (users.find(u=>u.id===id)?.name)||id).join(", ") || "—";
+
+        cal.insertAdjacentHTML("beforeend", `
+          <div class="day ${committed?'committed':''}">
+            <header><div>${title}</div><div class="pill">Nudge: Needs ALS</div></header>
+            <div class="row">
+              <div class="pill">AM</div>
+              <div class="names">${amNames}</div>
+              <div class="rank"><span class="ok">●</span><span class="pill">Score 3</span></div>
+            </div>
+            <div class="row" style="border-bottom:0">
+              <div class="pill">PM</div>
+              <div class="names">${pmNames}</div>
+              <div class="rank"><span class="warn">●</span><span class="pill">Score 1</span></div>
+            </div>
+          </div>
+        `);
       }
-      host.addEventListener('change', async (e)=>{
-        const t=e.target;
-        try{
-          if(t.dataset.reserve){ await api("/api/user/flag",{method:"POST",body:JSON.stringify({userId:t.dataset.reserve,flag:"reserve",value:t.checked})}); }
-          if(t.dataset.type3){ await api("/api/user/flag",{method:"POST",body:JSON.stringify({userId:t.dataset.type3,flag:"type3_driver",value:t.checked})}); }
-          if(t.dataset.inactive){ await api("/api/user/flag",{method:"POST",body:JSON.stringify({userId:t.dataset.inactive,flag:"inactive",value:t.checked})}); }
-        }catch(err){ showApiError(err.message); }
+    }
+
+    function buildRoster(){
+      const host = document.getElementById('roster');
+      host.innerHTML = "";
+      users.forEach(u=>{
+        const can = (u.can_drive||[]).join(", ") || "—";
+        host.insertAdjacentHTML("beforeend", `
+          <div style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--card);box-shadow:var(--shadow)">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+              <div><strong>${u.name}</strong> · <span class="pill">${u.role}</span> · <span class="sub">#${u.member_no||'—'}</span></div>
+              <div class="flags">
+                <label><input type="checkbox" data-inactive-user="${u.id}" ${u.inactive?'checked':''}/> Inactive</label>
+                <label><input type="checkbox" data-reserve-user="${u.id}" ${u.reserve?'checked':''}/> Reserve</label>
+                <label><input type="checkbox" data-type3-user="${u.id}" ${u.type3_driver?'checked':''}/> Type III driver</label>
+              </div>
+            </div>
+            <div class="sub" style="margin-top:6px">Can drive: ${can}</div>
+          </div>
+        `);
       });
+
+      host.addEventListener("change", async (e)=>{
+        const t=e.target;
+        const id = t.dataset.inactiveUser || t.dataset.reserveUser || t.dataset.type3User;
+        if(!id) return;
+        const payload = {
+          user_id: id,
+          inactive: !!document.querySelector(`[data-inactive-user="${id}"]`)?.checked,
+          reserve: !!document.querySelector(`[data-reserve-user="${id}"]`)?.checked,
+          type3_driver: !!document.querySelector(`[data-type3-user="${id}"]`)?.checked
+        };
+        // Server update (implement in Worker)
+        await fetch(`${API}/api/user-flags`, {method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        showToast("Roster updated");
+      }, { once:true }); // once attaches a single listener; page lifetime OK
     }
 
-    async function loadWeek(){
-      const startISO = fmtISO(weekStart);
-      const endISO = fmtISO(addDays(weekStart,6));
-      const state = await api(`/api/state?start=${startISO}&end=${endISO}`);
-      const host = document.getElementById('board'); host.innerHTML="";
+    function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>t.classList.add('hidden'),900) }
 
-      for (let i=0;i<7;i++){
-        const d = addDays(weekStart,i);
-        const iso = fmtISO(d);
-        const day = document.createElement('div');
-        day.className="day bg-white";
-        const s = (state.shifts[iso]||{});
-        const AM = s.AM || {assignees:[],status:"unassigned"};
-        const PM = s.PM || {assignees:[],status:"unassigned"};
-
-        day.innerHTML = `
-          <div class="font-medium mb-1">${d.toDateString().slice(0,10)} • ${iso}</div>
-          <div class="seat"><div class="text-xs text-gray-500">AM • ${AM.status}</div><div>${(AM.assignees||[]).join(", ")||"—"}</div></div>
-          <div class="seat"><div class="text-xs text-gray-500">PM • ${PM.status}</div><div>${(PM.assignees||[]).join(", ")||"—"}</div></div>
-        `;
-        host.appendChild(day);
+    function buildUglyList(){
+      // Naive ranked table demo based on availability map
+      const tableHost = document.getElementById('uglyTable');
+      const rows = [];
+      for (const [date, halves] of Object.entries(state.shifts||{})){
+        for (const half of ["AM","PM"]){
+          const rank = [];
+          for (const u of users){
+            const st = state.availability?.[u.id]?.[date]?.[half] || "unset";
+            let score = st==="prefer"?3: st==="available"?1: st==="no"?-9: 0;
+            if(u.inactive) score -= 5;
+            if(u.reserve) score += 0.5; // small encouragement
+            rank.push({date, half, user: u.name, score});
+          }
+          rank.sort((a,b)=>b.score-a.score);
+          rows.push({ date, half, top: rank.slice(0,5) });
+        }
       }
+      const html = rows.slice(0,60).map(r=>{
+        const best = r.top.map(x=>`${x.user} (${x.score})`).join(", ");
+        return `<tr><td>${r.date}</td><td>${r.half}</td><td>${best}</td></tr>`;
+      }).join("");
+      tableHost.innerHTML = `<table><thead><tr><th>Date</th><th>Half</th><th>Top candidates</th></tr></thead><tbody>${html}</tbody></table>`;
     }
 
-    document.getElementById('prevBtn').addEventListener('click', async ()=>{ weekStart = addDays(weekStart,-7); paintRange(); try{ await loadWeek(); }catch(e){ showApiError(e.message); } });
-    document.getElementById('nextBtn').addEventListener('click', async ()=>{ weekStart = addDays(weekStart,7); paintRange(); try{ await loadWeek(); }catch(e){ showApiError(e.message); } });
+    function uglyOpen(){ document.getElementById('uglyModal').style.display='flex'; buildUglyList() }
+    function uglyClose(){ document.getElementById('uglyModal').style.display='none' }
+    window.uglyClose = uglyClose;
 
-    (async function init(){
-      try{
-        paintRange();
-        await loadRoster();
-        await loadWeek();
-      }catch(e){ showApiError(e.message); }
-    })();
+    async function loadAndRender(){
+      users = await fetchUsers();
+      state = await fetchState(startOfMonth(base), endOfMonth(base));
+      renderMonth(base);
+      buildRoster();
+    }
+
+    document.getElementById('uglyBtn').onclick = uglyOpen;
+    document.getElementById('prevBtn').onclick = ()=>{ base=new Date(base.getFullYear(),base.getMonth()-1,1); loadAndRender() }
+    document.getElementById('nextBtn').onclick = ()=>{ base=new Date(base.getFullYear(),base.getMonth()+1,1); loadAndRender() }
+    document.getElementById('thisBtn').onclick = ()=>{ base=new Date(); loadAndRender() }
+
+    loadAndRender();
   </script>
 </body>
 </html>
