@@ -18,7 +18,7 @@
   .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:var(--ink-soft);text-decoration:none}
   .tab.active{background:var(--ring);color:var(--ink)}
   .controls{display:flex;gap:10px;align-items:center;padding:10px 16px}
-  select, button{background:var(--card2);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 10px}
+  select, button, input, textarea{background:var(--card2);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 10px}
   button.icon{padding:6px 8px}
   .cal-wrap{padding:8px 16px}
   .cal{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:10px}
@@ -26,9 +26,9 @@
   .month-title{font-weight:700}
   .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:0 4px 8px 4px;color:var(--muted);font-size:12px}
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  .day{position:relative;background:var(--card);border:1px dashed #2b394b;border-radius:12px;min-height:98px;padding:8px;overflow:hidden}
+  .day{position:relative;background:var(--card);border:1px dashed #2b394b;border-radius:12px;min-height:98px;padding:8px}
   .day.dim{opacity:0.35}
-  .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted)}
+  .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted);font-weight:700}
   .shifts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:18px}
   .pill{display:flex;align-items:center;justify-content:center;height:30px;border-radius:999px;border:1px solid transparent;color:#0e151b;font-weight:700;cursor:pointer;user-select:none;transition:transform .05s}
   .pill:active{transform:scale(.98)}
@@ -37,20 +37,25 @@
   .state-available{background:var(--avail)}
   .state-unset{background:#2b394b;color:var(--ink)}
   .state-no{background:var(--no)}
-  .note-btn{position:absolute;left:8px;top:6px;font-size:12px;color:var(--note);background:transparent;border:0;cursor:pointer}
-  .note-pop{position:absolute;inset:0;background:rgba(7,10,14,.97);border:1px solid var(--ring);border-radius:12px;padding:10px;display:none}
-  .note-pop.show{display:block}
+  .note-mini{margin-left:6px;font-size:12px;padding:2px 6px;border-radius:999px;background:transparent;color:var(--note);border:1px solid var(--ring);cursor:pointer}
+  .note-modal{position:fixed;inset:0;background:rgba(7,10,14,.82);display:none;align-items:center;justify-content:center;padding:16px}
+  .note-modal.show{display:flex}
+  .note-card{width:min(520px,96vw);background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
   .note-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .note-head label{display:flex;gap:6px;align-items:center;color:var(--ink-soft);font-size:12px}
-  textarea{width:100%;height:56px;background:var(--card2);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:8px;resize:vertical;min-height:56px}
+  .note-head small{color:var(--muted)}
   .note-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
   .legend{display:flex;gap:14px;align-items:center;color:var(--ink-soft);font-size:12px;padding:10px 2px}
   .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
-  .dot.prefer{background:var(--ok)}
-  .dot.avail{background:var(--avail)}
-  .dot.none{background:#2b394b}
-  .dot.no{background:var(--no)}
+  .dot.prefer{background:var(--ok)} .dot.avail{background:var(--avail)} .dot.none{background:#2b394b} .dot.no{background:var(--no)}
   .msg{color:var(--no);padding:0 16px}
+  /* Tools panel */
+  details.tools{margin:12px 16px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
+  details.tools>summary{cursor:pointer;padding:10px 12px;font-weight:700;list-style:none}
+  .tools-body{padding:10px 12px;display:grid;gap:14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:var(--card2)}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--ring);background:var(--card2);cursor:pointer}
+  .btn.primary{background:#1b2431}
 </style>
 </head>
 <body>
@@ -92,6 +97,93 @@
     </div>
   </div>
 
+  <details class="tools" open>
+    <summary>Preferences &amp; bulk tools</summary>
+    <div class="tools-body">
+      <div class="row">
+        <label class="chip"><input type="checkbox" id="pref24"> Prefer 24s</label>
+        <label class="chip"><input type="checkbox" id="type3"> Type III driver approved</label>
+        <label class="chip"><input type="checkbox" id="inactive"> Inactive (block new scheduling)</label>
+        <button class="btn" id="savePrefs">Save</button>
+      </div>
+
+      <div class="row" style="gap:12px;align-items:flex-end">
+        <div>
+          <div style="font-weight:600;margin-bottom:6px">Bulk set (date range)</div>
+          <div class="row">
+            <label>From <input type="date" id="bulkFrom"></label>
+            <label>Until <input type="date" id="bulkUntil"></label>
+            <label>Set to:
+              <select id="bulkState">
+                <option value="available">Available</option>
+                <option value="prefer">Prefer</option>
+                <option value="no">Do Not</option>
+                <option value="unset">Unset</option>
+              </select>
+            </label>
+            <span>Half-days:</span>
+            <label class="chip"><input type="checkbox" id="bulkAM" checked> AM</label>
+            <label class="chip"><input type="checkbox" id="bulkPM" checked> PM</label>
+            <button class="btn primary" id="applyBulk">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="gap:12px;align-items:flex-end">
+        <div>
+          <div style="font-weight:600;margin-bottom:6px">Weekly pattern (repeat until date)</div>
+          <div class="row">
+            <label class="chip"><input type="checkbox" class="wday" value="Mon"> Mon</label>
+            <label class="chip"><input type="checkbox" class="wday" value="Tue"> Tue</label>
+            <label class="chip"><input type="checkbox" class="wday" value="Wed"> Wed</label>
+            <label class="chip"><input type="checkbox" class="wday" value="Thu"> Thu</label>
+            <label class="chip"><input type="checkbox" class="wday" value="Fri"> Fri</label>
+            <label class="chip"><input type="checkbox" class="wday" value="Sat"> Sat</label>
+            <label class="chip"><input type="checkbox" class="wday" value="Sun"> Sun</label>
+            <span>Repeat until</span>
+            <input type="date" id="patternUntil">
+            <label class="chip"><input type="checkbox" id="patAM" checked> AM</label>
+            <label class="chip"><input type="checkbox" id="patPM" checked> PM</label>
+            <label>Set to
+              <select id="patternState">
+                <option value="available">Available</option>
+                <option value="prefer">Prefer</option>
+                <option value="no">Do Not</option>
+                <option value="unset">Unset</option>
+              </select>
+            </label>
+            <button class="btn primary" id="applyPattern">Apply pattern</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-weight:600;margin-bottom:6px">Avoid co-workers (backup list)</div>
+        <textarea id="avoidList" rows="3" placeholder="Comma-separated member #s or names"></textarea>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn" id="saveAvoid">Save</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- shift-note modal (per-shift) -->
+  <div class="note-modal" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteTitle">
+    <div class="note-card">
+      <div class="note-head">
+        <div>
+          <strong id="noteTitle">Note to supervisor</strong>
+          <div><small id="noteMeta">—</small></div>
+        </div>
+        <button class="btn" id="noteClose">Close</button>
+      </div>
+      <textarea id="noteText" placeholder="e.g., 'In at 10am'"></textarea>
+      <div class="note-actions">
+        <button class="btn primary" id="noteSave">Save note</button>
+      </div>
+    </div>
+  </div>
+
   <div class="msg" id="msg"></div>
 
 <script>
@@ -104,6 +196,38 @@
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
 
+  // tools
+  const pref24 = document.getElementById('pref24');
+  const type3 = document.getElementById('type3');
+  const inactive = document.getElementById('inactive');
+  const savePrefs = document.getElementById('savePrefs');
+
+  const bulkFrom = document.getElementById('bulkFrom');
+  const bulkUntil = document.getElementById('bulkUntil');
+  const bulkState = document.getElementById('bulkState');
+  const bulkAM = document.getElementById('bulkAM');
+  const bulkPM = document.getElementById('bulkPM');
+  const applyBulk = document.getElementById('applyBulk');
+
+  const wdayBoxes = () => [...document.querySelectorAll('.wday')];
+  const patternUntil = document.getElementById('patternUntil');
+  const patternState = document.getElementById('patternState');
+  const patAM = document.getElementById('patAM');
+  const patPM = document.getElementById('patPM');
+  const applyPattern = document.getElementById('applyPattern');
+
+  const avoidList = document.getElementById('avoidList');
+  const saveAvoid = document.getElementById('saveAvoid');
+
+  // note modal
+  const noteModal = document.getElementById('noteModal');
+  const noteTitle = document.getElementById('noteTitle');
+  const noteMeta  = document.getElementById('noteMeta');
+  const noteText  = document.getElementById('noteText');
+  const noteClose = document.getElementById('noteClose');
+  const noteSave  = document.getElementById('noteSave');
+  let noteCtx = null; // {dateISO, half}
+
   let users = [];
   let currentUser = null;
   let anchor = new Date(); anchor.setDate(1);
@@ -113,8 +237,7 @@
   const startOfCalendar = (d) => {
     const first = new Date(d.getFullYear(), d.getMonth(), 1);
     const weekdayMon0 = (first.getDay()+6)%7;
-    const calStart = new Date(first);
-    calStart.setDate(first.getDate() - weekdayMon0);
+    const calStart = new Date(first); calStart.setDate(first.getDate() - weekdayMon0);
     return calStart;
   };
 
@@ -127,7 +250,7 @@
     unset:'pill state-unset'
   }[s] || 'pill state-unset');
 
-  let windowData = { availability:{}, prefs:{} };
+  let windowData = { availability:{}, prefs:{}, notes:{} };
 
   async function loadUsers() {
     const r = await fetch(API + '/api/users');
@@ -144,6 +267,11 @@
     const r = await fetch(API + '/api/state?start='+iso(start)+'&end='+iso(end));
     if(!r.ok) throw new Error('state fetch failed');
     windowData = await r.json();
+    // basic prefs hydrate if available
+    const p = windowData.prefs?.[currentUser] || {};
+    pref24.checked = !!p.prefer24s;
+    type3.checked = !!p.type3_driver;
+    inactive.checked = !!users.find(u=>u.id===currentUser)?.inactive;
     render();
   }
 
@@ -162,86 +290,56 @@
 
       const dnum = document.createElement('div');
       dnum.className = 'dnum';
-      dnum.textContent = d.getDate();
+      dnum.textContent = d.getDate(); // visible date number
       dayDiv.appendChild(dnum);
-
-      const nb = document.createElement('button');
-      nb.className = 'note-btn';
-      nb.textContent = '📝';
-      nb.title = 'Note to supervisor';
-      dayDiv.appendChild(nb);
 
       const shifts = document.createElement('div');
       shifts.className = 'shifts';
-      const sAM = makePill('AM', dateISO, 'AM');
-      const sPM = makePill('PM', dateISO, 'PM');
-      shifts.append(sAM, sPM);
+      shifts.append(makeShift('AM'), makeShift('PM'));
       dayDiv.appendChild(shifts);
 
-      const pop = document.createElement('div');
-      pop.className = 'note-pop';
-      pop.innerHTML = `
-        <div class="note-head">
-          <strong>Note to supervisor</strong>
-          <label><input type="checkbox" id="enable-${dateISO}"> activate note</label>
-        </div>
-        <textarea id="ta-${dateISO}" placeholder="e.g., 'In at 10am'"></textarea>
-        <div class="note-actions">
-          <button data-act="close">Close</button>
-          <button data-act="save">Save</button>
-        </div>
-      `;
-      pop.addEventListener('click', async (e) => {
-        const act = e.target?.dataset?.act;
-        if(act === 'close'){ pop.classList.remove('show'); return; }
-        if(act === 'save'){
-          const enabled = pop.querySelector(`#enable-${dateISO}`).checked;
-          const txt = pop.querySelector(`#ta-${dateISO}`).value.trim();
-          if(!enabled){ pop.classList.remove('show'); return; }
-          if(!currentUser) return;
+      grid.appendChild(dayDiv);
+
+      function makeShift(half){
+        const userMap = windowData.availability[currentUser] || {};
+        const dayMap = userMap[dateISO] || {};
+        const state = dayMap[half] || 'unset';
+
+        const wrap = document.createElement('div');
+        wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='center';
+
+        const el = document.createElement('div');
+        el.className = pillClassFor(state);
+        el.dataset.state = state;
+        el.dataset.label = half;
+        el.classList.add(half);
+        el.setAttribute('data-label', half);
+
+        // cycle intent
+        el.addEventListener('click', async () => {
+          const next = nextState(el.dataset.state);
+          el.className = pillClassFor(next)+' '+half;
+          el.dataset.state = next;
           try{
-            await fetch(API + '/api/note', {
+            await fetch(API + '/api/availability', {
               method:'POST',
               headers:{'content-type':'application/json'},
-              body: JSON.stringify({ user_id: currentUser, date: dateISO, note: txt })
+              body: JSON.stringify({ user_id: currentUser, date: dateISO, half, state: next })
             });
-            flash('Note saved.');
-            pop.classList.remove('show');
-          }catch{ flash('Note save failed.'); }
-        }
-      });
-      dayDiv.appendChild(pop);
-      nb.addEventListener('click', () => pop.classList.add('show'));
-
-      grid.appendChild(dayDiv);
-    }
-  }
-
-  function makePill(label, dateISO, half) {
-    const userMap = windowData.availability[currentUser] || {};
-    const dayMap = userMap[dateISO] || {};
-    const state = dayMap[half] || 'unset';
-
-    const el = document.createElement('div');
-    el.className = pillClassFor(state);
-    el.dataset.state = state;
-    el.dataset.label = label;
-    el.classList.add(label);
-    el.setAttribute('data-label', label);
-
-    el.addEventListener('click', async () => {
-      const next = nextState(el.dataset.state);
-      el.className = pillClassFor(next)+' '+label;
-      el.dataset.state = next;
-      try{
-        await fetch(API + '/api/availability', {
-          method:'POST',
-          headers:{'content-type':'application/json'},
-          body: JSON.stringify({ user_id: currentUser, date: dateISO, half, state: next })
+          }catch{ flash('Save failed'); }
         });
-      }catch{ flash('Save failed'); }
-    });
-    return el;
+
+        const nb = document.createElement('button');
+        nb.className = 'note-mini';
+        nb.textContent = 'note';
+        nb.title = 'Note to supervisor for this shift';
+        nb.addEventListener('click', () => openNote(dateISO, half));
+
+        wrap.appendChild(el);
+        wrap.appendChild(nb);
+        return wrap;
+      }
+    }
   }
 
   function flash(text){
@@ -249,6 +347,98 @@
     clearTimeout(flash._t);
     flash._t = setTimeout(()=> msg.textContent='', 1600);
   }
+
+  // note modal actions (per-shift)
+  function openNote(dateISO, half){
+    noteCtx = {dateISO, half};
+    noteTitle.textContent = 'Note to supervisor';
+    noteMeta.textContent = `${dateISO} • ${half}`;
+    noteText.value = '';
+    noteModal.classList.add('show');
+  }
+  noteClose.addEventListener('click', ()=> noteModal.classList.remove('show'));
+  noteSave.addEventListener('click', async () => {
+    if(!noteCtx || !currentUser) return;
+    try{
+      await fetch(API + '/api/note', {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({ user_id: currentUser, date: noteCtx.dateISO, half: noteCtx.half, note: noteText.value.trim() })
+      });
+      flash('Note saved.');
+      noteModal.classList.remove('show');
+    }catch{ flash('Note save failed.'); }
+  });
+
+  // tools actions
+  savePrefs.addEventListener('click', async () => {
+    if(!currentUser) return;
+    try{
+      await fetch(API + '/api/prefs', {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({
+          user_id: currentUser,
+          prefer24s: !!pref24.checked,
+          type3_driver: !!type3.checked,
+          inactive: !!inactive.checked
+        })
+      });
+      flash('Preferences saved.');
+    }catch{ flash('Save failed.'); }
+  });
+
+  applyBulk.addEventListener('click', async () => {
+    if(!currentUser) return;
+    const from = bulkFrom.value, until = bulkUntil.value;
+    if(!from || !until) { flash('Pick a date range.'); return; }
+    const halves = [bulkAM.checked && 'AM', bulkPM.checked && 'PM'].filter(Boolean);
+    if(!halves.length){ flash('Select AM and/or PM.'); return; }
+    try{
+      await fetch(API + '/api/bulk-set', {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({
+          user_id: currentUser, from, until,
+          state: bulkState.value, halves
+        })
+      });
+      flash('Bulk applied.');
+      await loadWindow();
+    }catch{ flash('Bulk failed.'); }
+  });
+
+  applyPattern.addEventListener('click', async () => {
+    if(!currentUser) return;
+    const until = patternUntil.value; if(!until){ flash('Pick an until date.'); return; }
+    const days = wdayBoxes().filter(b=>b.checked).map(b=>b.value);
+    if(!days.length){ flash('Select weekdays.'); return; }
+    const halves = [patAM.checked && 'AM', patPM.checked && 'PM'].filter(Boolean);
+    if(!halves.length){ flash('Select AM and/or PM.'); return; }
+    try{
+      await fetch(API + '/api/weekly-pattern', {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({
+          user_id: currentUser, days, until, state: patternState.value, halves
+        })
+      });
+      flash('Pattern applied.');
+      await loadWindow();
+    }catch{ flash('Pattern failed.'); }
+  });
+
+  saveAvoid.addEventListener('click', async () => {
+    if(!currentUser) return;
+    try{
+      await fetch(API + '/api/avoid', {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({ user_id: currentUser, avoid: avoidList.value })
+      });
+      flash('Avoid list saved.');
+    }catch{ flash('Save failed.'); }
+  });
 
   memberSel.addEventListener('change', async () => { currentUser = memberSel.value; await loadWindow(); });
   prevBtn.addEventListener('click', async () => { anchor.setMonth(anchor.getMonth()-1); await loadWindow(); });
