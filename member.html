@@ -20,6 +20,36 @@
           Changes save in ~1.5s and cards update server-side.
         </div>
       </div>
+<!-- ===== Bulk tools (AM/PM as CHECKBOXES) ===== -->
+<div id="bulkTools" style="max-width:1100px;margin:10px auto 0;padding:8px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+  <!-- Optional flags (wire later if desired) -->
+  <label style="display:flex;gap:6px;align-items:center">
+    <input type="checkbox" id="bulkReserve" /> <span>Reserve mode (never auto-assign me)</span>
+  </label>
+  <label style="display:flex;gap:6px;align-items:center">
+    <input type="checkbox" id="bulkType3" /> <span>Type III driver approved</span>
+  </label>
+  <label style="display:flex;gap:6px;align-items:center">
+    <input type="checkbox" id="bulkInactive" /> <span>Inactive</span>
+  </label>
+
+  <span class="muted">Bulk from</span>
+  <input type="date" id="bulkFrom" />
+  <span class="muted">to</span>
+  <input type="date" id="bulkTo" />
+
+  <span class="muted">Set to:</span>
+  <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="bulkState" value="prefer" /> Prefer</label>
+  <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="bulkState" value="available" checked /> Available</label>
+  <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="bulkState" value="no" /> Do Not</label>
+
+  <!-- AM/PM are CHECKBOXES (not radios) -->
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="bulkAM" checked /> AM</label>
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="bulkPM" checked /> PM</label>
+
+  <button id="bulkApplyBtn" class="nav">Apply</button>
+</div>
+<!-- ===== /Bulk tools ===== -->
 
       <div id="calHost" class="grid"></div>
     </main>
@@ -31,6 +61,61 @@
       </div>
     </footer>
   </div>
+<script>
+// ===== Bulk helpers =====
+function datesBetweenIncl(startStr, endStr){
+  const out=[]; const a=new Date(startStr), b=new Date(endStr);
+  if (isNaN(a)||isNaN(b)) return out;
+  for (let d=new Date(a); d<=b; d.setDate(d.getDate()+1)) {
+    out.push(d.toISOString().slice(0,10));
+  }
+  return out;
+}
+
+async function applyBulk(){
+  const userId = currentUserId;
+  if(!userId){ alert("Select a member first."); return; }
+
+  const from = document.getElementById('bulkFrom').value;
+  const to   = document.getElementById('bulkTo').value;
+  if(!from || !to){ alert("Pick a start and end date."); return; }
+
+  const state = (document.querySelector('input[name="bulkState"]:checked')||{}).value;
+  if(!state){ alert("Pick a state (Prefer / Available / Do Not)."); return; }
+
+  const useAM = document.getElementById('bulkAM').checked;
+  const usePM = document.getElementById('bulkPM').checked;
+  if(!useAM && !usePM){ alert("Choose AM and/or PM."); return; }
+
+  document.getElementById('status').textContent = "Applying bulk changes…";
+
+  const dates = datesBetweenIncl(from, to);
+  // Send sequentially (simple + friendlier to the API)
+  for (const d of dates){
+    if (useAM) await postAvailability(userId, d, "AM", state);
+    if (usePM) await postAvailability(userId, d, "PM", state);
+  }
+
+  // Optional: wire these later to a user-flags endpoint if you want
+  // const reserve  = document.getElementById('bulkReserve').checked;
+  // const type3    = document.getElementById('bulkType3').checked;
+  // const inactive = document.getElementById('bulkInactive').checked;
+  // await fetch(`${API_BASE}/api/user/flags`, {
+  //   method: "POST", headers: {"Content-Type":"application/json"},
+  //   body: JSON.stringify({ userId, reserve, type3_driver: type3, inactive })
+  // });
+
+  document.getElementById('status').textContent = "Bulk changes saved.";
+  // Refresh the view so chips/tips reflect the new state
+  await render();
+}
+
+// Hook up the button once DOM exists
+window.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('bulkApplyBtn');
+  if (btn) btn.addEventListener('click', applyBulk);
+});
+</script>
 
   <script>
     const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";

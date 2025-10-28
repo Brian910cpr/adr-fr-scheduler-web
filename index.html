@@ -2,486 +2,336 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ADR-FR ShiftCommander</title>
+  <title>ShiftCommander — Member</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Apple-ish, touch-friendly styling -->
   <style>
-    :root{--bg:#0b1720;--bg2:#0e2230;--text:#eaf4ff;--muted:#aac1d4;--accent:#3ea6ff;--ok:#2ecc71;--warn:#f1c40f;--bad:#e74c3c;--chip:#1b3a50}
+    :root{
+      --bg:#0b1220;
+      --panel:#121a2b;
+      --card:#0f1729;
+      --text:#e6edf6;
+      --muted:#9fb0c7;
+      --line:#1f2a44;
+
+      --green:#22c55e;
+      --green-bg: rgba(34,197,94,.15);
+      --yellow:#f59e0b;
+      --yellow-bg: rgba(245,158,11,.15);
+      --red:#ef4444;
+      --red-bg: rgba(239,68,68,.15);
+
+      --pill-bg: rgba(255,163,0,.12);
+      --pill-stroke: rgba(255,163,0,.35);
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 420px,#0a141b 100%);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    .nav{display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:#0a151e}
-    .nav img{height:22px}
-    .nav a{color:#d8e9f6;text-decoration:none;opacity:.85}
-    .wrap{max-width:1180px;margin:28px auto;padding:0 18px}
-    h1{margin:8px 0 0;font-size:28px}
-    .subtitle{margin:6px 0 24px;color:var(--muted)}
-    .card{background:#102231;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin:12px 0}
-    .row{display:flex;gap:12px;align-items:center}
-    .between{display:flex;justify-content:space-between;align-items:center}
-    .tag{display:inline-block;background:var(--chip);padding:3px 8px;border-radius:999px;font-size:12px}
-    .btn{background:#17354a;border:1px solid rgba(255,255,255,.12);color:#e9f4ff;border-radius:8px;padding:8px 12px;cursor:pointer}
-    .btn:disabled{opacity:.5;cursor:default}
-    input,select,textarea{background:#0e2130;color:#eaf4ff;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:8px}
-    label{cursor:pointer}
-    .legend{display:flex;gap:12px;color:#a6bfd3;font-size:12px}
-    .legend .dot{width:10px;height:10px;border-radius:50%}
-    .green{background:#2ecc71}.yellow{background:#f1c40f}.red{background:#e74c3c}
-    /* Calendar */
-    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-    .day{background:#0f1f2c;border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:8px 8px 12px;min-height:112px;display:flex;flex-direction:column}
-    .day h4{margin:0 0 8px;color:#b9d0e0;font-weight:600;font-size:12px;display:flex;justify-content:space-between}
-    .halves{display:flex;gap:8px;flex-wrap:wrap}
-    .half{font-size:12px;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 8px;cursor:pointer;user-select:none;background:#112636}
-    .half.prefer{background:rgba(46,204,113,.12);border-color:rgba(46,204,113,.45)}
-    .half.available{background:rgba(241,196,15,.12);border-color:rgba(241,196,15,.45)}
-    .half.no{background:rgba(231,76,60,.12);border-color:rgba(231,76,60,.45)}
-    .half.unset{}
-    .noteRow{display:flex;gap:6px;margin-top:8px}
-    .noteRow input{flex:1}
-    .advice{margin-top:6px;font-size:12px;color:#cbdcec;opacity:.9}
-    /* Supervisor roster */
-    .adminRow{display:flex;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
-    .adminRow small{opacity:.65}
-    .pill{padding:2px 6px;border-radius:6px;background:#153246;font-size:11px}
-    /* Modal */
-    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center}
-    .modal{background:#0f2030;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;max-width:520px;width:92%}
-    .modal h3{margin:0 0 8px}
+    html,body{height:100%}
+    body{
+      margin:0;background:linear-gradient(180deg,#0a1020,#0c1528 40%,#0a1325);
+      color:var(--text);font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      -webkit-font-smoothing:antialiased; line-height:1.4;
+    }
+    header{
+      position:sticky;top:0;z-index:5;
+      backdrop-filter:saturate(180%) blur(10px);
+      -webkit-backdrop-filter:saturate(180%) blur(10px);
+      background:rgba(8,12,24,.6); border-bottom:1px solid var(--line);
+    }
+    .bar{
+      max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;
+    }
+    .brand{font-weight:700;letter-spacing:.2px}
+    .muted{color:var(--muted)}
+    select,button,input[type="date"]{
+      background:var(--card); color:var(--text); border:1px solid var(--line);
+      border-radius:12px; padding:8px 10px; font-size:14px; outline:none;
+    }
+    button.nav{padding:8px 10px}
+    .legend{display:flex;gap:14px;align-items:center;font-size:12px}
+    .dot{width:10px;height:10px;border-radius:50%;}
+    .d-green{background:var(--green)}
+    .d-yellow{background:var(--yellow)}
+    .d-red{background:var(--red)}
+    .wrap{max-width:1100px;margin:18px auto;padding:0 16px}
+    .cal{
+      display:grid;gap:10px;
+      grid-template-columns:repeat(7,minmax(120px,1fr));
+    }
+    .weekday{color:var(--muted);text-align:center;font-size:12px}
+    .monthHead{
+      display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px 0;
+    }
+    .monthTitle{font-weight:700;font-size:18px}
+    .day{
+      background:var(--panel);border:1px solid var(--line);border-radius:16px;min-height:120px;padding:8px;position:relative;
+      display:flex;flex-direction:column;gap:8px;
+    }
+    .dateNum{color:var(--muted);font-size:12px}
+    .half{
+      background:var(--card); border:1px solid var(--line); border-radius:12px; padding:6px 8px;
+      display:flex;align-items:center;justify-content:space-between; gap:10px;
+    }
+    .toggle{
+      display:inline-flex;gap:6px;
+    }
+    .chip{
+      border:1px solid var(--line); border-radius:999px; padding:6px 10px; font-size:12px; user-select:none; cursor:pointer;
+      transition:transform .05s ease;
+    }
+    .chip:active{transform:scale(.98)}
+    .chip.prefer{background:var(--green-bg); border-color:rgba(34,197,94,.45); color:var(--green)}
+    .chip.available{background:var(--yellow-bg); border-color:rgba(245,158,11,.45); color:var(--yellow)}
+    .chip.unset{opacity:.7}
+    .chip.no{background:var(--red-bg); border-color:rgba(239,68,68,.45); color:var(--red)}
+
+    .tip-badge{
+      display:inline-block; margin-top:6px; padding:2px 8px;
+      border-radius:9999px; font-size:11px; line-height:18px;
+      background:var(--pill-bg); color:#b26a00; border:1px solid var(--pill-stroke);
+      backdrop-filter:saturate(180%) blur(6px); -webkit-backdrop-filter:saturate(180%) blur(6px);
+      align-self:flex-start;
+    }
+
+    .note{
+      width:100%; margin-top:4px; font-size:12px; color:var(--text);
+      background:transparent; border:1px dashed var(--line); border-radius:10px; padding:6px 8px;
+    }
+    .note::placeholder{color:#7786a3}
+    .status{margin-top:10px;color:var(--muted);font-size:12px}
+    @media (max-width:980px){
+      .cal{grid-template-columns:repeat(2,1fr)}
+    }
   </style>
 </head>
 <body>
-  <div class="nav">
-    <img src="/assets/adr-fr-logo-light.svg" alt="ADR-FR Logo" />
-    <a href="/">Home</a>
-    <a href="/join">Join</a>
-    <a href="/schedule">Schedule</a>
-    <a href="/resources">Resources</a>
-    <div style="margin-left:auto" class="legend">
-      <div class="row" style="gap:6px;"><span class="dot green"></span> Prefer</div>
-      <div class="row" style="gap:6px;"><span class="dot yellow"></span> Available</div>
-      <div class="row" style="gap:6px;"><span class="dot red"></span> Do Not</div>
+
+<header>
+  <div class="bar">
+    <div class="brand">ShiftCommander <span class="muted">Member</span></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="muted" for="memberSel">Logged in as:</label>
+      <select id="memberSel"></select>
+
+      <button class="nav" id="prevBtn">◀ Prev</button>
+      <label class="muted">Months</label>
+      <select id="monthsSel">
+        <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+      </select>
+      <button class="nav" id="nextBtn">Next ▶</button>
+
+      <div class="legend">
+        <div class="dot d-green"></div><span class="muted">Prefer</span>
+        <div class="dot d-yellow"></div><span class="muted">Available</span>
+        <div class="dot d-red"></div><span class="muted">Do Not</span>
+      </div>
     </div>
   </div>
+</header>
 
-  <div class="wrap">
-    <h1>Active Scheduling Window</h1>
-    <div class="subtitle">Connected to Worker API • Auto-commit every 3 seconds • Server-side scoring</div>
+<div class="wrap">
+  <div id="months"></div>
+  <div class="status" id="status">AM/PM toggles auto-commit after ~3s.</div>
+</div>
 
-    <!-- Who am I -->
-    <div class="card row">
-      <div>Member #</div>
-      <input id="inpMemberNo" placeholder="e.g., 1001" style="width:120px" />
-      <button id="btnLoadMe" class="btn">Load me</button>
-      <div id="whoami" class="tag" style="display:none"></div>
-      <div id="reserveChip" class="tag" style="display:none;background:#153246">Reserve</div>
-      <button id="btnSwap" class="btn" style="margin-left:auto">Frictionless Shift Swap</button>
-    </div>
+<script>
+  // ---------- Config ----------
+  const API_BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  const today = new Date();
+  let viewAnchor = new Date(today.getFullYear(), today.getMonth(), 1);
+  let viewMonths = 2;
+  let currentUserId = null;
 
-    <!-- Calendar -->
-    <div class="card">
-      <div class="between">
-        <div class="row" style="gap:8px">
-          <button id="prev" class="btn">Prev</button>
-          <div>Months <select id="months"><option>1</option><option selected>2</option><option>3</option></select></div>
-          <button id="next" class="btn">Next</button>
+  // pending changes (debounced flush)
+  const pending = new Map(); // key `${date}_${half}` -> state
+  let flushTimer = null;
+
+  // ---------- Utilities ----------
+  function fmtDate(d){ return d.toISOString().slice(0,10); }
+  function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  function addMonths(d, n){ const x = new Date(d); x.setMonth(x.getMonth()+n); return x; }
+  function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); } // last day
+  function yyyyMmDdRange(start, end){
+    const out=[]; for(let dt=new Date(start); dt<=end; dt=addDays(dt,1)) out.push(fmtDate(dt)); return out;
+  }
+  function cycleState(cur){
+    // Order: prefer -> available -> unset -> no -> prefer
+    if (cur==="prefer") return "available";
+    if (cur==="available") return "unset";
+    if (cur==="no") return "prefer";
+    return "no"; // unset -> no
+  }
+
+  // ---------- Data ----------
+  async function fetchUsers(){
+    const r = await fetch(`${API_BASE}/api/users`);
+    return await r.json();
+  }
+  async function fetchState(startStr, endStr){
+    const qs = new URLSearchParams({ start: startStr, end: endStr }).toString();
+    const r = await fetch(`${API_BASE}/api/state?${qs}`);
+    return await r.json();
+  }
+  async function postAvailability(userId, date, half, state){
+    await fetch(`${API_BASE}/api/availability`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ userId, date, half, state })
+    });
+  }
+
+  // ---------- Render ----------
+  async function render(){
+    const anchor = firstOfMonth(viewAnchor);
+    const end = endOfMonth(addMonths(anchor, viewMonths-1));
+    const startStr = fmtDate(anchor);
+    const endStr = fmtDate(end);
+
+    // data
+    const state = await fetchState(startStr, endStr);
+
+    // months container
+    const monthsEl = document.getElementById('months');
+    monthsEl.innerHTML = "";
+
+    // build month(s)
+    for(let m=0;m<viewMonths;m++){
+      const base = firstOfMonth(addMonths(anchor, m));
+      const monthEnd = endOfMonth(base);
+      const days = yyyyMmDdRange(base, monthEnd);
+
+      const monthWrap = document.createElement('section');
+      monthWrap.className = "month";
+      monthWrap.innerHTML = `
+        <div class="monthHead">
+          <div class="monthTitle">${base.toLocaleString(undefined,{month:"long", year:"numeric"})}</div>
         </div>
-        <div id="windowLabel" class="tag"></div>
-      </div>
-      <div id="cal" class="calendar" style="margin-top:12px"></div>
-    </div>
-
-    <!-- Preferences (member) -->
-    <div class="card">
-      <div class="row">
-        <label class="row"><input id="prefReserve" type="checkbox" /> Reserve mode (never auto-assign me)</label>
-        <label class="row" title="Supervisor-set"><input id="prefType3Approved" type="checkbox" disabled /> Type III driver approved</label>
-        <label class="row" title="Supervisor-set"><input id="prefInactivePreview" type="checkbox" disabled /> Inactive</label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <div>Bulk from <input id="bulkFrom" placeholder="mm/dd/yyyy" style="width:140px" /></div>
-        <div>to <input id="bulkUntil" placeholder="mm/dd/yyyy" style="width:140px" /></div>
-        <div class="row" style="gap:8px">
-          <label class="row"><input type="radio" name="bulkState" value="prefer" /> Prefer</label>
-          <label class="row"><input type="radio" name="bulkState" value="available" checked /> Available</label>
-          <label class="row"><input type="radio" name="bulkState" value="no" /> Do Not</label>
+        <div class="cal">
+          ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>`<div class="weekday">${d}</div>`).join("")}
         </div>
-        <div class="row" style="gap:8px">
-          <label class="row"><input type="radio" name="bulkHalf" value="AM" checked /> AM</label>
-          <label class="row"><input type="radio" name="bulkHalf" value="PM" /> PM</label>
-        </div>
-        <button id="btnApplyBulk" class="btn">Apply</button>
-      </div>
-    </div>
+      `;
+      const grid = monthWrap.querySelector('.cal');
 
-    <!-- Supervisor -->
-    <div class="card">
-      <div class="row"><strong>Supervisor</strong> <span class="tag">Roster admin</span></div>
-      <div id="rosterAdminPanel" class="section" style="margin-top:10px"></div>
-    </div>
-  </div>
-
-  <!-- Swap Modal -->
-  <div id="swapBack" class="modalBackdrop">
-    <div class="modal">
-      <h3>Frictionless Shift Swap</h3>
-      <p>Select an assigned shift to give up, then pick a replacement. If they’re valid (no disqualifying flags/restrictions), it will auto-approve.</p>
-      <div class="row">
-        <div style="flex:1">
-          <div>My assigned shift</div>
-          <select id="swapMyShift" style="width:100%"></select>
-        </div>
-        <div style="flex:1">
-          <div>Replacement</div>
-          <select id="swapCandidate" style="width:100%"></select>
-        </div>
-      </div>
-      <div class="row" style="margin-top:12px;justify-content:flex-end">
-        <button id="swapCancel" class="btn">Cancel</button>
-        <button id="swapSubmit" class="btn">Submit</button>
-      </div>
-      <div id="swapMsg" class="tag" style="margin-top:10px;display:none"></div>
-    </div>
-  </div>
-
-  <script>
-    // Config
-    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    let ME_ID = localStorage.getItem("sc_me_id") || "";
-    let USERS = [];
-    let STATE = null; // /api/state payload
-    let windowStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    let monthsSpan = 2;
-    let pendingSaves = new Map(); // key `${date}|${half}` -> {state, timeoutId}
-    const saveDelayMs = 3000;
-
-    // DOM
-    const elWho = document.getElementById("whoami");
-    const elResChip = document.getElementById("reserveChip");
-    const elReserve = document.getElementById("prefReserve");
-    const elType3 = document.getElementById("prefType3Approved");
-    const elInactive = document.getElementById("prefInactivePreview");
-    const elCal = document.getElementById("cal");
-    const elWindow = document.getElementById("windowLabel");
-    const elMonths = document.getElementById("months");
-    const elSwapBack = document.getElementById("swapBack");
-    const elSwapMy = document.getElementById("swapMyShift");
-    const elSwapCand = document.getElementById("swapCandidate");
-    const elSwapMsg = document.getElementById("swapMsg");
-
-    // Boot
-    document.getElementById("btnLoadMe").addEventListener("click", handleLoadMe);
-    document.getElementById("prev").addEventListener("click", ()=>{ windowStart = addMonths(windowStart, -monthsSpan); refresh();});
-    document.getElementById("next").addEventListener("click", ()=>{ windowStart = addMonths(windowStart, +monthsSpan); refresh();});
-    elMonths.addEventListener("change", ()=>{ monthsSpan = parseInt(elMonths.value,10)||2; refresh(); });
-    document.getElementById("btnApplyBulk").addEventListener("click", applyBulk);
-    document.getElementById("btnSwap").addEventListener("click", openSwap);
-    document.getElementById("swapCancel").addEventListener("click", ()=> elSwapBack.style.display="none");
-    document.getElementById("swapSubmit").addEventListener("click", submitSwap);
-
-    // Load users roster up-front
-    (async function init(){
-      try { USERS = await (await fetch(`${API}/api/users`)).json(); } catch {}
-      if (ME_ID) syncMeBanner();
-      refresh();
-    })();
-
-    async function handleLoadMe(){
-      const memberNo = (document.getElementById("inpMemberNo").value||"").trim();
-      if (!memberNo) return;
-      if (!USERS.length) USERS = await (await fetch(`${API}/api/users`)).json();
-      const me = USERS.find(u => (u.member_no||"")===memberNo);
-      if (!me) { alert("Member not found"); return; }
-      ME_ID = me.id; localStorage.setItem("sc_me_id", ME_ID);
-      syncMeBanner();
-      refresh();
-    }
-
-    function syncMeBanner(){
-      const me = USERS.find(u => u.id===ME_ID);
-      if (!me) return;
-      elWho.style.display=""; elWho.textContent = `${me.name} • ${me.role}`;
-      elResChip.style.display = me.reserve ? "" : "none";
-      elReserve.checked = !!me.reserve;
-      elType3.checked = !!me.type3_driver;
-      elInactive.checked = !!me.inactive;
-    }
-
-    function addMonths(d, n){ const dt=new Date(d); dt.setMonth(dt.getMonth()+n); return dt;}
-    function fmt(d){ return d.toISOString().slice(0,10); }
-
-    async function refresh(){
-      const start = new Date(windowStart);
-      const end = new Date(windowStart.getFullYear(), windowStart.getMonth()+monthsSpan, 0);
-      elWindow.textContent = `${fmt(start)} → ${fmt(end)}`;
-      STATE = await (await fetch(`${API}/api/state?start=${fmt(start)}&end=${fmt(end)}`)).json();
-      renderCalendar(start, end);
-      buildRosterAdmin();
-      if (ME_ID) fillSwapLists();
-    }
-
-    function renderCalendar(start, end){
-      elCal.innerHTML="";
-      const days = enumerateDays(start, end);
-      for (const d of days){
-        const dKey = fmt(d);
-        const box = document.createElement("div");
-        box.className = "day";
-        const title = document.createElement("h4");
-        title.innerHTML = `<span>${dKey}</span><span class="pill">${adviceFor(dKey)}</span>`;
-        box.appendChild(title);
-
-        const halves = document.createElement("div"); halves.className="halves";
-        ["AM","PM"].forEach(half=>{
-          const btn = document.createElement("div");
-          btn.className = "half unset";
-          btn.textContent = half;
-          applyMyStateClass(btn, myState(dKey, half));
-
-          btn.addEventListener("click", ()=>{
-            const next = cycle(myState(dKey, half)); // prefer -> available -> unset -> no -> prefer …
-            queueAvailabilitySave(dKey, half, next);
-            applyMyStateClass(btn, next);
-          });
-
-          halves.appendChild(btn);
-        });
-        box.appendChild(halves);
-
-        // ultra-brief note
-        const noteRow = document.createElement("div"); noteRow.className = "noteRow";
-        const note = document.createElement("input");
-        note.placeholder = "In at 10am";
-        note.value = getMyNote(dKey) || "";
-        note.addEventListener("input", debounce(()=>{
-          if (!ME_ID) return;
-          fetch(`${API}/api/note`, {
-            method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({ userId: ME_ID, date: dKey, text: note.value.slice(0,60) })
-          });
-        }, 600));
-        noteRow.appendChild(note);
-        box.appendChild(noteRow);
-
-        // supervisor hint text per shift color (server-side logic summarized)
-        const adv = document.createElement("div");
-        adv.className = "advice";
-        adv.textContent = shiftHint(dKey);
-        box.appendChild(adv);
-
-        elCal.appendChild(box);
+      // Pad to Monday-start grid
+      const pad = (base.getDay()+6)%7; // Monday=0
+      for(let i=0;i<pad;i++){
+        const p = document.createElement('div'); p.className="weekday"; p.innerHTML=""; grid.appendChild(p);
       }
+
+      days.forEach(date=>{
+        const day = document.createElement('div');
+        day.className = "day";
+        const amState = state.availability?.[currentUserId]?.[date]?.AM ?? "unset";
+        const pmState = state.availability?.[currentUserId]?.[date]?.PM ?? "unset";
+        const tip = state.shifts?.[date]?.AM?.tip || state.shifts?.[date]?.PM?.tip || "";
+
+        day.innerHTML = `
+          <div class="dateNum">${new Date(date).getDate()}</div>
+          <div class="half" data-date="${date}" data-half="AM">
+            <div class="muted">AM</div>
+            <div class="toggle">
+              <span class="chip ${amState}" data-date="${date}" data-half="AM" data-state="${amState}">AM</span>
+            </div>
+          </div>
+          <div class="half" data-date="${date}" data-half="PM">
+            <div class="muted">PM</div>
+            <div class="toggle">
+              <span class="chip ${pmState}" data-date="${date}" data-half="PM" data-state="${pmState}">PM</span>
+            </div>
+          </div>
+          ${tip ? `<span class="tip-badge">${tip}</span>` : ``}
+          <input class="note" data-date="${date}" placeholder="In at 10am" />
+        `;
+        grid.appendChild(day);
+      });
+
+      monthsEl.appendChild(monthWrap);
     }
 
-    function enumerateDays(start, end){
-      const out=[]; const d=new Date(start);
-      while (d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1); }
-      return out;
-    }
+    // attach listeners for chips
+    monthsEl.querySelectorAll('.chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        if(!currentUserId) return;
+        const date = chip.getAttribute('data-date');
+        const half = chip.getAttribute('data-half');
+        const cur  = chip.getAttribute('data-state') || "unset";
+        const next = cycleState(cur);
 
-    // 4-state cycle
-    function cycle(cur){
-      const order = ["prefer","available","unset","no"];
-      const i = Math.max(0, order.indexOf(cur));
-      return order[(i+1)%order.length];
-    }
-    function myState(date, half){
-      if (!STATE || !STATE.availability || !ME_ID) return "unset";
-      return STATE.availability[ME_ID]?.[date]?.[half] || "unset";
-    }
-    function applyMyStateClass(el, state){
-      el.classList.remove("prefer","available","no","unset");
-      el.classList.add(state);
-    }
+        chip.setAttribute('data-state', next);
+        chip.classList.remove('prefer','available','unset','no'); chip.classList.add(next);
 
-    // 3-second auto-commit
-    function queueAvailabilitySave(date, half, state){
-      if (!ME_ID) { alert("Load your member # first."); return; }
-      const key = `${date}|${half}`;
-      const existing = pendingSaves.get(key);
-      if (existing) clearTimeout(existing.timeoutId);
-      const timeoutId = setTimeout(async ()=>{
-        try{
-          await fetch(`${API}/api/availability`, {
-            method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({ userId: ME_ID, date, half, state })
-          });
-          // Pull fresh server state so colors/advice reflect global logic
-          const curStart = new Date(windowStart);
-          const curEnd = new Date(windowStart.getFullYear(), windowStart.getMonth()+monthsSpan, 0);
-          STATE = await (await fetch(`${API}/api/state?start=${fmt(curStart)}&end=${fmt(curEnd)}`)).json();
-          renderCalendar(curStart, curEnd);
-        } finally {
-          pendingSaves.delete(key);
-        }
-      }, saveDelayMs);
-      pendingSaves.set(key, {state, timeoutId});
-    }
-
-    // Notes (per-user, per-date) – using STATE.notes if provided; fallback none
-    function getMyNote(date){
-      const n = STATE?.notes?.[ME_ID]?.[date];
-      return n || "";
-    }
-
-    // Supervisor shift hint (simple summary from STATE.shifts)
-    function shiftHint(date){
-      const s = STATE?.shifts?.[date];
-      if (!s) return "";
-      // very light example copy; your server can compute text and include it in STATE if preferred
-      const am = s.AM?.assignees?.length||0, pm = s.PM?.assignees?.length||0;
-      // you can expand this with ALS/EMT mix if Worker returns composition
-      if (am===0 && pm===0) return "Needs crew";
-      if (am===0) return "AM needs crew";
-      if (pm===0) return "PM needs crew";
-      return "Looks okay";
-    }
-
-    // Reserve toggle
-    elReserve.addEventListener("change", async e=>{
-      if (!ME_ID){ alert("Load your member # first."); e.target.checked=!e.target.checked; return; }
-      const on = !!e.target.checked;
-      await fetch(`${API}/api/me/reserve`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:ME_ID, reserve:on})});
-      const me = USERS.find(u=>u.id===ME_ID); if (me) me.reserve = on;
-      elResChip.style.display = on ? "" : "none";
+        // queue change
+        pending.set(`${date}_${half}`, { date, half, state: next });
+        scheduleFlush();
+      });
     });
 
-    // Supervisor roster admin
-    function buildRosterAdmin(){
-      const host = document.getElementById("rosterAdminPanel");
-      if (!USERS.length) { host.textContent="Roster unavailable."; return; }
-      host.innerHTML="";
-      USERS.forEach(u=>{
-        const row = document.createElement("div");
-        row.className = "adminRow";
-        row.innerHTML = `
-          <div style="min-width:240px"><strong>${esc(u.name)}</strong> <small>${esc(u.role||"")}</small> <span class="pill">#${esc(u.member_no||"—")}</span></div>
-          <label class="row"><input type="checkbox" class="f-inactive"> Inactive</label>
-          <label class="row"><input type="checkbox" class="f-type3"> Type III driver</label>
-          <span class="tag saveNote" style="display:none">Saved</span>
-        `;
-        const ci = row.querySelector(".f-inactive");
-        const ct = row.querySelector(".f-type3");
-        const saved = row.querySelector(".saveNote");
-        ci.checked = !!u.inactive;
-        ct.checked = !!u.type3_driver;
-
-        ci.addEventListener("change", async ()=>{
-          await fetch(`${API}/api/me/inactive`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:u.id, inactive:ci.checked})});
-          u.inactive = ci.checked; flash(saved);
-        });
-        ct.addEventListener("change", async ()=>{
-          await fetch(`${API}/api/me/type3`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:u.id, type3:ct.checked})});
-          u.type3_driver = ct.checked; flash(saved);
-        });
-
-        host.appendChild(row);
+    // (Optional) notes capture to your own endpoint when you’re ready.
+    document.querySelectorAll('.note').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        // TODO: POST /api/note { userId, date, text: inp.value }
+        // For now we only keep it local
       });
-    }
-
-    function flash(el){ el.style.display=""; setTimeout(()=>el.style.display="none",900); }
-    function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-
-    // Frictionless swap
-    function openSwap(){
-      if (!ME_ID){ alert("Load your member # first."); return; }
-      fillSwapLists();
-      elSwapMsg.style.display="none";
-      elSwapBack.style.display="flex";
-    }
-
-    function fillSwapLists(){
-      // My assigned shifts in window (from STATE.shifts)
-      const my = [];
-      for (const [date, halves] of Object.entries(STATE?.shifts||{})){
-        for (const half of ["AM","PM"]){
-          const a = halves[half]?.assignees||[];
-          if (a.includes(ME_ID)) my.push(`${date}|${half}`);
-        }
-      }
-      elSwapMy.innerHTML = my.map(k=>`<option value="${k}">${k.replace("|"," • ")}</option>`).join("") || `<option value="">(none)</option>`;
-
-      // Candidates: all active users (non-inactive); you can filter here by role/Type-III as you like
-      const cands = USERS.filter(u=>!u.inactive && u.id!==ME_ID);
-      elSwapCand.innerHTML = cands.map(u=>`<option value="${u.id}">${esc(u.name)} • ${esc(u.role||"")}</option>`).join("");
-    }
-
-    async function submitSwap(){
-      const key = elSwapMy.value;
-      if (!key){ elSwapMsg.textContent = "No shift selected."; elSwapMsg.style.display=""; return; }
-      const [date, half] = key.split("|");
-      const replacement = elSwapCand.value;
-
-      // Call Worker to validate & swap (server enforces disqualifiers, reserves, Type-III, etc.)
-      const res = await fetch(`${API}/api/shift/swap`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ fromUserId: ME_ID, toUserId: replacement, date, half })
-      }).then(r=>r.json()).catch(()=>({error:"network"}));
-
-      if (res?.ok){
-        elSwapMsg.textContent = "Swap approved.";
-        elSwapMsg.style.display="";
-        // refresh state
-        await refresh();
-        setTimeout(()=> elSwapBack.style.display="none", 700);
-      } else {
-        elSwapMsg.textContent = res?.error || "Swap denied.";
-        elSwapMsg.style.display="";
-      }
-    }
-
-    // Bulk apply
-    async function applyBulk(){
-      if (!ME_ID){ alert("Load your member # first."); return; }
-      const from = (document.getElementById("bulkFrom").value||"").trim();
-      const until = (document.getElementById("bulkUntil").value||"").trim();
-      const state = [...document.querySelectorAll("input[name=bulkState]")].find(r=>r.checked)?.value || "available";
-      const half =  [...document.querySelectorAll("input[name=bulkHalf]")].find(r=>r.checked)?.value   || "AM";
-      if (!from || !until){ alert("Enter a date range."); return; }
-      const dates = rangeDates(from, until);
-      for (const d of dates){
-        await fetch(`${API}/api/availability`, {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: ME_ID, date:d, half, state })
-        });
-      }
-      refresh();
-    }
-
-    function rangeDates(mdyFrom, mdyUntil){
-      const [m1,d1,y1] = mdyFrom.split("/").map(x=>parseInt(x,10));
-      const [m2,d2,y2] = mdyUntil.split("/").map(x=>parseInt(x,10));
-      const start = new Date(y1,m1-1,d1), end = new Date(y2,m2-1,d2);
-      const out=[]; const cur=new Date(start);
-      while (cur<=end){ out.push(fmt(cur)); cur.setDate(cur.getDate()+1); }
-      return out;
-    }
-  </script>
-<!-- index.html (tail, before </body>) -->
-<script src="/js/sc-preferences.js"></script>
-<script>
-  // Example wiring that matches the IDs/classes from the index I sent
-  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-  function refreshAll() {
-    // re-pull /api/state and re-render your calendar/roster
-    if (window.refresh) return window.refresh(); // if you exposed refresh()
-    return Promise.resolve();
+    });
   }
-  window.SCPreferences.init({
-    apiBase: API,
-    getMeId: () => localStorage.getItem("sc_me_id") || "",
-    onStateRefresh: refreshAll,
-    els: {
-      reserve: document.getElementById("prefReserve"),
-      type3: document.getElementById("prefType3Approved"),
-      inactive: document.getElementById("prefInactivePreview"),
-      bulkFrom: document.getElementById("bulkFrom"),
-      bulkUntil: document.getElementById("bulkUntil"),
-      bulkStateRadios: document.querySelectorAll('input[name="bulkState"]'),
-      bulkHalfRadios: document.querySelectorAll('input[name="bulkHalf"]'),
-      bulkApplyBtn: document.getElementById("btnApplyBulk"),
-      noteSelector: '.noteRow input[data-date]',   // ensure your note inputs include data-date="YYYY-MM-DD"
-      reserveChip: document.getElementById("reserveChip"),
-    },
-  });
+
+  function scheduleFlush(){
+    const status = document.getElementById('status');
+    status.textContent = "Pending changes… saving shortly.";
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = setTimeout(async ()=>{
+      if (!currentUserId || pending.size===0) { status.textContent = "All changes saved."; return; }
+      const ops = Array.from(pending.values());
+      pending.clear();
+      // send sequentially (simple); replace with Promise.all if you want
+      for (const op of ops) {
+        await postAvailability(currentUserId, op.date, op.half, op.state);
+      }
+      status.textContent = "All changes saved.";
+      // refresh tips (and any color that depends on server logic)
+      render();
+    }, 3000);
+  }
+
+  // ---------- Boot ----------
+  (async function boot(){
+    // populate member dropdown
+    const users = await fetchUsers();
+    const sel = document.getElementById('memberSel');
+    sel.innerHTML = users.map(u=>`<option value="${u.id}">${u.name}</option>`).join("");
+    currentUserId = users[0]?.id || null;
+    sel.value = currentUserId;
+    sel.addEventListener('change', ()=>{ currentUserId = sel.value; render(); });
+
+    // month controls
+    document.getElementById('monthsSel').addEventListener('change', e=>{
+      viewMonths = parseInt(e.target.value,10) || 2; render();
+    });
+    document.getElementById('prevBtn').addEventListener('click', ()=>{ viewAnchor = addMonths(viewAnchor, -1); render(); });
+    document.getElementById('nextBtn').addEventListener('click', ()=>{ viewAnchor = addMonths(viewAnchor, +1); render(); });
+
+    await render();
+  })();
+</script>
+
+<!-- shared “tip” painter is inlined here so this file is self-contained -->
+<script>
+(function () {
+  const TIP_CLASS = "tip-badge"; // class already styled above
+  window.paintTips = function paintTips(state){
+    if (!state || !state.shifts) return;
+    document.querySelectorAll('[data-date][data-half]').forEach(node=>{
+      const d = node.getAttribute('data-date');
+      const h = node.getAttribute('data-half');
+      const tip = state.shifts?.[d]?.[h]?.tip || "";
+      node.parentElement.querySelectorAll('.'+TIP_CLASS).forEach(n=>n.remove());
+      if (!tip) return;
+      const pill = document.createElement('span'); pill.className = TIP_CLASS; pill.textContent = tip;
+      node.parentElement.appendChild(pill);
+    });
+  };
+})();
 </script>
 
 </body>
