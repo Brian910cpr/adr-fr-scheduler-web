@@ -1,93 +1,124 @@
-<!-- supervisor.html (drop-in replacement or merge the "Notes" panel) -->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ShiftCommander • Supervisor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ADR-FR | Supervisor Dashboard</title>
 <style>
-  :root{--bg:#0c0f14;--panel:#141a22;--ink:#e8eef7;--muted:#8ea0b6;--ring:#2b394b}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#10161d)}
-  h1{margin:0;font-size:18px;font-weight:700}
-  .tabs{margin-left:auto;display:flex;gap:6px}
-  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c6d2df;text-decoration:none}
-  .tab.active{background:var(--ring);color:var(--ink)}
-  .wrap{padding:16px;display:grid;gap:18px}
-  .panel{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
-  .row{display:flex;gap:8px;align-items:center}
-  table{width:100%;border-collapse:collapse;margin-top:8px}
-  th,td{padding:8px;border-bottom:1px solid var(--ring);text-align:left}
-  th{color:#b9c6d5}
-  .muted{color:var(--muted)}
+  :root{--bg:#0b1220;--card:#111a2e;--ink:#e9eefc;--muted:#9fb0d3;--ok:#16a34a;--prefer:#0ea5e9;--no:#ef4444;--unset:#334155;--accent:#7c3aed}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
+  header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #22314f}
+  h1{font:600 16px;margin:0}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input,button{background:#0e172a;border:1px solid #24324d;color:var(--ink);padding:8px 10px;border-radius:8px}
+  button.primary{background:var(--accent);border-color:transparent}
+  main{padding:16px;max-width:1200px;margin:0 auto}
+  .grid{display:grid;gap:12px}
+  .twocol{grid-template-columns:2fr 1fr}
+  .card{background:var(--card);border:1px solid #22314f;border-radius:12px;padding:12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #23314f;padding:8px;text-align:left}
+  th{color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;background:#0e172a;border:1px solid #2a3a5f}
+  .prefer{background:var(--prefer);border-color:transparent}
+  .available{background:var(--ok);border-color:transparent}
+  .no{background:var(--no);border-color:transparent}
+  .unset{background:#334155}
 </style>
 </head>
 <body>
 <header>
-  <h1>ShiftCommander <span class="muted" style="margin-left:6px">Supervisor</span></h1>
-  <nav class="tabs">
-    <a class="tab" href="/member.html">Member</a>
-    <a class="tab active" href="/supervisor.html">Supervisor</a>
-    <a class="tab" href="/wallboard.html">Wallboard</a>
-  </nav>
-</header>
-
-<div class="wrap">
-  <!-- existing supervisor content goes above/below as needed -->
-
-  <div class="panel">
-    <div class="row">
-      <strong>Notes (member → supervisor)</strong>
-      <span class="muted" id="noteWindow"></span>
-      <div style="margin-left:auto">
-        <button id="prev" title="Prev week">◀</button>
-        <button id="next" title="Next week">▶</button>
-      </div>
-    </div>
-    <table>
-      <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
-      <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
-    </table>
+  <h1>Supervisor</h1>
+  <div class="row">
+    <label>Start <input type="date" id="start"></label>
+    <label>End <input type="date" id="end"></label>
+    <button class="primary" id="load">Load</button>
   </div>
-</div>
+</header>
+<main class="grid twocol">
+  <section class="card">
+    <h3 style="margin:0 0 8px 0">Coverage & nudges</h3>
+    <table id="coverage">
+      <thead>
+        <tr>
+          <th>Date</th><th>AM</th><th>PM</th><th>Nudge</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h3 style="margin:0 0 8px 0">Notes to supervisor</h3>
+    <table id="notes">
+      <thead><tr><th>Date</th><th>Half</th><th>User</th><th>Note</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
 
 <script>
-(() => {
-  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const tbody = document.getElementById('notesBody');
-  const winLbl = document.getElementById('noteWindow');
-  const prev = document.getElementById('prev');
-  const next = document.getElementById('next');
+const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+const fmt=(d)=> d.toISOString().slice(0,10);
+function addDays(dt,n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
 
-  let anchor = new Date(); // week anchor (Monday)
-  function monday(d){ const c=new Date(d); const k=(c.getDay()+6)%7; c.setDate(c.getDate()-k); return c; }
-  function iso(d){ return d.toISOString().slice(0,10); }
+async function getUsers(){ const r=await fetch(`${API}/api/users`); return r.json(); }
+async function getState(a,b){ const r=await fetch(`${API}/api/state?start=${a}&end=${b}`); return r.json(); }
 
-  async function jget(u){ const r=await fetch(u); if(!r.ok) throw 0; return r.json(); }
+function pill(txt,cls){ const span=document.createElement('span'); span.className=`pill ${cls||''}`; span.textContent=txt; return span; }
 
-  async function load(){
-    const start = monday(anchor);
-    const end = new Date(start); end.setDate(end.getDate()+6);
-    winLbl.textContent = `(${iso(start)} → ${iso(end)})`;
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
+function renderCoverage(data, users){
+  const tb=document.querySelector('#coverage tbody'); tb.innerHTML='';
+  const shifts=data.shifts||{};
+  const keys=Object.keys(shifts).sort();
+  for(const ymd of keys){
+    const AM=shifts[ymd]?.AM || {assignees:[],status:'unassigned'};
+    const PM=shifts[ymd]?.PM || {assignees:[],status:'unassigned'};
+    const nud = ( (AM.assignees.length+PM.assignees.length)===0 ) ? 'Need ALS & EMT' : '';
+    const tr=document.createElement('tr');
+    const dateCell=document.createElement('td'); dateCell.textContent=new Date(ymd).toLocaleDateString();
+    const amCell=document.createElement('td'); amCell.appendChild(pill(`${AM.assignees.length} assigned`, AM.assignees.length? 'available':'unset'));
+    const pmCell=document.createElement('td'); pmCell.appendChild(pill(`${PM.assignees.length} assigned`, PM.assignees.length? 'available':'unset'));
+    const nu=document.createElement('td'); nu.textContent=nud;
+    tr.append(dateCell,amCell,pmCell,nu);
+    tb.appendChild(tr);
+  }
+}
 
-    // try notes endpoint; if missing, show message
-    try{
-      const data = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
-      const rows = data?.rows || []; // expected: [{date:'YYYY-MM-DD', half:'AM', user_id:'u1', user_name:'Alex', note:'...'}]
-      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="4" class="muted">No notes.</td></tr>`; return; }
-      tbody.innerHTML = rows.map(r=>(
-        `<tr><td>${r.date}</td><td>${r.half}</td><td>${r.user_name||r.user_id||''}</td><td>${(r.note||'').replace(/</g,'&lt;')}</td></tr>`
-      )).join('');
-    }catch{
-      tbody.innerHTML = `<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`;
+function renderNotes(data, users){
+  const tb=document.querySelector('#notes tbody'); tb.innerHTML='';
+  const notes = data.notes || {}; // expect data.notes[date][half] = [{userId,note,updated_at}]
+  const byId = Object.fromEntries(users.map(u=>[u.id,u]));
+  for(const ymd of Object.keys(notes).sort()){
+    for(const half of Object.keys(notes[ymd])){
+      for(const item of notes[ymd][half]){
+        if(!item.note) continue;
+        const tr=document.createElement('tr');
+        const d=document.createElement('td'); d.textContent=new Date(ymd).toLocaleDateString();
+        const h=document.createElement('td'); h.textContent=half;
+        const u=document.createElement('td'); u.textContent= byId[item.userId]?.name || item.userId;
+        const n=document.createElement('td'); n.textContent=item.note;
+        tr.append(d,h,u,n);
+        tb.appendChild(tr);
+      }
     }
   }
+}
 
-  prev.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()-7); load(); });
-  next.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()+7); load(); });
+async function load(){
+  const s=document.getElementById('start').value || fmt(new Date());
+  const e=document.getElementById('end').value || fmt(addDays(new Date(),27));
+  const [users, data] = await Promise.all([getUsers(), getState(s,e)]);
+  renderCoverage(data, users);
+  renderNotes(data, users);
+}
 
-  load();
+(function init(){
+  const today=fmt(new Date());
+  document.getElementById('start').value=today;
+  document.getElementById('end').value=fmt(addDays(new Date(),27));
+  document.getElementById('load').addEventListener('click', load);
+  load().catch(e=>{console.error(e); alert('Failed to load');});
 })();
 </script>
 </body>
