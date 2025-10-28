@@ -1,432 +1,87 @@
-<!-- member.html (drop-in replacement) -->
+<!-- wallboard.html -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ShiftCommander • Member</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ShiftCommander • Wallboard</title>
 <style>
-  :root{
-    --bg:#0c0f14;--panel:#141a22;--muted:#7e8ca0;--ink:#e8eef7;--ink-soft:#c5cfdb;
-    --ring:#2b394b;--card:#10161d;--chip:#0f141b;--ok:#18a957;--avail:#2e86ff;--no:#d34b4b;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
-  h1{margin:0;font-size:18px;font-weight:700}
-  .tabs{margin-left:auto;display:flex;gap:6px}
-  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:var(--ink-soft);text-decoration:none}
-  .tab.active{background:var(--ring);color:var(--ink)}
-  .controls{display:flex;gap:10px;align-items:center;padding:10px 16px}
-  select,button,input,textarea{background:var(--chip);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 10px}
-  button.icon{padding:6px 8px}
-  .cal-wrap{padding:8px 16px}
-  .cal{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:10px}
-  .cal-head{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 10px 4px}
-  .month-title{font-weight:700}
-  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:0 4px 8px 4px;color:var(--muted);font-size:12px}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  .day{position:relative;background:var(--card);border:1px dashed var(--ring);border-radius:12px;min-height:128px;padding:8px}
-  .day.dim{opacity:.35}
-  .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted);font-weight:700}
-  .shifts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:18px}
-  .half{display:flex;flex-direction:column;gap:6px}
-  .pill{display:flex;align-items:center;justify-content:center;height:32px;border-radius:999px;border:1px solid transparent;color:#0e151b;font-weight:800;cursor:pointer;user-select:none;transition:transform .05s}
-  .pill:active{transform:scale(.98)}
-  .state-prefer{background:var(--ok)}
-  .state-available{background:var(--avail)}
-  .state-no{background:var(--no)}
-  .state-unset{background:#2b394b;color:var(--ink)}
-  .note-mini{font-size:12px;padding:4px 8px;border-radius:999px;background:transparent;color:#9aa6b2;border:1px solid var(--ring);cursor:pointer;align-self:center}
-  .note-mini.has{background:#fff;color:#000;border-color:#fff}
-  .legend{display:flex;gap:14px;align-items:center;color:var(--ink-soft);font-size:12px;padding:10px 2px}
-  .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
-  .dot.prefer{background:var(--ok)} .dot.avail{background:var(--avail)} .dot.none{background:#2b394b} .dot.no{background:var(--no)}
-  .msg{color:var(--no);padding:0 16px}
-
-  details.tools{margin:12px 16px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
-  details.tools>summary{cursor:pointer;padding:10px 12px;font-weight:700;list-style:none}
-  .tools-body{padding:10px 12px;display:grid;gap:14px}
-  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:var(--chip)}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--ring);background:var(--chip);cursor:pointer}
-  .btn.primary{background:#1b2431}
-
-  .note-modal{position:fixed;inset:0;background:rgba(7,10,14,.82);display:none;align-items:center;justify-content:center;padding:16px}
-  .note-modal.show{display:flex}
-  .note-card{width:min(520px,96vw);background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
-  .note-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .note-head small{color:var(--muted)}
-  .note-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  :root{--bg:#0b0f14;--panel:#111822;--ring:#263243;--ink:#e8eef7;--muted:#9bb0c7;--card:#0e151d}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
+  h1{margin:0;font-size:18px}
+  .wrap{padding:16px;display:grid;gap:14px;grid-template-columns:repeat(6,1fr)}
+  .card{background:var(--panel);border:1px solid var(--ring);border-radius:16px;padding:12px}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px}
+  .dow{font-weight:800;color:#bcd0e6}
+  .date{font-size:28px;font-weight:900}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .half{background:var(--card);border:1px dashed var(--ring);border-radius:12px;padding:8px}
+  .half h4{margin:0 0 8px 0;font-size:12px;letter-spacing:.4px;color:#9bb0c7}
+  .slot{display:grid;gap:6px}
+  .name{padding:6px 8px;border-radius:8px;background:#1a2431;font-weight:700}
+  .nudge{margin-top:8px;padding:8px;border-radius:10px;background:#2a3950;border:1px solid var(--ring);font-weight:900;text-align:center}
+  @media (max-width:1100px){ .wrap{grid-template-columns:repeat(3,1fr)} }
+  @media (max-width:720px){ .wrap{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-  <header>
-    <h1>ShiftCommander <span style="color:var(--muted);font-weight:600;margin-left:6px;">Member</span></h1>
-    <nav class="tabs">
-      <a class="tab active" href="/member.html">Member</a>
-      <a class="tab" href="/supervisor.html">Supervisor</a>
-      <a class="tab" href="/wallboard.html">Wallboard</a>
-    </nav>
-  </header>
-
-  <div class="controls">
-    <label>
-      Member #
-      <select id="memberSelect"></select>
-    </label>
-    <div style="margin-left:auto;display:flex;gap:8px">
-      <button class="icon" id="prevBtn" aria-label="Previous month">◀</button>
-      <button class="icon" id="nextBtn" aria-label="Next month">▶</button>
-    </div>
-  </div>
-
-  <div class="cal-wrap">
-    <div class="cal">
-      <div class="cal-head">
-        <div class="month-title" id="monthTitle">Month YYYY</div>
-      </div>
-      <div class="dow">
-        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-      </div>
-      <div class="grid" id="grid"></div>
-      <div class="legend">
-        <span><span class="dot prefer"></span>Prefer</span>
-        <span><span class="dot avail"></span>Available</span>
-        <span><span class="dot none"></span>Unset</span>
-        <span><span class="dot no"></span>Do Not</span>
-      </div>
-    </div>
-  </div>
-
-  <details class="tools" open>
-    <summary>Preferences &amp; bulk tools</summary>
-    <div class="tools-body">
-      <div class="row">
-        <label class="chip"><input type="checkbox" id="pref24"> Prefer 24s</label>
-        <label class="chip"><input type="checkbox" id="type3"> Type III driver approved</label>
-        <label class="chip"><input type="checkbox" id="inactive"> Inactive (block new scheduling)</label>
-        <button class="btn" id="savePrefs">Save</button>
-      </div>
-
-      <div class="row" style="gap:12px;align-items:flex-end">
-        <div>
-          <div style="font-weight:600;margin-bottom:6px">Bulk set (date range)</div>
-          <div class="row">
-            <label>From <input type="date" id="bulkFrom"></label>
-            <label>Until <input type="date" id="bulkUntil"></label>
-            <label>Set to
-              <select id="bulkState">
-                <option value="available">Available</option>
-                <option value="prefer">Prefer</option>
-                <option value="no">Do Not</option>
-                <option value="unset">Unset</option>
-              </select>
-            </label>
-            <span>Half-days:</span>
-            <label class="chip"><input type="checkbox" id="bulkAM" checked> AM</label>
-            <label class="chip"><input type="checkbox" id="bulkPM" checked> PM</label>
-            <button class="btn primary" id="applyBulk">Apply</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="row" style="gap:12px;align-items:flex-end">
-        <div>
-          <div style="font-weight:600;margin-bottom:6px">Weekly pattern (repeat between dates)</div>
-          <div class="row">
-            <span>Start</span> <input type="date" id="patternStart">
-            <span>Repeat until</span> <input type="date" id="patternUntil">
-            <label class="chip"><input type="checkbox" class="wday" value="Mon"> Mon</label>
-            <label class="chip"><input type="checkbox" class="wday" value="Tue"> Tue</label>
-            <label class="chip"><input type="checkbox" class="wday" value="Wed"> Wed</label>
-            <label class="chip"><input type="checkbox" class="wday" value="Thu"> Thu</label>
-            <label class="chip"><input type="checkbox" class="wday" value="Fri"> Fri</label>
-            <label class="chip"><input type="checkbox" class="wday" value="Sat"> Sat</label>
-            <label class="chip"><input type="checkbox" class="wday" value="Sun"> Sun</label>
-            <label class="chip"><input type="checkbox" id="patAM" checked> AM</label>
-            <label class="chip"><input type="checkbox" id="patPM" checked> PM</label>
-            <label>Set to
-              <select id="patternState">
-                <option value="available">Available</option>
-                <option value="prefer">Prefer</option>
-                <option value="no">Do Not</option>
-                <option value="unset">Unset</option>
-              </select>
-            </label>
-            <button class="btn primary" id="applyPattern">Apply pattern</button>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div style="font-weight:600;margin-bottom:6px">Avoid co-workers (backup list)</div>
-        <textarea id="avoidList" rows="3" placeholder="Comma-separated member #s or names"></textarea>
-        <div class="row" style="justify-content:flex-end">
-          <button class="btn" id="saveAvoid">Save</button>
-        </div>
-      </div>
-    </div>
-  </details>
-
-  <!-- Per-shift note modal -->
-  <div class="note-modal" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteTitle">
-    <div class="note-card">
-      <div class="note-head">
-        <div>
-          <strong id="noteTitle">Note to supervisor</strong>
-          <div><small id="noteMeta">—</small></div>
-        </div>
-        <button class="btn" id="noteClose">Close</button>
-      </div>
-      <textarea id="noteText" placeholder="e.g., 'In at 10am'"></textarea>
-      <div class="note-actions">
-        <button class="btn primary" id="noteSave">Save note</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="msg" id="msg"></div>
+<header>
+  <h1>ShiftCommander • Wallboard</h1>
+</header>
+<main class="wrap" id="wrap">Loading…</main>
 
 <script>
-(() => {
-  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+(async () => {
+  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const wrap=document.getElementById('wrap');
+  const today=new Date(); const start=new Date(today); start.setDate(start.getDate()-today.getDay()+1); // Monday start
+  const end=new Date(start); end.setDate(start.getDate()+13); // 2 weeks
 
-  // DOM
-  const memberSel = document.getElementById('memberSelect');
-  const grid = document.getElementById('grid');
-  const monthTitle = document.getElementById('monthTitle');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const msg = document.getElementById('msg');
+  const iso=d=>d.toISOString().slice(0,10);
+  const addDays=(d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
+  const [state, users] = await Promise.all([
+    fetch(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`).then(r=>r.json()),
+    fetch(`${API}/api/users`).then(r=>r.json())
+  ]);
 
-  // Tools
-  const pref24 = document.getElementById('pref24');
-  const type3 = document.getElementById('type3');
-  const inactive = document.getElementById('inactive');
-  const savePrefs = document.getElementById('savePrefs');
-  const bulkFrom = document.getElementById('bulkFrom');
-  const bulkUntil = document.getElementById('bulkUntil');
-  const bulkState = document.getElementById('bulkState');
-  const bulkAM = document.getElementById('bulkAM');
-  const bulkPM = document.getElementById('bulkPM');
-  const patternStart = document.getElementById('patternStart');
-  const patternUntil = document.getElementById('patternUntil');
-  const patternState = document.getElementById('patternState');
-  const patAM = document.getElementById('patAM');
-  const patPM = document.getElementById('patPM');
-  const applyBulk = document.getElementById('applyBulk');
-  const applyPattern = document.getElementById('applyPattern');
-  const avoidList = document.getElementById('avoidList');
+  const id2name=id => (users.find(u=>u.id===id)||{}).name||id;
 
-  // Notes
-  const noteModal = document.getElementById('noteModal');
-  const noteMeta  = document.getElementById('noteMeta');
-  const noteText  = document.getElementById('noteText');
-  const noteClose = document.getElementById('noteClose');
-  const noteSave  = document.getElementById('noteSave');
-  let noteCtx = null; // { dateISO, half }
+  wrap.innerHTML='';
+  for(let i=0;i<14;i++){
+    const d=addDays(start,i); const key=iso(d);
+    const sh=state.shifts[key]||{};
+    const card=document.createElement('section'); card.className='card';
+    card.innerHTML=`
+      <div class="head">
+        <div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
+        <div class="date">${d.toLocaleString(undefined,{month:'short'})} ${d.getDate()}</div>
+      </div>
+      <div class="row">
+        <div class="half">
+          <h4>AM</h4>
+          <div class="slot" id="am-${key}"></div>
+        </div>
+        <div class="half">
+          <h4>PM</h4>
+          <div class="slot" id="pm-${key}"></div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(card);
 
-  let users = [];
-  let currentUser = null;
-  let anchor = new Date(); anchor.setDate(1);
-
-  const iso = d => d.toISOString().slice(0,10);
-  const addDays = (d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
-  const startOfCalendar = (d)=>{
-    const first = new Date(d.getFullYear(), d.getMonth(), 1);
-    const weekdayMon0 = (first.getDay()+6)%7; // Monday=0
-    const calStart = new Date(first); calStart.setDate(first.getDate()-weekdayMon0);
-    return calStart;
-  };
-
-  const STATES = ['unset','prefer','available','no'];
-  const nextState = s => STATES[(STATES.indexOf(s)+1)%STATES.length];
-  const pillClass = s => ({
-    prefer:'pill state-prefer', available:'pill state-available',
-    no:'pill state-no', unset:'pill state-unset'
-  }[s] || 'pill state-unset');
-
-  let windowData = { availability:{}, prefs:{}, notes:{} }; // notes optional
-
-  async function jget(url){
-    const r = await fetch(url);
-    const t = await r.text();
-    if(!r.ok) throw new Error(url+' → '+r.status);
-    if(t.startsWith('<')) throw new Error('API returned HTML');
-    return JSON.parse(t);
-  }
-  async function jpost(url, body){
-    const r = await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-    const t = await r.text();
-    if(!r.ok) throw new Error(url+' → '+r.status);
-    return t ? JSON.parse(t) : {ok:true};
-  }
-  function flash(t){ msg.textContent=t; clearTimeout(flash.t); flash.t=setTimeout(()=>msg.textContent='',1600); }
-
-  async function loadUsers(){
-    const list = await jget(API + '/api/users');
-    users = list;
-    memberSel.innerHTML = users.map(u=>`<option value="${u.id}">${u.member_no || ''} ${u.name}</option>`).join('');
-    currentUser = users[0]?.id || null;
-    if(currentUser) memberSel.value = currentUser;
-  }
-
-  async function loadWindow(){
-    const start = startOfCalendar(anchor);
-    const end = addDays(start,41);
-    windowData = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
-    // Optional notes (ignore if endpoint missing)
-    try{
-      const notes = await jget(`${API}/api/notes?user_id=${encodeURIComponent(currentUser)}&start=${iso(start)}&end=${iso(end)}`);
-      windowData.notes = notes?.notes || {};
-    }catch(_){}
-    hydratePrefs();
-    render();
-  }
-
-  function hydratePrefs(){
-    const p = windowData.prefs?.[currentUser] || {};
-    pref24.checked = !!p.prefer24s;
-    const me = users.find(u=>u.id===currentUser);
-    type3.checked = !!(p.type3_driver ?? me?.type3_driver);
-    inactive.checked = !!(me?.inactive);
-  }
-
-  function noteExists(dateISO, half){
-    const nuser = windowData.notes?.[currentUser] || {};
-    const nday = nuser[dateISO] || {};
-    const text = (nday[half]||'').trim();
-    return text.length>0;
-  }
-
-  function render(){
-    monthTitle.textContent = anchor.toLocaleString(undefined,{month:'long',year:'numeric'});
-    const start = startOfCalendar(anchor);
-    grid.innerHTML = '';
-    for(let i=0;i<42;i++){
-      const d = addDays(start,i);
-      const dateISO = iso(d);
-      const inMonth = d.getMonth() === anchor.getMonth();
-
-      const day = document.createElement('div');
-      day.className = 'day' + (inMonth?'':' dim');
-      const dnum = document.createElement('div');
-      dnum.className = 'dnum';
-      dnum.textContent = d.getDate();
-      day.appendChild(dnum);
-
-      const shifts = document.createElement('div');
-      shifts.className = 'shifts';
-      shifts.append(makeShift('AM'), makeShift('PM'));
-      day.appendChild(shifts);
-
-      grid.appendChild(day);
-
-      function makeShift(half){
-        const amap = windowData.availability[currentUser] || {};
-        const dmap = amap[dateISO] || {};
-        const state = dmap[half] || 'unset';
-
-        const wrap = document.createElement('div');
-        wrap.className='half';
-
-        const el = document.createElement('div');
-        el.className = pillClass(state);
-        el.textContent = half;
-        el.dataset.state = state;
-
-        el.addEventListener('click', async ()=>{
-          const nxt = nextState(el.dataset.state);
-          el.dataset.state = nxt; el.className = pillClass(nxt);
-          try{
-            // IMPORTANT: use userId (camelCase) – this is what the Worker requires
-            await jpost(API + '/api/availability', { userId: currentUser, date: dateISO, half, state: nxt });
-          }catch(e){ flash('Save failed'); }
-        });
-
-        const nb = document.createElement('button');
-        nb.className = 'note-mini' + (noteExists(dateISO,half)?' has':'');
-        nb.textContent = 'note';
-        nb.title = 'Note to supervisor for this shift';
-        nb.addEventListener('click', ()=> openNote(dateISO, half, nb));
-
-        wrap.appendChild(el);
-        wrap.appendChild(nb);
-        return wrap;
+    const paint = (half) => {
+      const assignees=(sh[half]?.assignees||[]).map(id2name);
+      const target = card.querySelector(`#${half.toLowerCase()}-${key}`);
+      if(assignees.length===0){
+        target.innerHTML = `<div class="nudge">NUDGE: Need ALS &amp; EMT</div>`;
+        return;
       }
-    }
+      const names=assignees.slice(0,4).map(n=>`<div class="name">${n}</div>`).join('');
+      target.innerHTML = names + (assignees.length>4? `<div class="name">+${assignees.length-4} more</div>`:'');
+    };
+    paint('AM'); paint('PM');
   }
-
-  function openNote(dateISO, half, buttonEl){
-    noteCtx = {dateISO, half, buttonEl};
-    document.getElementById('noteMeta').textContent = `${dateISO} • ${half}`;
-    const existing = windowData.notes?.[currentUser]?.[dateISO]?.[half] || '';
-    document.getElementById('noteText').value = existing;
-    document.getElementById('noteModal').classList.add('show');
-  }
-  document.getElementById('noteClose').addEventListener('click', ()=> document.getElementById('noteModal').classList.remove('show'));
-  document.getElementById('noteSave').addEventListener('click', async ()=>{
-    if(!noteCtx || !currentUser) return;
-    const text = document.getElementById('noteText').value.trim();
-    try{
-      // Accept both keys for compatibility
-      await jpost(API + '/api/note', { userId: currentUser, user_id: currentUser, date: noteCtx.dateISO, half: noteCtx.half, note: text });
-      windowData.notes ||= {};
-      windowData.notes[currentUser] ||= {};
-      windowData.notes[currentUser][noteCtx.dateISO] ||= {};
-      windowData.notes[currentUser][noteCtx.dateISO][noteCtx.half] = text;
-      if(noteCtx.buttonEl){ noteCtx.buttonEl.classList.toggle('has', !!text); }
-      flash('Note saved');
-      document.getElementById('noteModal').classList.remove('show');
-    }catch(e){ flash('Note save failed'); }
-  });
-
-  // Tools actions
-  document.getElementById('savePrefs').addEventListener('click', async ()=>{
-    try{
-      await jpost(API + '/api/prefs', { userId: currentUser, prefer24s: !!pref24.checked, type3_driver: !!type3.checked, inactive: !!inactive.checked });
-      flash('Preferences saved');
-    }catch(e){ flash('Save failed'); }
-  });
-
-  applyBulk.addEventListener('click', async ()=>{
-    const from=bulkFrom.value, until=bulkUntil.value;
-    if(!from || !until) return flash('Pick a date range');
-    const halves=[bulkAM.checked&&'AM', bulkPM.checked&&'PM'].filter(Boolean);
-    if(!halves.length) return flash('Select AM and/or PM');
-    try{
-      await jpost(API + '/api/bulk-set', { userId: currentUser, from, until, state: bulkState.value, halves });
-      flash('Bulk applied'); await loadWindow();
-    }catch(e){ flash('Bulk failed'); }
-  });
-
-  applyPattern.addEventListener('click', async ()=>{
-    const from=patternStart.value; const until=patternUntil.value;
-    if(!from || !until) return flash('Pick start & until dates');
-    const days=[...document.querySelectorAll('.wday')].filter(b=>b.checked).map(b=>b.value);
-    if(!days.length) return flash('Select weekdays');
-    const halves=[patAM.checked&&'AM', patPM.checked&&'PM'].filter(Boolean);
-    if(!halves.length) return flash('Select AM and/or PM');
-    try{
-      await jpost(API + '/api/weekly-pattern', { userId: currentUser, start: from, until, days, state: patternState.value, halves });
-      flash('Pattern applied'); await loadWindow();
-    }catch(e){ flash('Pattern failed'); }
-  });
-
-  document.getElementById('saveAvoid').addEventListener('click', async ()=>{
-    try{ await jpost(API + '/api/avoid', { userId: currentUser, avoid: avoidList.value }); flash('Avoid list saved'); }
-    catch(e){ flash('Save failed'); }
-  });
-
-  memberSel.addEventListener('change', async ()=>{ currentUser = memberSel.value; await loadWindow(); });
-  prevBtn.addEventListener('click', async ()=>{ anchor.setMonth(anchor.getMonth()-1); await loadWindow(); });
-  nextBtn.addEventListener('click', async ()=>{ anchor.setMonth(anchor.getMonth()+1); await loadWindow(); });
-
-  (async () => {
-    try{ await loadUsers(); await loadWindow(); }
-    catch(e){ msg.textContent = 'API error: ' + (e?.message||e); }
-  })();
 })();
 </script>
 </body>

@@ -1,30 +1,43 @@
-<!-- supervisor.html (drop-in replacement or merge the "Notes" panel) -->
+<!-- supervisor.html -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShiftCommander • Supervisor</title>
 <style>
-  :root{--bg:#0c0f14;--panel:#141a22;--ink:#e8eef7;--muted:#8ea0b6;--ring:#2b394b}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#10161d)}
+  :root{--bg:#0c0f14;--panel:#141a22;--ring:#2b394b;--ink:#e8eef7;--muted:#8ea0b5;--card:#10161d;--ok:#18a957;--warn:#f0b23e}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
   h1{margin:0;font-size:18px;font-weight:700}
   .tabs{margin-left:auto;display:flex;gap:6px}
-  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c6d2df;text-decoration:none}
+  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c5cfdb;text-decoration:none}
   .tab.active{background:var(--ring);color:var(--ink)}
-  .wrap{padding:16px;display:grid;gap:18px}
-  .panel{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
-  .row{display:flex;gap:8px;align-items:center}
-  table{width:100%;border-collapse:collapse;margin-top:8px}
-  th,td{padding:8px;border-bottom:1px solid var(--ring);text-align:left}
-  th{color:#b9c6d5}
+  .controls{display:flex;gap:10px;align-items:center;padding:10px 16px}
+  .btn{padding:6px 10px;border:1px solid var(--ring);border-radius:8px;background:#0f141b;color:var(--ink);cursor:pointer}
+  .toggle{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .cal{padding:12px 16px}
+  .grid{display:grid;gap:10px}
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .day{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:130px}
+  .dhead{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
+  .big{font-size:22px;color:var(--ink);font-weight:900}
+  .row{display:flex;gap:8px;margin-top:10px}
+  .slot{flex:1;background:var(--card);border:1px dashed var(--ring);border-radius:10px;padding:6px 8px}
+  .slot h4{margin:0 0 6px 0;font-size:12px;color:var(--muted);letter-spacing:.5px}
+  .name{display:block;font-weight:700}
+  .nudge{margin-top:6px;padding:6px 8px;border-radius:8px;background:#1e2a38;border:1px solid var(--ring);color:#fff;font-weight:800}
+  .nudge strong{color:#fff}
+  .notes{margin:14px 16px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
+  .notes h3{margin:10px 12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 12px;border-top:1px solid var(--ring);text-align:left}
   .muted{color:var(--muted)}
 </style>
 </head>
 <body>
 <header>
-  <h1>ShiftCommander <span class="muted" style="margin-left:6px">Supervisor</span></h1>
+  <h1>ShiftCommander <span style="color:#8ea0b5;font-weight:600;margin-left:6px;">Supervisor</span></h1>
   <nav class="tabs">
     <a class="tab" href="/member.html">Member</a>
     <a class="tab active" href="/supervisor.html">Supervisor</a>
@@ -32,62 +45,119 @@
   </nav>
 </header>
 
-<div class="wrap">
-  <!-- existing supervisor content goes above/below as needed -->
-
-  <div class="panel">
-    <div class="row">
-      <strong>Notes (member → supervisor)</strong>
-      <span class="muted" id="noteWindow"></span>
-      <div style="margin-left:auto">
-        <button id="prev" title="Prev week">◀</button>
-        <button id="next" title="Next week">▶</button>
-      </div>
-    </div>
-    <table>
-      <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
-      <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
-    </table>
-  </div>
+<div class="controls">
+  <button class="btn" id="prev">◀ Prev</button>
+  <div id="when" class="muted"></div>
+  <button class="btn" id="next">Next ▶</button>
+  <label class="toggle"><input type="checkbox" id="monthView"> Month</label>
 </div>
+
+<div class="cal">
+  <div id="weeks" class="grid"></div>
+</div>
+
+<section class="notes" id="notesBox" hidden>
+  <h3>Notes (member → supervisor) <span id="range" class="muted"></span></h3>
+  <table>
+    <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
+    <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+  </table>
+</section>
 
 <script>
 (() => {
-  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const tbody = document.getElementById('notesBody');
-  const winLbl = document.getElementById('noteWindow');
-  const prev = document.getElementById('prev');
-  const next = document.getElementById('next');
+  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const weeksEl=document.getElementById('weeks');
+  const when=document.getElementById('when');
+  const monthView=document.getElementById('monthView');
+  const prev=document.getElementById('prev');
+  const next=document.getElementById('next');
+  const notesBox=document.getElementById('notesBox');
+  const notesBody=document.getElementById('notesBody');
+  const rangeEl=document.getElementById('range');
 
-  let anchor = new Date(); // week anchor (Monday)
-  function monday(d){ const c=new Date(d); const k=(c.getDay()+6)%7; c.setDate(c.getDate()-k); return c; }
+  let anchor=new Date(); // start of week/month
+  function monday(d){ const c=new Date(d); const wd=(c.getDay()+6)%7; c.setDate(c.getDate()-wd); c.setHours(0,0,0,0); return c; }
   function iso(d){ return d.toISOString().slice(0,10); }
+  function addDays(d,n){ const c=new Date(d); c.setDate(c.getDate()+n); return c; }
 
-  async function jget(u){ const r=await fetch(u); if(!r.ok) throw 0; return r.json(); }
+  async function jget(u){ const r=await fetch(u); const t=await r.text(); if(!r.ok) throw new Error(t); return JSON.parse(t); }
 
-  async function load(){
-    const start = monday(anchor);
-    const end = new Date(start); end.setDate(end.getDate()+6);
-    winLbl.textContent = `(${iso(start)} → ${iso(end)})`;
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
+  async function render(){
+    const start = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth(),1) : monday(anchor);
+    const days  = monthView.checked ? 42 : 7;
+    const end   = addDays(start,days-1);
 
-    // try notes endpoint; if missing, show message
+    when.textContent = monthView.checked
+      ? start.toLocaleString(undefined,{month:'long',year:'numeric'})
+      : `${start.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${end.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
+
+    const state = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
+    const users = await jget(`${API}/api/users`);
+
+    // notes (optional)
     try{
-      const data = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
-      const rows = data?.rows || []; // expected: [{date:'YYYY-MM-DD', half:'AM', user_id:'u1', user_name:'Alex', note:'...'}]
-      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="4" class="muted">No notes.</td></tr>`; return; }
-      tbody.innerHTML = rows.map(r=>(
-        `<tr><td>${r.date}</td><td>${r.half}</td><td>${r.user_name||r.user_id||''}</td><td>${(r.note||'').replace(/</g,'&lt;')}</td></tr>`
-      )).join('');
-    }catch{
-      tbody.innerHTML = `<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`;
+      rangeEl.textContent = `(${iso(start)} → ${iso(end)})`;
+      const notes = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
+      const rows=[];
+      for (const uid of Object.keys(notes.notes||{})){
+        const byDate=notes.notes[uid];
+        const name=(users.find(u=>u.id===uid)||{}).name||uid;
+        for(const d of Object.keys(byDate)){
+          for(const half of Object.keys(byDate[d])){
+            const txt=(byDate[d][half]||'').trim();
+            if(!txt) continue;
+            rows.push(`<tr><td>${d}</td><td>${half}</td><td>${name}</td><td>${txt}</td></tr>`);
+          }
+        }
+      }
+      notesBody.innerHTML = rows.length? rows.join('') : `<tr><td colspan="4" class="muted">No notes.</td></tr>`;
+      notesBox.hidden=false;
+    }catch(_){ notesBox.hidden=false; notesBody.innerHTML=`<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`; }
+
+    // draw weeks
+    weeksEl.innerHTML='';
+    const cols=7, rows=Math.ceil(days/7);
+    for(let r=0;r<rows;r++){
+      const row=document.createElement('div'); row.className='week';
+      for(let c=0;c<cols;c++){
+        const i=r*7+c; const day=addDays(start,i);
+        const dateISO=iso(day);
+        const card=document.createElement('div'); card.className='day';
+        card.innerHTML=`
+          <div class="dhead"><div>${day.toLocaleString(undefined,{weekday:'short'})}</div>
+          <div class="big">${day.toLocaleString(undefined,{month:'short'})} ${day.getDate()}</div></div>
+          <div class="row">
+            <div class="slot"><h4>AM</h4><div class="names" id="am-${dateISO}"></div></div>
+            <div class="slot"><h4>PM</h4><div class="names" id="pm-${dateISO}"></div></div>
+          </div>
+        `;
+        row.appendChild(card);
+
+        const amNames = (state.shifts[dateISO]?.AM?.assignees||[]).map(id => (users.find(u=>u.id===id)||{}).name||id);
+        const pmNames = (state.shifts[dateISO]?.PM?.assignees||[]).map(id => (users.find(u=>u.id===id)||{}).name||id);
+        const put = (elId,names,half) => {
+          const el=card.querySelector(`#${half.toLowerCase()}-${dateISO}`);
+          if(!names.length){
+            // zero signed → show bold nudge
+            el.innerHTML = `<div class="nudge"><strong>NUDGE:</strong> Need ALS &amp; EMT</div>`;
+          } else {
+            const show = names.slice(0,4).map(n=>`<span class="name">${n}</span>`).join('');
+            el.innerHTML = show + (names.length>4? `<span class="muted">+${names.length-4} more</span>`:'');
+          }
+        };
+        put(`am-${dateISO}`, amNames, 'AM');
+        put(`pm-${dateISO}`, pmNames, 'PM');
+      }
+      weeksEl.appendChild(row);
     }
   }
 
-  prev.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()-7); load(); });
-  next.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()+7); load(); });
+  prev.addEventListener('click', ()=>{ anchor = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth()-1,1) : addDays(monday(anchor),-7); render(); });
+  next.addEventListener('click', ()=>{ anchor = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth()+1,1) : addDays(monday(anchor),+7); render(); });
+  monthView.addEventListener('change', render);
 
-  load();
+  render().catch(err=>{ weeksEl.innerHTML=`<div class="muted">API error: ${err}</div>`; });
 })();
 </script>
 </body>
