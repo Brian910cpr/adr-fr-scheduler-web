@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ADR-FR • My Calendar</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a1020">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="/css/ios.css">
+</head>
+<body>
+  <div class="app">
+    <nav class="nav"><div class="nav-inner"><div class="large-title">My Shifts</div></div></nav>
+
+    <main class="section">
+      <div class="card" style="margin-bottom:12px">
+        <h2>How it works</h2>
+        <div class="muted">
+          Tap AM/PM and cycle: <b>Prefer</b> (green) → <b>Available</b> (yellow) → <b>Blank</b> → <b>Do not schedule</b> (red).
+          Changes save in ~1.5s and cards update server-side.
+        </div>
+      </div>
+
+      <div id="calHost" class="grid"></div>
+    </main>
+
+    <footer class="tabbar">
+      <div class="tabbar-inner">
+        <a class="tab active" href="/member.html">My Calendar</a>
+        <a class="tab" href="/supervisor.html">Supervisor</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    // identify current user (persisted)
+    if (!localStorage.getItem("sc_me_id")) localStorage.setItem("sc_me_id","uq2w4or");
+    const ME = localStorage.getItem("sc_me_id");
+
+    const sleep = ms => new Promise(r=>setTimeout(r,ms));
+    const fmt = d => d.toISOString().slice(0,10);
+    function addDays(d,n){const x=new Date(d); x.setDate(x.getDate()+n); return x;}
+
+    const STATES = ["blank","prefer","available","no"]; // UI rotation
+
+    function stateToButtonClass(s){
+      if (s==="prefer") return "active-prefer";
+      if (s==="available") return "active-available";
+      if (s==="no") return "active-no";
+      return "";
+    }
+
+    function nextState(current){
+      const i = STATES.indexOf(current ?? "blank");
+      return STATES[(i+1) % STATES.length];
+    }
+
+    function colorForShift(status){
+      if (status==="approved") return "health-ok";
+      if (status==="proposed") return "health-warn";
+      return "muted";
+    }
+
+    // Debounced saver per (date,half)
+    const pendingSaves = new Map(); // key "YYYY-MM-DD|AM"
+    function scheduleSave(date, half, state){
+      const key = `${date}|${half}`;
+      if (pendingSaves.has(key)) clearTimeout(pendingSaves.get(key));
+      const t = setTimeout(async ()=>{
+        pendingSaves.delete(key);
+        // translate "blank" -> do not send (we treat as unset)
+        const payload = { userId: ME, date, half, state: state==="blank" ? "unset" : state };
+        await fetch(`${API}/api/availability`,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+      }, 1500);
+      pendingSaves.set(key, t);
+    }
+
+    async function loadState(start,end){
+      const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
+      return r.json();
+    }
+
+    function renderWeek(container, dateISO, dayData, myAvail={}){
+      const card = document.createElement("div");
+      card.className = "card";
+      const d = new Date(dateISO);
+      const label = d.toLocaleDateString(undefined,{weekday:"long", month:"short", day:"numeric"});
+      const amStatus = dayData?.AM?.status ?? "unassigned";
+      const pmStatus = dayData?.PM?.status ?? "unassigned";
+
+      const myAM = (myAvail["AM"] ?? "blank");
+      const myPM = (myAvail["PM"] ?? "blank");
+
+      card.innerHTML = `
+        <div class="shift">
+          <div class="shift-head">
+            <div class="shift-title">${label}</div>
+            <div class="pill ${colorForShift(amStatus)}">AM: ${amStatus}</div>
+          </div>
+          <div class="segment" data-date="${dateISO}" data-half="AM">
+            <button class="${stateToButtonClass(myAM)}" data-state="prefer">Prefer</button>
+            <button class="${stateToButtonClass(myAM)}" data-state="available">Available</button>
+            <button class="${stateToButtonClass(myAM)}" data-state="blank">Blank</button>
+            <button class="${stateToButtonClass(myAM)}" data-state="no">No</button>
+          </div>
+        </div>
+
+        <div class="shift" style="margin-top:10px">
+          <div class="shift-head">
+            <div class="shift-title"></div>
+            <div class="pill ${colorForShift(pmStatus)}">PM: ${pmStatus}</div>
+          </div>
+          <div class="segment" data-date="${dateISO}" data-half="PM">
+            <button class="${stateToButtonClass(myPM)}" data-state="prefer">Prefer</button>
+            <button class="${stateToButtonClass(myPM)}" data-state="available">Available</button>
+            <button class="${stateToButtonClass(myPM)}" data-state="blank">Blank</button>
+            <button class="${stateToButtonClass(myPM)}" data-state="no">No</button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    }
+
+    function markActive(segmentEl, chosen){
+      segmentEl.querySelectorAll("button").forEach(b=>{
+        b.classList.remove("active-prefer","active-available","active-no");
+      });
+      const btn = Array.from(segmentEl.querySelectorAll("button")).find(b => b.dataset.state===chosen);
+      if (!btn) return;
+      const cls = stateToButtonClass(chosen);
+      if (cls) btn.classList.add(cls);
+    }
+
+    async function boot(){
+      const host = document.getElementById("calHost");
+      host.innerHTML = `<div class="card"><div class="muted">Loading…</div></div>`;
+
+      const start = new Date(); // today
+      const end = addDays(start, 13); // 2 weeks
+      const state = await loadState(fmt(start), fmt(end));
+      host.innerHTML = "";
+
+      // Build quick index for my availability
+      const myAvailIndex = state.availability?.[ME] || {};
+
+      // Render each day
+      let cursor = new Date(start);
+      while (cursor <= end){
+        const iso = fmt(cursor);
+        const day = state.shifts?.[iso] || {};
+        const myAvail = myAvailIndex?.[iso] || {};
+        renderWeek(host, iso, day, myAvail);
+        cursor = addDays(cursor,1);
+      }
+
+      // Wire the 4-state segments
+      host.addEventListener("click", (e)=>{
+        const btn = e.target.closest("button[data-state]");
+        if (!btn) return;
+        const seg = btn.closest(".segment");
+        const date = seg.dataset.date;
+        const half = seg.dataset.half;
+
+        // compute next chosen by rotating from whichever button was clicked:
+        const current = seg.querySelector(".active-prefer") ? "prefer"
+                       : seg.querySelector(".active-available") ? "available"
+                       : seg.querySelector(".active-no") ? "no"
+                       : "blank";
+        const chosen = nextState(current);
+
+        markActive(seg, chosen);
+        scheduleSave(date, half, chosen);
+      });
+    }
+
+    boot();
+  </script>
+</body>
+</html>

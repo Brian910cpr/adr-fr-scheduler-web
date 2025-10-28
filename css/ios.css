@@ -1,0 +1,103 @@
+/* /css/ios.css  — lightweight “Apple-y” look */
+:root{
+  --bg: #0b0f17;
+  --card: #0f1420;
+  --hairline: #1e2a42;
+  --text: #ecf1ff;
+  --muted: #a6b6d8;
+  --tint: #5ac8fa;       /* iOS cyan */
+  --ok: #34c759;         /* iOS green */
+  --warn: #ffd60a;       /* iOS yellow */
+  --bad: #ff3b30;        /* iOS red */
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  color:var(--text);
+  background:linear-gradient(180deg,#0a1020 0%, #091125 100%);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+
+.app{min-height:100dvh; display:flex; flex-direction:column}
+.nav{
+  position:sticky; top:0; z-index:10;
+  backdrop-filter: saturate(180%) blur(16px);
+  background: color-mix(in oklab, #0a1020 85%, transparent);
+  border-bottom:1px solid var(--hairline);
+}
+.nav-inner{padding:14px 18px 10px}
+.large-title{font-weight:800; font-size:28px; letter-spacing:-0.02em}
+
+.section{padding:16px}
+.card{
+  background:var(--card);
+  border:1px solid var(--hairline);
+  border-radius:18px;
+  padding:14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.25);
+}
+h2{margin:0 0 8px 0; font-size:15px; font-weight:700}
+.muted{color:var(--muted)}
+
+.grid{
+  display:grid;
+  gap:10px;
+}
+
+.table{width:100%; border-collapse:collapse}
+.table th,.table td{
+  padding:10px 8px; border-bottom:1px solid var(--hairline); text-align:left
+}
+.table thead th{color:var(--muted); font-weight:600}
+
+/* 4-state segmented control (Prefer / Available / Blank / No) */
+.segment{
+  display:grid; grid-template-columns: repeat(4, 1fr);
+  background:#0b152d; border:1px solid var(--hairline);
+  border-radius:12px; overflow:hidden;
+}
+.segment button{
+  appearance:none; border:0; background:transparent; color:var(--text);
+  padding:10px 6px; font-weight:600; cursor:pointer;
+}
+.segment button:is(:hover,:focus-visible){background:#0d1a33}
+.segment button.active-prefer{background: color-mix(in oklab, var(--ok) 18%, #0a1020); color:#fff}
+.segment button.active-available{background: color-mix(in oklab, var(--warn) 18%, #0a1020); color:#111}
+.segment button.active-no{background: color-mix(in oklab, var(--bad) 22%, #0a1020); color:#fff}
+
+/* shift cell */
+.shift{
+  display:flex; flex-direction:column; gap:8px;
+  border:1px solid var(--hairline); border-radius:14px; padding:12px; background:#0b1222;
+}
+.shift-head{display:flex; justify-content:space-between; align-items:center}
+.shift-title{font-weight:700}
+.pill{font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--hairline); color:var(--muted)}
+
+/* bottom tab bar */
+.tabbar{
+  position:sticky; bottom:0; z-index:10;
+  backdrop-filter: saturate(180%) blur(16px);
+  background: color-mix(in oklab, #0a1020 85%, transparent);
+  border-top:1px solid var(--hairline);
+}
+.tabbar-inner{display:flex; gap:6px; padding:8px}
+.tab{
+  flex:1; text-align:center; padding:10px 8px; border-radius:12px;
+  color:var(--muted); text-decoration:none; font-weight:600; border:1px solid transparent;
+}
+.tab.active{color:var(--text); border-color:var(--hairline); background:#0d1630}
+.btn{
+  background:var(--tint); color:#001015; border:0; border-radius:12px; padding:10px 12px; font-weight:700; cursor:pointer;
+}
+.input{
+  width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--hairline); background:#09132a; color:var(--text);
+}
+
+/* badge colors for card health */
+.health-ok{color:var(--ok)}
+.health-warn{color:var(--warn)}
+.health-bad{color:var(--bad)}
