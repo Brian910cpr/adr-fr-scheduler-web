@@ -1,110 +1,101 @@
+<!-- wallboard.html -->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>ShiftCommander — Wallboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8">
+  <title>ShiftCommander · Wallboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <style>
-    .daycard{ @apply border rounded-2xl p-3 bg-white shadow-sm h-full; }
-    .ghost{ opacity:.4; }
-    .status-pill{ @apply text-[10px] px-2 py-0.5 rounded-full; }
-    .status-unassigned{ @apply bg-slate-100 text-slate-600; }
-    .status-proposed{ @apply bg-amber-100 text-amber-700; }
-    .status-approved{ @apply bg-emerald-100 text-emerald-800; }
+    .pill{border:1px solid #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin:.125rem;cursor:pointer}
+    .day{border:1px solid #e5e7eb;border-radius:.5rem;padding:.5rem;margin:.25rem}
+    .grid-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.5rem}
+    .badge{padding:.15rem .4rem;border-radius:.5rem;background:#ecfeff;color:#155e75;border:1px solid #a5f3fc;font-size:.75rem}
+    #apiError{display:none}
+    .seat{border:1px dashed #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin-top:.25rem}
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-  <div class="max-w-6xl mx-auto px-4 py-5">
-    <div class="flex items-center justify-between mb-4">
-      <div class="text-lg font-semibold">ShiftCommander</div>
-      <nav class="flex items-center gap-2">
-        <a href="./member.html" class="px-3 py-1 rounded border text-sm">Member</a>
-        <a href="./supervisor.html" class="px-3 py-1 rounded border text-sm">Supervisor</a>
-      </nav>
-    </div>
+<body class="bg-gray-50 text-gray-900">
+  <header class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="text-xl font-semibold">ShiftCommander <span class="badge">Public (read-only)</span></div>
+    <nav class="space-x-2">
+      <a class="pill" href="/member.html">Member</a>
+      <a class="pill" href="/supervisor.html">Supervisor</a>
+    </nav>
+  </header>
 
-    <div class="flex items-center justify-between mb-2">
-      <div class="text-sm">Public calendar (read-only)</div>
-      <div class="flex items-center gap-2">
-        <button id="prev" class="px-3 py-1 rounded-lg border text-sm">Prev</button>
-        <select id="months" class="border rounded-lg px-2 py-1 text-sm">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-        </select>
-        <button id="next" class="px-3 py-1 rounded-lg border text-sm">Next</button>
-      </div>
-    </div>
+  <main class="max-w-6xl mx-auto px-4 pb-20">
+    <div id="apiError" class="mb-3 p-3 rounded-md border border-red-300 bg-red-50 text-red-800 text-sm"></div>
 
-    <div id="cal"></div>
-  </div>
+    <section class="mb-4 flex items-center gap-2">
+      <button id="prevBtn" class="pill">Prev</button>
+      <label>Months</label>
+      <select id="monthsSel" class="border rounded px-2 py-1">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+      </select>
+      <button id="nextBtn" class="pill">Next</button>
+      <div id="rangeTxt" class="ml-3 text-sm text-gray-600"></div>
+    </section>
 
-<script>
-const BASE="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-let members=[], memberById={}, state=null, start=startOfMonth(new Date()), months=2, resetTimer=null, resetAnchor=start;
+    <section id="board" class="grid-days"></section>
+  </main>
 
-init();
-async function init(){
-  members=await j(BASE+"/api/users"); members.forEach(m=>memberById[m.id]=m);
-  hook(); await refresh(); armReset();
-}
-function hook(){
-  g("prev").onclick=()=>{ start=addMonths(start,-1); refresh(); armReset(); };
-  g("next").onclick=()=>{ start=addMonths(start, 1); refresh(); armReset(); };
-  g("months").onchange=e=>{ months=+e.target.value; refresh(); armReset(); };
-}
-function armReset(){ clearTimeout(resetTimer); resetTimer=setTimeout(()=>{ start=resetAnchor; refresh(); }, 20000); }
+  <script>
+    const API_BASE = new URLSearchParams(location.search).get('api') || "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    async function api(path, opts={}) {
+      const res = await fetch(API_BASE + path, { headers:{ "Content-Type":"application/json" }, ...opts });
+      if(!res.ok){ const t=await res.text().catch(()=>res.statusText); throw new Error(`HTTP ${res.status} ${path}: ${t}`); }
+      return res.json();
+    }
+    function showApiError(msg){ const el=document.getElementById('apiError'); el.textContent="API error: "+msg; el.style.display='block'; }
 
-async function refresh(){
-  const s=toISO(start), e=toISO(addMonths(start, months, 1, 0));
-  state=await j(`${BASE}/api/state?start=${s}&end=${e}`);
-  render();
-}
+    function firstOfMonth(d){ return new Date(d.getFullYear(),d.getMonth(),1); }
+    function addMonths(d,n){ return new Date(d.getFullYear(), d.getMonth()+n, 1); }
+    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function fmtISO(d){ return d.toISOString().slice(0,10); }
 
-function render(){
-  const root=g("cal"); root.innerHTML="";
-  for(let i=0;i<months;i++){
-    const first=addMonths(start,i);
-    root.appendChild(month(first));
-  }
-}
-function month(firstDay){
-  const wrap=el("div","mb-6");
-  wrap.appendChild(el("div","text-sm font-semibold mb-2", firstDay.toLocaleString(undefined,{month:"long",year:"numeric"})));
-  const grid=el("div","grid grid-cols-7 gap-2");
-  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d=>grid.appendChild(el("div","text-xs text-slate-500 px-1",d)));
+    let start = firstOfMonth(new Date());
+    let months = 2;
 
-  const startGrid=startOfWeek(firstDay), end=endOfMonth(firstDay);
-  for(let d=startGrid; d<= addDays(end,6-dayOfWeek(end)); d=addDays(d,1)){
-    const inMonth=d.getMonth()===firstDay.getMonth(), key=toISO(d);
-    const card=el("div","daycard "+(inMonth?"":"ghost"));
-    card.appendChild(el("div","text-xs font-medium text-slate-700 mb-2", String(d.getDate())));
-    ["AM","PM"].forEach(h=>{
-      const r=el("div","flex items-center justify-between mb-1");
-      const sh=state.shifts[key]?.[h];
-      const pill=el("span","status-pill "+(sh?("status-"+sh.status):"status-unassigned"), sh?sh.status:"unassigned");
-      const names=(sh?.assignees||[]).map(id=>memberById[id]?.name||"").filter(Boolean).join(", ");
-      r.appendChild(el("div","text-xs",h+(names?": "+names:"")));
-      r.appendChild(pill);
-      card.appendChild(r);
-    });
-    grid.appendChild(card);
-  }
-  wrap.appendChild(grid);
-  return wrap;
-}
+    function paintRange(){
+      const end = addDays(addMonths(start, months), -1);
+      document.getElementById('rangeTxt').textContent = fmtISO(start) + " — " + fmtISO(end);
+    }
 
-/* utils */
-function g(id){return document.getElementById(id)}
-function el(t,c,txt){const n=document.createElement(t); if(c)n.className=c; if(txt!=null)n.textContent=txt; return n}
-function j(u,o){return fetch(u,o).then(r=>{if(!r.ok)throw 0;return r.json()})}
-function toISO(d){return d.toISOString().slice(0,10)}
-function startOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1)}
-function endOfMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0)}
-function startOfWeek(d){const k=(d.getDay()+6)%7; const x=new Date(d); x.setDate(d.getDate()-k); x.setHours(0,0,0,0); return x}
-function dayOfWeek(d){return (d.getDay()+6)%7}
-function addDays(d,n){const x=new Date(d); x.setDate(d.getDate()+n); return x}
-function addMonths(d,n,fix=0){const x=new Date(d); const dd=x.getDate(); x.setMonth(x.getMonth()+n); if(fix&&x.getDate()<dd) x.setDate(0); return x}
-</script>
+    async function loadRange(){
+      const end = addDays(addMonths(start, months), -1);
+      const state = await api(`/api/state?start=${fmtISO(start)}&end=${fmtISO(end)}`);
+
+      const host = document.getElementById('board'); host.innerHTML="";
+      const days = [];
+      for(let d=new Date(start); d<=end; d=addDays(d,1)) days.push(new Date(d));
+
+      for(const d of days){
+        const iso = fmtISO(d);
+        const s = state.shifts[iso] || {};
+        const AM = s.AM || {assignees:[],status:"unassigned"};
+        const PM = s.PM || {assignees:[],status:"unassigned"};
+
+        const card = document.createElement('div');
+        card.className="day bg-white";
+        card.innerHTML = `
+          <div class="font-medium mb-1">${d.toDateString().slice(0,10)} • ${iso}</div>
+          <div class="seat"><div class="text-xs text-gray-500">AM • ${AM.status}</div><div>${(AM.assignees||[]).join(", ")||"—"}</div></div>
+          <div class="seat"><div class="text-xs text-gray-500">PM • ${PM.status}</div><div>${(PM.assignees||[]).join(", ")||"—"}</div></div>
+        `;
+        host.appendChild(card);
+      }
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', async ()=>{ start = addMonths(start, -months); paintRange(); try{ await loadRange(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('nextBtn').addEventListener('click', async ()=>{ start = addMonths(start, months); paintRange(); try{ await loadRange(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('monthsSel').addEventListener('change', async (e)=>{ months = parseInt(e.target.value,10)||2; paintRange(); try{ await loadRange(); }catch(e){ showApiError(e.message); } });
+
+    (async function init(){
+      try{ paintRange(); await loadRange(); } catch(e){ showApiError(e.message); }
+    })();
+  </script>
 </body>
 </html>

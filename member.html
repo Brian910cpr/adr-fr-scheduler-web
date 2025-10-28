@@ -1,364 +1,265 @@
+<!-- member.html (4-state cycling: prefer → available → unset → no) -->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>ShiftCommander — Member</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8">
+  <title>ShiftCommander · Member</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
   <style>
-    :root { color-scheme: light dark; }
-    .chip{ @apply inline-block px-2 py-0.5 rounded text-xs font-medium; }
-    .chip-prefer{ @apply bg-purple-100 text-purple-700; }
-    .chip-available{ @apply bg-emerald-100 text-emerald-700; }
-    .chip-no{ @apply bg-red-100 text-red-700; }
-    .half-btn{ @apply inline-flex items-center justify-center w-9 h-7 rounded-lg border text-[13px] font-medium transition; }
-    .half-unset{ @apply bg-slate-50 text-slate-500 border-slate-200; }
-    .half-available{ @apply bg-emerald-100 text-emerald-700 border-emerald-200; }
-    .half-prefer{ @apply bg-purple-100 text-purple-700 border-purple-200; }
-    .half-no{ @apply bg-red-100 text-red-700 border-red-200; }
-    .status-pill{ @apply text-[10px] px-2 py-0.5 rounded-full; }
-    .status-unassigned{ @apply bg-slate-100 text-slate-600; }
-    .status-proposed{ @apply bg-amber-100 text-amber-700; }
-    .status-approved{ @apply bg-emerald-100 text-emerald-800; }
-    .precommit{ @apply text-[10px] text-purple-600; }
-    .daycard{ @apply border rounded-2xl p-3 bg-white shadow-sm h-full; }
-    .ghost{ opacity:.4; }
+    .chip{display:inline-block;padding:.25rem .5rem;border-radius:.5rem;font-size:.8rem;margin-right:.5rem}
+    .chip.green{background:#e8f7ef;color:#0f5132;border:1px solid #badbcc}
+    .chip.yellow{background:#fff3cd;color:#664d03;border:1px solid #ffecb5}
+    .chip.gray{background:#eef2f7;color:#374151;border:1px solid #cfd8e3}
+    .chip.red{background:#f8d7da;color:#842029;border:1px solid #f5c2c7}
+
+    .pill{border:1px solid #d1d5db;border-radius:.5rem;padding:.25rem .6rem;margin:.125rem;cursor:pointer;user-select:none}
+    .pill.prefer{background:#e8f7ef;border-color:#0f5132;color:#0f5132}
+    .pill.available{background:#fff3cd;border-color:#664d03;color:#664d03}
+    .pill.unset{background:#eef2f7;border-color:#cfd8e3;color:#374151}
+    .pill.no{background:#f8d7da;border-color:#842029;color:#842029}
+
+    .daycard{border:1px solid #e5e7eb;border-radius:.75rem;padding:.5rem;margin:.25rem;min-width:9rem;background:#fff}
+    .halfrow{display:flex;gap:.5rem;align-items:center;margin-top:.25rem}
+    .halfrow .label{width:2.25rem;opacity:.75}
+    .grid-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));gap:.5rem}
+    .badge{padding:.15rem .4rem;border-radius:.5rem;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-size:.75rem}
+    #apiError{display:none}
   </style>
 </head>
-<body class="bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
-  <div class="max-w-6xl mx-auto px-4 py-5">
-    <!-- Top bar -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <div class="text-lg font-semibold tracking-tight">ShiftCommander</div>
-        <div class="text-xs px-2 py-0.5 rounded bg-slate-200">Member</div>
+<body class="bg-gray-50 text-gray-900">
+  <header class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="text-xl font-semibold">ShiftCommander <span class="badge">Member</span></div>
+    <nav class="space-x-2">
+      <a class="pill unset" href="/supervisor.html">Supervisor</a>
+      <a class="pill unset" href="/wallboard.html">Wallboard</a>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 pb-20">
+    <div id="apiError" class="mb-3 p-3 rounded-md border border-red-300 bg-red-50 text-red-800 text-sm"></div>
+
+    <section class="mb-4 flex items-center gap-3">
+      <div>Member #</div>
+      <select id="memberSelect" class="border rounded px-2 py-1"></select>
+      <div id="apiStatus" class="chip gray">Connecting…</div>
+    </section>
+
+    <section class="mb-4 flex items-center gap-2">
+      <button id="prevBtn" class="pill unset">Prev</button>
+      <label>Months</label>
+      <select id="monthsSel" class="border rounded px-2 py-1">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+      </select>
+      <button id="nextBtn" class="pill unset">Next</button>
+      <div class="ml-auto text-sm">
+        <span class="chip green">Prefer</span>
+        <span class="chip yellow">Available</span>
+        <span class="chip gray">If needed</span>
+        <span class="chip red">Do Not</span>
       </div>
-      <nav class="flex items-center gap-2">
-        <a href="./member.html" class="px-3 py-1 rounded bg-slate-900 text-white text-sm">Member</a>
-        <a href="./supervisor.html" class="px-3 py-1 rounded border text-sm">Supervisor</a>
-        <a href="./wallboard.html" class="px-3 py-1 rounded border text-sm">Wallboard</a>
-      </nav>
-    </div>
+    </section>
 
-    <!-- Legend + date window -->
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-3 text-xs">
-        <div class="chip chip-prefer">Prefer</div>
-        <div class="chip chip-available">Available</div>
-        <div class="chip chip-no">Do Not</div>
-        <div class="status-pill status-unassigned">Unassigned</div>
-        <div class="status-pill status-proposed">Proposed</div>
-        <div class="status-pill status-approved">Approved</div>
-        <div class="precommit">“Pre-commit” shown &gt; 4 weeks</div>
-      </div>
-      <div id="windowRange" class="text-sm"></div>
-    </div>
+    <section class="mb-6">
+      <details class="bg-white rounded-lg border p-3">
+        <summary class="cursor-pointer font-medium">Preferences & bulk tools</summary>
+        <div class="mt-3 grid md:grid-cols-2 gap-3">
+          <label class="inline-flex items-center gap-2"><input type="checkbox" id="reserveChk"> Reserve mode (never auto-assign me)</label>
+          <label class="inline-flex items-center gap-2"><input type="checkbox" id="inactiveChk"> Inactive</label>
 
-    <!-- Month controls -->
-    <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center gap-2">
-        <button id="prevBtn" class="px-3 py-1 rounded-lg border text-sm">Prev</button>
-        <div class="text-sm">Months</div>
-        <select id="monthsCount" class="border rounded-lg px-2 py-1 text-sm">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-        <button id="nextBtn" class="px-3 py-1 rounded-lg border text-sm">Next</button>
-      </div>
-      <div class="flex items-center gap-2">
-        <label class="text-sm">Member #</label>
-        <select id="memberSelect" class="border rounded-lg px-2 py-1 text-sm"></select>
-      </div>
-    </div>
-
-    <!-- Calendars -->
-    <div id="userView"></div>
-
-    <!-- Preferences / bulk tools -->
-    <div class="mt-6">
-      <details class="bg-white rounded-2xl border shadow-sm open:shadow-md">
-        <summary class="px-4 py-3 cursor-pointer font-semibold">Preferences & bulk tools</summary>
-        <div class="p-4 space-y-6">
-
-          <!-- Persistent flags -->
-          <div class="grid md:grid-cols-3 gap-4">
-            <label class="flex items-center gap-2 text-sm">
-              <input id="flagReserve" type="checkbox" class="h-4 w-4">
-              <span>Reserve mode (never auto-assign me)</span>
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input id="flagType3" type="checkbox" class="h-4 w-4">
-              <span>Type III driver approved</span>
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input id="flagInactive" type="checkbox" class="h-4 w-4">
-              <span>Inactive</span>
-            </label>
+          <div class="flex items-center gap-3 md:col-span-2 flex-wrap">
+            <span>Bulk from</span><input id="bulkFrom" type="date" class="border rounded px-2 py-1">
+            <span>to</span><input id="bulkTo" type="date" class="border rounded px-2 py-1">
+            <span class="ml-2">Set to:</span>
+            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="prefer"> Prefer</label>
+            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="available" checked> Available</label>
+            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="unset"> If needed</label>
+            <label class="inline-flex items-center gap-1"><input type="radio" name="bulkState" value="no"> Do Not</label>
+            <label class="inline-flex items-center gap-1 ml-2"><input type="checkbox" id="bulkAM" checked> AM</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" id="bulkPM" checked> PM</label>
+            <button id="bulkApply" class="pill available">Apply</button>
           </div>
-
-          <!-- One-line daily note -->
-          <div>
-            <div class="text-sm font-medium mb-1">Quick note (per-day)</div>
-            <div class="text-xs text-slate-500 mb-2">Click a day in the calendar to add a brief note like “In at 10am”. Notes appear on Supervisor dashboard and get lowest score until approved.</div>
-          </div>
-
-          <!-- Bulk set -->
-          <div class="grid sm:grid-cols-2 gap-4 items-end">
-            <div>
-              <label class="text-sm font-medium">From</label>
-              <input id="rangeFrom" type="date" class="block border rounded-lg px-2 py-1 w-full">
-            </div>
-            <div>
-              <label class="text-sm font-medium">Until</label>
-              <input id="rangeUntil" type="date" class="block border rounded-lg px-2 py-1 w-full">
-            </div>
-            <div class="sm:col-span-2">
-              <div class="flex items-center gap-6">
-                <div class="flex items-center gap-3">
-                  <span class="text-sm">Set to:</span>
-                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="prefer"> Prefer</label>
-                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="available" checked> Available</label>
-                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="no"> Do Not</label>
-                </div>
-                <div class="flex items-center gap-4 text-sm">
-                  <span>Half-days:</span>
-                  <!-- changed to checkboxes per your request -->
-                  <label class="flex items-center gap-1"><input id="bulkAM" type="checkbox" checked> AM</label>
-                  <label class="flex items-center gap-1"><input id="bulkPM" type="checkbox" checked> PM</label>
-                </div>
-                <button id="btnApplyBulk" class="ml-auto px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-sm">Apply</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Frictionless Shift Swap -->
-          <div>
-            <button id="btnSwap" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm">Frictionless Shift Swap</button>
-            <div id="swapCurtain" class="hidden mt-3 border rounded-xl p-3 bg-slate-50">
-              <div class="font-medium mb-2">Frictionless Shift Swap</div>
-              <div class="text-xs text-slate-600 mb-3">Pick one of your committed shifts, then choose a qualified replacement. If no disqualifiers, the swap auto-approves; otherwise it alerts a supervisor with your suggested alternate.</div>
-              <div class="grid md:grid-cols-2 gap-3">
-                <div>
-                  <label class="text-sm font-medium">My committed shift</label>
-                  <select id="swapMine" class="mt-1 w-full border rounded-lg px-2 py-1 text-sm"></select>
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Replacement</label>
-                  <select id="swapAlt" class="mt-1 w-full border rounded-lg px-2 py-1 text-sm"></select>
-                </div>
-              </div>
-              <div class="mt-3 flex gap-2">
-                <button id="swapSubmit" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm">Submit swap</button>
-                <button id="swapCancel" class="px-3 py-1.5 rounded-lg border text-sm">Cancel</button>
-              </div>
-            </div>
-          </div>
-
         </div>
       </details>
-      <div class="mt-2 text-[11px] text-slate-500">AM/PM toggles auto-commit after 3s. Dates &gt; 4 weeks show “Pre-commit”.</div>
-    </div>
-  </div>
+      <p class="text-xs text-gray-500 mt-1">AM/PM toggles auto-commit after ~3 seconds. Dates &gt; 4 weeks show “Pre-commit”.</p>
+    </section>
 
-<script>
-const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-const PRECOMMIT_AFTER_DAYS = 28;
+    <section id="calendar"></section>
+  </main>
 
-let members=[], memberById={}, currentUserId=null;
-let windowStart = startOfMonth(new Date());
-let monthsShown = 2;
-let stateCache=null; // { shifts, availability, prefs }
-let commitTimers={};
+  <script>
+    const API_BASE = new URLSearchParams(location.search).get('api') || "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
 
-init();
+    async function api(path, opts={}) {
+      const res = await fetch(API_BASE + path, { headers:{ "Content-Type":"application/json" }, ...opts });
+      if (!res.ok) { const t = await res.text().catch(()=>res.statusText); throw new Error(`HTTP ${res.status} ${path}: ${t}`); }
+      return res.json();
+    }
+    function showApiError(msg){
+      const el = document.getElementById('apiError');
+      el.textContent = "API error: " + msg;
+      el.style.display = 'block';
+      const st = document.getElementById('apiStatus');
+      st.className = 'chip red'; st.textContent = 'API error';
+    }
 
-async function init(){
-  members = await j(BASE+"/api/users");
-  members.forEach(m=>memberById[m.id]=m);
-  populateMemberSelect(members);
-  currentUserId = members[0]?.id || null;
-  document.getElementById("memberSelect").value=currentUserId;
+    // Utilities
+    function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function addMonths(d,n){ return new Date(d.getFullYear(), d.getMonth()+n, 1); }
+    function fmtISO(d){ return d.toISOString().slice(0,10); }
+    function rangeFor(start, months){ const end = addDays(addMonths(start, months), -1); return {startISO:fmtISO(start), endISO:fmtISO(end)}; }
 
-  hookUI();
-  await refresh();
-  document.getElementById("windowRange").textContent = fmtRange(windowStart, addMonths(windowStart, monthsShown, 1));
-}
+    // 4-state cycle
+    const STATES = ["prefer","available","unset","no"];
+    function nextState(s){ const i = STATES.indexOf(s); return STATES[(i+1) % STATES.length]; }
+    function stateLabel(s){
+      return s==="prefer"?"Prefer":s==="available"?"Available":s==="no"?"Do Not":"If needed";
+    }
 
-function hookUI(){
-  document.getElementById("prevBtn").onclick=()=>{ windowStart=addMonths(windowStart,-1); refresh(); };
-  document.getElementById("nextBtn").onclick=()=>{ windowStart=addMonths(windowStart, 1); refresh(); };
-  document.getElementById("monthsCount").onchange=e=>{ monthsShown=+e.target.value; refresh(); };
-  document.getElementById("memberSelect").onchange=e=>{ currentUserId=e.target.value; refresh(); };
+    let users = [];
+    let currentUser = null;
+    let startDate = firstOfMonth(new Date());
+    let monthsSpan = 2;
+    let autoCommitTimer = null;
 
-  document.getElementById("btnApplyBulk").onclick=applyBulk;
-  document.getElementById("btnSwap").onclick=()=>document.getElementById("swapCurtain").classList.remove("hidden");
-  document.getElementById("swapCancel").onclick=()=>document.getElementById("swapCurtain").classList.add("hidden");
-
-  // Persistent flags
-  ["flagReserve","flagType3","flagInactive"].forEach(id=>{
-    document.getElementById(id).onchange=saveFlags;
-  });
-}
-
-async function refresh(){
-  const startStr = toISO(windowStart);
-  const endStr = toISO(addMonths(windowStart, monthsShown, 1, 0));
-  stateCache = await j(`${BASE}/api/state?start=${startStr}&end=${endStr}`);
-
-  // hydrate flags for current user (reserve/type3/inactive)
-  const me = (stateCache.users || []).find(u=>u.id===currentUserId) || {};
-  document.getElementById("flagReserve").checked = !!me.reserve;
-  document.getElementById("flagType3").checked = !!me.type3_driver;
-  document.getElementById("flagInactive").checked = !!me.inactive;
-
-  renderMonths();
-  populateSwapChoices();
-  document.getElementById("windowRange").textContent = fmtRange(windowStart, addMonths(windowStart, monthsShown, 1));
-}
-
-function renderMonths(){
-  const root = g("userView"); root.innerHTML="";
-  for(let i=0;i<monthsShown;i++){
-    const first = addMonths(startOfMonth(windowStart), i);
-    root.appendChild(renderMonth(first));
-  }
-}
-
-function renderMonth(firstDay){
-  const wrap = el("div","mb-6");
-  wrap.appendChild(el("div","text-sm font-semibold mb-2", firstDay.toLocaleString(undefined,{month:"long",year:"numeric"})));
-  const grid = el("div","grid grid-cols-7 gap-2");
-  const start = startOfWeek(firstDay), end=endOfMonth(firstDay);
-  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d=>grid.appendChild(el("div","text-xs text-slate-500 px-1",d)));
-
-  const cutoff = addDays(new Date(), PRECOMMIT_AFTER_DAYS);
-
-  for(let d=start; d<= addDays(end, 6-dayOfWeek(end)); d=addDays(d,1)){
-    const inMonth = d.getMonth()===firstDay.getMonth();
-    const key = toISO(d);
-    const card = el("div","daycard "+(inMonth?"":"ghost"));
-
-    card.appendChild(el("div","text-xs font-medium text-slate-700 mb-2", String(d.getDate())));
-
-    ["AM","PM"].forEach(half=>{
-      const row = el("div","flex items-center justify-between mb-1");
-      const cur = (stateCache.availability[currentUserId]?.[key]?.[half]) || "unset";
-      const precommit = d>cutoff;
-
-      const b = el("button",`half-btn half-${cur}`,half);
-      b.onclick = ()=>cycleHalf(key, half, precommit);
-
-      // quick note launcher
-      const noteBtn = el("button","text-xs underline decoration-dotted ml-2", "note");
-      noteBtn.onclick = ()=>editNote(key);
-
-      const left = el("div","flex items-center"); left.appendChild(b); left.appendChild(noteBtn);
-      row.appendChild(left);
-
-      // status pill + assignee names if approved
-      const sh = stateCache.shifts[key]?.[half];
-      const pill = el("span","status-pill "+(sh?("status-"+sh.status):"status-unassigned"), sh?sh.status:"unassigned");
-      row.appendChild(pill);
-
-      if (precommit) row.appendChild(el("span","precommit ml-2","PRE-COMMIT"));
-      card.appendChild(row);
-    });
-
-    grid.appendChild(card);
-  }
-  wrap.appendChild(grid);
-  return wrap;
-}
-
-function editNote(dateKey){
-  const prev = (stateCache.notes?.[currentUserId]?.[dateKey]||"");
-  const val = prompt("Brief note (e.g. ‘In at 10am’)", prev || "In at 10am");
-  if (val===null) return;
-  j(BASE+"/api/note",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:dateKey,note:val.slice(0,60)})})
-    .then(refresh);
-}
-
-function cycleHalf(dateKey, half, precommit){
-  const avail = stateCache.availability[currentUserId] ||= {};
-  const day = avail[dateKey] ||= { AM:"unset", PM:"unset" };
-  const order = ["unset","available","prefer","no"];
-  const next = order[(order.indexOf(day[half])+1)%order.length];
-  day[half]=next; // optimistic
-  renderMonths();
-
-  const key=dateKey+"|"+half;
-  clearTimeout(commitTimers[key]);
-  commitTimers[key]=setTimeout(()=>{
-    j(BASE+"/api/availability",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:dateKey,half,state:next})})
-      .then(refresh);
-  },3000);
-}
-
-async function applyBulk(){
-  const from=v("rangeFrom"), until=v("rangeUntil");
-  if(!from||!until) return alert("Pick a date range.");
-  const state = document.querySelector('input[name="bulkState"]:checked').value;
-  const doAM = g("bulkAM").checked, doPM=g("bulkPM").checked;
-  const dates = enumerateDates(new Date(from), new Date(until));
-
-  for(const d of dates){
-    const key=toISO(d);
-    if(doAM) await j(BASE+"/api/availability",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:key,half:"AM",state})});
-    if(doPM) await j(BASE+"/api/availability",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:key,half:"PM",state})});
-  }
-  refresh();
-}
-
-async function saveFlags(){
-  const reserve = g("flagReserve").checked?1:0;
-  const type3 = g("flagType3").checked?1:0;
-  const inactive = g("flagInactive").checked?1:0;
-  await j(BASE+"/api/user/flags",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,reserve,type3,inactive})});
-  refresh();
-}
-
-// Swap UI (basic happy-path)
-function populateSwapChoices(){
-  const mineSel = g("swapMine"); mineSel.innerHTML="";
-  const altSel = g("swapAlt"); altSel.innerHTML="";
-  const committed = []; // {label, date, half}
-  Object.entries(stateCache.shifts||{}).forEach(([date, halves])=>{
-    ["AM","PM"].forEach(h=>{
-      const s=halves[h];
-      if(s?.status==="approved" && (s.assignees||[]).includes(currentUserId)){
-        committed.push({label:`${date} ${h}`, date, half:h});
+    async function loadUsers(){
+      const list = await api("/api/users");
+      users = list;
+      const sel = document.getElementById('memberSelect');
+      sel.innerHTML = "";
+      for(const u of users){
+        const o = document.createElement('option');
+        o.value = u.id;
+        o.textContent = `${u.member_no ? u.member_no+" · " : ""}${u.name}`;
+        sel.appendChild(o);
       }
-    });
-  });
-  committed.forEach(x=>opt(mineSel, `${x.date}|${x.half}`, x.label));
-  members.filter(m=>m.id!==currentUserId && !m.inactive).forEach(m=>opt(altSel, m.id, m.name));
+      if(users.length){ currentUser = users[0].id; sel.value = currentUser; }
+      const st = document.getElementById('apiStatus');
+      st.className = 'chip green'; st.textContent = 'Connected to Worker API';
+    }
 
-  g("swapSubmit").onclick=async ()=>{
-    const mine = mineSel.value.split("|"); if(mine.length<2) return;
-    const alt = altSel.value;
-    await j(BASE+"/api/swap",{method:"POST",headers:ct(),body:JSON.stringify({date:mine[0],half:mine[1],from:currentUserId,to:alt})});
-    g("swapCurtain").classList.add("hidden");
-    refresh();
-  };
-}
+    function buildCalendar(){
+      const host = document.getElementById('calendar');
+      host.innerHTML = "";
+      const {startISO, endISO} = rangeFor(startDate, monthsSpan);
+      const title = document.createElement('div');
+      title.className = "mb-2 text-sm text-gray-600";
+      title.textContent = `${startISO} — ${endISO}`;
+      host.appendChild(title);
 
-/* helpers */
-function g(id){return document.getElementById(id)}
-function v(id){return g(id).value}
-function el(t,c,txt){const n=document.createElement(t); if(c) n.className=c; if(txt!=null) n.textContent=txt; return n;}
-function opt(sel,val,txt){const o=document.createElement("option");o.value=val;o.textContent=txt;sel.appendChild(o);}
-function ct(){return {"Content-Type":"application/json"};}
-async function j(u,o){const r=await fetch(u,o); if(!r.ok) throw new Error("HTTP "+r.status); return r.json();}
-function toISO(d){return d.toISOString().slice(0,10)}
-function startOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1)}
-function endOfMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0)}
-function startOfWeek(d){const k=(d.getDay()+6)%7;const x=new Date(d);x.setDate(d.getDate()-k);x.setHours(0,0,0,0);return x}
-function dayOfWeek(d){return (d.getDay()+6)%7}
-function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
-function addMonths(d,n, plusOneDayEdgeFix = 0){const x=new Date(d); const dd=x.getDate(); x.setMonth(x.getMonth()+n); if(plusOneDayEdgeFix && x.getDate()<dd) x.setDate(0); return x}
-function enumerateDates(a,b){const out=[];let d=new Date(a);d.setHours(12);const e=new Date(b);e.setHours(12);while(d<=e){out.push(new Date(d));d.setDate(d.getDate()+1)}return out}
-function fmtRange(a,b){return `${toISO(a)} — ${toISO(b)}`}
-</script>
+      const grid = document.createElement('div'); grid.className = "grid-days"; host.appendChild(grid);
+      for(let d=new Date(startDate); d<=addDays(addMonths(startDate, monthsSpan), -1); d=addDays(d,1)){
+        const iso = fmtISO(d);
+
+        const card = document.createElement('div'); card.className="daycard"; card.dataset.date=iso;
+
+        const head = document.createElement('div'); head.className="text-sm font-medium";
+        head.textContent = d.toDateString().slice(0,10) + "  " + iso;
+        card.appendChild(head);
+
+        // AM
+        card.appendChild(buildHalfRow("AM", iso));
+
+        // PM
+        card.appendChild(buildHalfRow("PM", iso));
+
+        const note = document.createElement('input');
+        note.type = "text"; note.placeholder = "In at 10am";
+        note.className = "mt-2 w-full border rounded px-2 py-1 text-sm";
+        note.dataset.date = iso;
+        note.addEventListener('change', () => commitNote(iso, note.value));
+        card.appendChild(note);
+
+        grid.appendChild(card);
+      }
+    }
+
+    function buildHalfRow(half, iso){
+      const row = document.createElement('div'); row.className="halfrow";
+      const lbl = document.createElement('div'); lbl.className="label"; lbl.textContent=half; row.appendChild(lbl);
+
+      const btn = document.createElement('button');
+      btn.className = "pill unset";
+      btn.dataset.half = half;
+      btn.dataset.state = "unset";
+      btn.textContent = stateLabel("unset");
+      btn.addEventListener('click', () => {
+        clearTimeout(autoCommitTimer);
+        const next = nextState(btn.dataset.state);
+        btn.dataset.state = next;
+        btn.className = `pill ${next}`;
+        btn.textContent = stateLabel(next);
+        const date = btn.closest('.daycard').dataset.date;
+        autoCommitTimer = setTimeout(() => commitAvailability(date, half, next).catch(err=>showApiError(err.message)), 800);
+      });
+      row.appendChild(btn);
+      return row;
+    }
+
+    async function hydrateAvailability(){
+      if(!currentUser) return;
+      const {startISO, endISO} = rangeFor(startDate, monthsSpan);
+      const state = await api(`/api/state?start=${startISO}&end=${endISO}`);
+      const mine = state.availability[currentUser] || {};
+
+      for(const [date, halves] of Object.entries(mine)){
+        const card = document.querySelector(`.daycard[data-date="${date}"]`);
+        if(!card) continue;
+        for(const [half, val] of Object.entries(halves)){
+          const btn = card.querySelector(`button.pill[data-half="${half}"]`);
+          if(btn){
+            const v = val || "unset";
+            btn.dataset.state = v;
+            btn.className = `pill ${v}`;
+            btn.textContent = stateLabel(v);
+          }
+        }
+      }
+    }
+
+    async function commitAvailability(date, half, state){
+      if(!currentUser) return;
+      await api("/api/availability", {
+        method:"POST",
+        body: JSON.stringify({ userId: currentUser, date, half, state })
+      });
+    }
+    async function commitNote(date, text){ console.log("note change", {date,text}); }
+
+    async function doBulkApply(){
+      if(!currentUser) return;
+      const from = document.getElementById('bulkFrom').value;
+      const to   = document.getElementById('bulkTo').value;
+      const st   = document.querySelector('input[name="bulkState"]:checked')?.value || "available";
+      const am   = document.getElementById('bulkAM').checked;
+      const pm   = document.getElementById('bulkPM').checked;
+      if(!from || !to || (!am && !pm)) return;
+
+      for(let d=new Date(from); d<=new Date(to); d=addDays(d,1)){
+        const iso = fmtISO(d);
+        if(am) await commitAvailability(iso,"AM",st);
+        if(pm) await commitAvailability(iso,"PM",st);
+      }
+      await hydrateAvailability();
+    }
+
+    // Wire up
+    document.getElementById('prevBtn').addEventListener('click', async ()=>{ startDate = addMonths(startDate, -monthsSpan); buildCalendar(); try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('nextBtn').addEventListener('click', async ()=>{ startDate = addMonths(startDate,  monthsSpan); buildCalendar(); try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('monthsSel').addEventListener('change', async (e)=>{ monthsSpan = parseInt(e.target.value,10)||2; buildCalendar(); try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('memberSelect').addEventListener('change', async (e)=>{ currentUser = e.target.value; try{ await hydrateAvailability(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('bulkApply').addEventListener('click', ()=>{ doBulkApply().catch(e=>showApiError(e.message)); });
+
+    (async function init(){
+      try{
+        await loadUsers();
+        buildCalendar();
+        await hydrateAvailability();
+      }catch(e){ showApiError(e.message); }
+    })();
+  </script>
 </body>
 </html>

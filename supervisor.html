@@ -1,135 +1,120 @@
+<!-- supervisor.html -->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>ShiftCommander — Supervisor</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8">
+  <title>ShiftCommander · Supervisor</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  <style>
+    .pill{border:1px solid #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin:.125rem;cursor:pointer}
+    .day{border:1px solid #e5e7eb;border-radius:.5rem;padding:.5rem;margin:.25rem}
+    .grid-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.5rem}
+    .badge{padding:.15rem .4rem;border-radius:.5rem;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-size:.75rem}
+    #apiError{display:none}
+    .seat{border:1px dashed #d1d5db;border-radius:.5rem;padding:.25rem .5rem;margin-top:.25rem}
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-  <div class="max-w-6xl mx-auto px-4 py-5">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <div class="text-lg font-semibold">ShiftCommander</div>
-        <div class="text-xs px-2 py-0.5 rounded bg-slate-200">Supervisor</div>
-      </div>
-      <nav class="flex items-center gap-2">
-        <a href="./member.html" class="px-3 py-1 rounded border text-sm">Member</a>
-        <a href="./supervisor.html" class="px-3 py-1 rounded bg-slate-900 text-white text-sm">Supervisor</a>
-        <a href="./wallboard.html" class="px-3 py-1 rounded border text-sm">Wallboard</a>
-      </nav>
-    </div>
+<body class="bg-gray-50 text-gray-900">
+  <header class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="text-xl font-semibold">ShiftCommander <span class="badge">Supervisor</span></div>
+    <nav class="space-x-2">
+      <a class="pill" href="/member.html">Member</a>
+      <a class="pill" href="/wallboard.html">Wallboard</a>
+    </nav>
+  </header>
 
-    <div class="flex items-center justify-between mb-3">
-      <div class="text-sm">Week board (starting <span id="wkStart"></span>)</div>
-      <div class="flex items-center gap-2">
-        <button id="prev" class="px-3 py-1 rounded-lg border text-sm">Prev week</button>
-        <button id="next" class="px-3 py-1 rounded-lg border text-sm">Next week</button>
-      </div>
-    </div>
+  <main class="max-w-6xl mx-auto px-4 pb-20">
+    <div id="apiError" class="mb-3 p-3 rounded-md border border-red-300 bg-red-50 text-red-800 text-sm"></div>
 
-    <div id="board" class="grid md:grid-cols-2 gap-4"></div>
+    <section class="mb-4 flex items-center gap-2">
+      <button id="prevBtn" class="pill">Prev week</button>
+      <button id="nextBtn" class="pill">Next week</button>
+      <div id="rangeTxt" class="ml-3 text-sm text-gray-600"></div>
+    </section>
 
-    <div class="mt-6 border rounded-2xl bg-white p-4 shadow-sm">
-      <div class="font-semibold mb-2">Roster admin</div>
-      <div id="roster" class="space-y-2"></div>
-      <div class="text-[11px] text-slate-500 mt-2">Use “Inactive” to hide a member and “Type III” to mark approvals. “Reserve” stops auto-assign but lets them volunteer; many systems reward reserves with a small fairness nudge.</div>
-    </div>
-  </div>
+    <section id="board" class="grid-days"></section>
 
-<script>
-const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-let members=[], memberById={}, state=null, weekStart=startOfWeek(new Date());
+    <section class="mt-6 bg-white rounded-lg border p-3">
+      <div class="font-medium mb-2">Roster admin</div>
+      <div class="text-sm text-gray-600">Use “Inactive” to hide a member and “Type III” to mark approvals. “Reserve” stops auto-assign but lets them volunteer.</div>
+      <div id="roster" class="mt-3 grid md:grid-cols-2 gap-2"></div>
+    </section>
+  </main>
 
-init();
+  <script>
+    const API_BASE = new URLSearchParams(location.search).get('api') || "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    async function api(path, opts={}) {
+      const res = await fetch(API_BASE + path, { headers:{ "Content-Type":"application/json" }, ...opts });
+      if(!res.ok){ const t=await res.text().catch(()=>res.statusText); throw new Error(`HTTP ${res.status} ${path}: ${t}`); }
+      return res.json();
+    }
+    function showApiError(msg){ const el=document.getElementById('apiError'); el.textContent="API error: "+msg; el.style.display='block'; }
 
-async function init(){
-  members = await j(BASE+"/api/users"); members.forEach(m=>memberById[m.id]=m);
-  await refresh();
-  g("prev").onclick=()=>{ weekStart=addDays(weekStart,-7); refresh(); }
-  g("next").onclick=()=>{ weekStart=addDays(weekStart, 7); refresh(); }
-}
+    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function fmtISO(d){ return d.toISOString().slice(0,10); }
 
-async function refresh(){
-  const start = toISO(weekStart);
-  const end = toISO(addDays(weekStart, 13)); // 2 weeks window for context
-  state = await j(`${BASE}/api/state?start=${start}&end=${end}`);
+    let weekStart = (d=>{ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; })(new Date());
+    function paintRange(){ document.getElementById('rangeTxt').textContent = fmtISO(weekStart)+" — "+fmtISO(addDays(weekStart,6)); }
 
-  g("wkStart").textContent = toISO(weekStart);
-  renderBoard();
-  renderRoster();
-}
-
-function renderBoard(){
-  const board=g("board"); board.innerHTML="";
-  for(let i=0;i<7;i++){
-    const d=addDays(weekStart,i), key=toISO(d);
-    const card=div("border rounded-2xl p-3 bg-white shadow-sm");
-      card.appendChild(div("text-sm font-semibold mb-2", d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})));
-      ["AM","PM"].forEach(half=>{
-        const wrap=div("mb-3");
-          wrap.appendChild(div("text-xs font-medium mb-1", half));
-          const row=div("grid grid-cols-2 gap-2 items-center");
-            const s1=input("seat"), s2=input("seat");
-            const shift=state.shifts[key]?.[half];
-            const ids=shift?.assignees || [];
-            s1.value=memberById[ids[0]]?.name || "";
-            s2.value=memberById[ids[1]]?.name || "";
-
-            const lockLbl=div("text-xs inline-flex items-center gap-2");
-              const lock=document.createElement("input"); lock.type="checkbox";
-              lock.checked = (shift?.status==="approved");
-              lock.onchange=()=>post("/api/shift/status",{date:key,half,status:lock.checked?"approved":"proposed"});
-              lockLbl.append("Lock "); lockLbl.prepend(lock);
-
-            s1.onblur=()=>seat(0,s1.value,key,half);
-            s2.onblur=()=>seat(1,s2.value,key,half);
-
-          row.append(s1,s2,lockLbl);
-        wrap.appendChild(row);
-      card.appendChild(wrap);
+    async function loadRoster(){
+      const list = await api("/api/users");
+      const host = document.getElementById('roster'); host.innerHTML="";
+      for(const u of list){
+        const row = document.createElement('div');
+        row.className="flex items-center justify-between border rounded px-2 py-1";
+        row.innerHTML = `<div>${u.name} <span class="text-xs text-gray-500">(${u.role}${u.member_no? ", #"+u.member_no:""})</span></div>
+          <div class="text-sm">
+            <label class="mr-3"><input type="checkbox" ${u.reserve? "checked":""} data-reserve="${u.id}"> Reserve</label>
+            <label class="mr-3"><input type="checkbox" ${u.type3_driver? "checked":""} data-type3="${u.id}"> Type III</label>
+            <label><input type="checkbox" ${u.inactive? "checked":""} data-inactive="${u.id}"> Inactive</label>
+          </div>`;
+        host.appendChild(row);
+      }
+      host.addEventListener('change', async (e)=>{
+        const t=e.target;
+        try{
+          if(t.dataset.reserve){ await api("/api/user/flag",{method:"POST",body:JSON.stringify({userId:t.dataset.reserve,flag:"reserve",value:t.checked})}); }
+          if(t.dataset.type3){ await api("/api/user/flag",{method:"POST",body:JSON.stringify({userId:t.dataset.type3,flag:"type3_driver",value:t.checked})}); }
+          if(t.dataset.inactive){ await api("/api/user/flag",{method:"POST",body:JSON.stringify({userId:t.dataset.inactive,flag:"inactive",value:t.checked})}); }
+        }catch(err){ showApiError(err.message); }
       });
-    board.appendChild(card);
-  }
-}
+    }
 
-function renderRoster(){
-  const box=g("roster"); box.innerHTML="";
-  members.forEach(m=>{
-    const row=div("flex items-center gap-3 text-sm bg-slate-50 border rounded px-2 py-1");
-    const dot=div("h-2 w-2 rounded-full "+(m.inactive?"bg-slate-300":"bg-emerald-500"));
-    const name=div("", m.name+" — "+m.role);
-    const cRes = cb(m.reserve, e=>flags(m.id,{reserve:e.target.checked?1:0}));
-    const cT3  = cb(m.type3_driver, e=>flags(m.id,{type3:e.target.checked?1:0}));
-    const cIn  = cb(m.inactive, e=>flags(m.id,{inactive:e.target.checked?1:0}));
-    row.append(dot,name, labelBox("Reserve",cRes), labelBox("Type III",cT3), labelBox("Inactive",cIn));
-    box.appendChild(row);
-  });
-}
+    async function loadWeek(){
+      const startISO = fmtISO(weekStart);
+      const endISO = fmtISO(addDays(weekStart,6));
+      const state = await api(`/api/state?start=${startISO}&end=${endISO}`);
+      const host = document.getElementById('board'); host.innerHTML="";
 
-/* actions */
-async function seat(idx,name,date,half){
-  const m = members.find(x=>x.name.toLowerCase()===name.trim().toLowerCase());
-  if(!m) return; // silently ignore typos
-  await post("/api/shift/assign",{date,half,userId:m.id,seat:idx});
-  refresh();
-}
-async function flags(userId, patch){
-  await post("/api/user/flags", {userId, ...patch});
-  refresh();
-}
+      for (let i=0;i<7;i++){
+        const d = addDays(weekStart,i);
+        const iso = fmtISO(d);
+        const day = document.createElement('div');
+        day.className="day bg-white";
+        const s = (state.shifts[iso]||{});
+        const AM = s.AM || {assignees:[],status:"unassigned"};
+        const PM = s.PM || {assignees:[],status:"unassigned"};
 
-/* utils */
-function g(id){return document.getElementById(id)}
-function j(u,o){return fetch(u,o).then(r=>{if(!r.ok)throw new Error();return r.json()})}
-function post(p,b){return j(BASE+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)})}
-function div(c,t){const n=document.createElement("div"); if(c)n.className=c; if(t!=null)n.textContent=t; return n}
-function cb(v,fn){const i=document.createElement("input"); i.type="checkbox"; i.checked=!!v; i.onchange=fn; return i}
-function labelBox(t,el){const n=div("flex items-center gap-2 ml-2"); n.append(el, div("",t)); return n}
-function input(cls){const i=document.createElement("input"); i.className="w-full border rounded px-2 py-1 text-sm "+(cls||""); return i}
-function toISO(d){return d.toISOString().slice(0,10)}
-function startOfWeek(d){const k=(d.getDay()+6)%7;const x=new Date(d);x.setDate(d.getDate()-k);x.setHours(0,0,0,0);return x}
-function addDays(d,n){const x=new Date(d);x.setDate(d.getDate()+n);return x}
-</script>
+        day.innerHTML = `
+          <div class="font-medium mb-1">${d.toDateString().slice(0,10)} • ${iso}</div>
+          <div class="seat"><div class="text-xs text-gray-500">AM • ${AM.status}</div><div>${(AM.assignees||[]).join(", ")||"—"}</div></div>
+          <div class="seat"><div class="text-xs text-gray-500">PM • ${PM.status}</div><div>${(PM.assignees||[]).join(", ")||"—"}</div></div>
+        `;
+        host.appendChild(day);
+      }
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', async ()=>{ weekStart = addDays(weekStart,-7); paintRange(); try{ await loadWeek(); }catch(e){ showApiError(e.message); } });
+    document.getElementById('nextBtn').addEventListener('click', async ()=>{ weekStart = addDays(weekStart,7); paintRange(); try{ await loadWeek(); }catch(e){ showApiError(e.message); } });
+
+    (async function init(){
+      try{
+        paintRange();
+        await loadRoster();
+        await loadWeek();
+      }catch(e){ showApiError(e.message); }
+    })();
+  </script>
 </body>
 </html>
