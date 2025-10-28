@@ -1,28 +1,110 @@
-<!-- In your <head> or before </body> -->
-<script src="/static/tips.js"></script>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShiftCommander — Wallboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .daycard{ @apply border rounded-2xl p-3 bg-white shadow-sm h-full; }
+    .ghost{ opacity:.4; }
+    .status-pill{ @apply text-[10px] px-2 py-0.5 rounded-full; }
+    .status-unassigned{ @apply bg-slate-100 text-slate-600; }
+    .status-proposed{ @apply bg-amber-100 text-amber-700; }
+    .status-approved{ @apply bg-emerald-100 text-emerald-800; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-6xl mx-auto px-4 py-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-lg font-semibold">ShiftCommander</div>
+      <nav class="flex items-center gap-2">
+        <a href="./member.html" class="px-3 py-1 rounded border text-sm">Member</a>
+        <a href="./supervisor.html" class="px-3 py-1 rounded border text-sm">Supervisor</a>
+      </nav>
+    </div>
+
+    <div class="flex items-center justify-between mb-2">
+      <div class="text-sm">Public calendar (read-only)</div>
+      <div class="flex items-center gap-2">
+        <button id="prev" class="px-3 py-1 rounded-lg border text-sm">Prev</button>
+        <select id="months" class="border rounded-lg px-2 py-1 text-sm">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+        </select>
+        <button id="next" class="px-3 py-1 rounded-lg border text-sm">Next</button>
+      </div>
+    </div>
+
+    <div id="cal"></div>
+  </div>
 
 <script>
-// Example: existing loader you already have
-(async function bootUser(){
-  const qs = new URLSearchParams({
-    start: window.SC_START || "2025-11-01",
-    end:   window.SC_END   || "2025-12-31"
-  }).toString();
+const BASE="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+let members=[], memberById={}, state=null, start=startOfMonth(new Date()), months=2, resetTimer=null, resetAnchor=start;
 
-  // 1) Fetch state
-  const res = await fetch(`${window.SC_API_BASE}/api/state?` + qs);
-  const state = await res.json();
+init();
+async function init(){
+  members=await j(BASE+"/api/users"); members.forEach(m=>memberById[m.id]=m);
+  hook(); await refresh(); armReset();
+}
+function hook(){
+  g("prev").onclick=()=>{ start=addMonths(start,-1); refresh(); armReset(); };
+  g("next").onclick=()=>{ start=addMonths(start, 1); refresh(); armReset(); };
+  g("months").onchange=e=>{ months=+e.target.value; refresh(); armReset(); };
+}
+function armReset(){ clearTimeout(resetTimer); resetTimer=setTimeout(()=>{ start=resetAnchor; refresh(); }, 20000); }
 
-  // 2) Render your calendar days + half tiles as you already do
-  //    Be sure your AM/PM tiles have data attributes:
-  //    <div class="half" data-date="YYYY-MM-DD" data-half="AM">...</div>
+async function refresh(){
+  const s=toISO(start), e=toISO(addMonths(start, months, 1, 0));
+  state=await j(`${BASE}/api/state?start=${s}&end=${e}`);
+  render();
+}
 
-  await renderUserCalendar(state); // your existing function
+function render(){
+  const root=g("cal"); root.innerHTML="";
+  for(let i=0;i<months;i++){
+    const first=addMonths(start,i);
+    root.appendChild(month(first));
+  }
+}
+function month(firstDay){
+  const wrap=el("div","mb-6");
+  wrap.appendChild(el("div","text-sm font-semibold mb-2", firstDay.toLocaleString(undefined,{month:"long",year:"numeric"})));
+  const grid=el("div","grid grid-cols-7 gap-2");
+  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d=>grid.appendChild(el("div","text-xs text-slate-500 px-1",d)));
 
-  // 3) Paint the nudges
-  paintTips(state);
+  const startGrid=startOfWeek(firstDay), end=endOfMonth(firstDay);
+  for(let d=startGrid; d<= addDays(end,6-dayOfWeek(end)); d=addDays(d,1)){
+    const inMonth=d.getMonth()===firstDay.getMonth(), key=toISO(d);
+    const card=el("div","daycard "+(inMonth?"":"ghost"));
+    card.appendChild(el("div","text-xs font-medium text-slate-700 mb-2", String(d.getDate())));
+    ["AM","PM"].forEach(h=>{
+      const r=el("div","flex items-center justify-between mb-1");
+      const sh=state.shifts[key]?.[h];
+      const pill=el("span","status-pill "+(sh?("status-"+sh.status):"status-unassigned"), sh?sh.status:"unassigned");
+      const names=(sh?.assignees||[]).map(id=>memberById[id]?.name||"").filter(Boolean).join(", ");
+      r.appendChild(el("div","text-xs",h+(names?": "+names:"")));
+      r.appendChild(pill);
+      card.appendChild(r);
+    });
+    grid.appendChild(card);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
 
-  // 4) If you re-render (e.g., after the member toggles AM/PM),
-  //    call paintTips() again with the fresh /api/state payload
-})();
+/* utils */
+function g(id){return document.getElementById(id)}
+function el(t,c,txt){const n=document.createElement(t); if(c)n.className=c; if(txt!=null)n.textContent=txt; return n}
+function j(u,o){return fetch(u,o).then(r=>{if(!r.ok)throw 0;return r.json()})}
+function toISO(d){return d.toISOString().slice(0,10)}
+function startOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1)}
+function endOfMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0)}
+function startOfWeek(d){const k=(d.getDay()+6)%7; const x=new Date(d); x.setDate(d.getDate()-k); x.setHours(0,0,0,0); return x}
+function dayOfWeek(d){return (d.getDay()+6)%7}
+function addDays(d,n){const x=new Date(d); x.setDate(d.getDate()+n); return x}
+function addMonths(d,n,fix=0){const x=new Date(d); const dd=x.getDate(); x.setMonth(x.getMonth()+n); if(fix&&x.getDate()<dd) x.setDate(0); return x}
 </script>
+</body>
+</html>

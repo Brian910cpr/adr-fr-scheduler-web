@@ -1,270 +1,364 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>ADR-FR • My Calendar</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0a1020">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="/css/ios.css">
+  <meta charset="utf-8" />
+  <title>ShiftCommander — Member</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    .chip{ @apply inline-block px-2 py-0.5 rounded text-xs font-medium; }
+    .chip-prefer{ @apply bg-purple-100 text-purple-700; }
+    .chip-available{ @apply bg-emerald-100 text-emerald-700; }
+    .chip-no{ @apply bg-red-100 text-red-700; }
+    .half-btn{ @apply inline-flex items-center justify-center w-9 h-7 rounded-lg border text-[13px] font-medium transition; }
+    .half-unset{ @apply bg-slate-50 text-slate-500 border-slate-200; }
+    .half-available{ @apply bg-emerald-100 text-emerald-700 border-emerald-200; }
+    .half-prefer{ @apply bg-purple-100 text-purple-700 border-purple-200; }
+    .half-no{ @apply bg-red-100 text-red-700 border-red-200; }
+    .status-pill{ @apply text-[10px] px-2 py-0.5 rounded-full; }
+    .status-unassigned{ @apply bg-slate-100 text-slate-600; }
+    .status-proposed{ @apply bg-amber-100 text-amber-700; }
+    .status-approved{ @apply bg-emerald-100 text-emerald-800; }
+    .precommit{ @apply text-[10px] text-purple-600; }
+    .daycard{ @apply border rounded-2xl p-3 bg-white shadow-sm h-full; }
+    .ghost{ opacity:.4; }
+  </style>
 </head>
-<body>
-  <div class="app">
-    <nav class="nav"><div class="nav-inner"><div class="large-title">My Shifts</div></div></nav>
+<body class="bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
+  <div class="max-w-6xl mx-auto px-4 py-5">
+    <!-- Top bar -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <div class="text-lg font-semibold tracking-tight">ShiftCommander</div>
+        <div class="text-xs px-2 py-0.5 rounded bg-slate-200">Member</div>
+      </div>
+      <nav class="flex items-center gap-2">
+        <a href="./member.html" class="px-3 py-1 rounded bg-slate-900 text-white text-sm">Member</a>
+        <a href="./supervisor.html" class="px-3 py-1 rounded border text-sm">Supervisor</a>
+        <a href="./wallboard.html" class="px-3 py-1 rounded border text-sm">Wallboard</a>
+      </nav>
+    </div>
 
-    <main class="section">
-      <div class="card" style="margin-bottom:12px">
-        <h2>How it works</h2>
-        <div class="muted">
-          Tap AM/PM and cycle: <b>Prefer</b> (green) → <b>Available</b> (yellow) → <b>Blank</b> → <b>Do not schedule</b> (red).
-          Changes save in ~1.5s and cards update server-side.
+    <!-- Legend + date window -->
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-3 text-xs">
+        <div class="chip chip-prefer">Prefer</div>
+        <div class="chip chip-available">Available</div>
+        <div class="chip chip-no">Do Not</div>
+        <div class="status-pill status-unassigned">Unassigned</div>
+        <div class="status-pill status-proposed">Proposed</div>
+        <div class="status-pill status-approved">Approved</div>
+        <div class="precommit">“Pre-commit” shown &gt; 4 weeks</div>
+      </div>
+      <div id="windowRange" class="text-sm"></div>
+    </div>
+
+    <!-- Month controls -->
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <button id="prevBtn" class="px-3 py-1 rounded-lg border text-sm">Prev</button>
+        <div class="text-sm">Months</div>
+        <select id="monthsCount" class="border rounded-lg px-2 py-1 text-sm">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+        <button id="nextBtn" class="px-3 py-1 rounded-lg border text-sm">Next</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm">Member #</label>
+        <select id="memberSelect" class="border rounded-lg px-2 py-1 text-sm"></select>
+      </div>
+    </div>
+
+    <!-- Calendars -->
+    <div id="userView"></div>
+
+    <!-- Preferences / bulk tools -->
+    <div class="mt-6">
+      <details class="bg-white rounded-2xl border shadow-sm open:shadow-md">
+        <summary class="px-4 py-3 cursor-pointer font-semibold">Preferences & bulk tools</summary>
+        <div class="p-4 space-y-6">
+
+          <!-- Persistent flags -->
+          <div class="grid md:grid-cols-3 gap-4">
+            <label class="flex items-center gap-2 text-sm">
+              <input id="flagReserve" type="checkbox" class="h-4 w-4">
+              <span>Reserve mode (never auto-assign me)</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input id="flagType3" type="checkbox" class="h-4 w-4">
+              <span>Type III driver approved</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input id="flagInactive" type="checkbox" class="h-4 w-4">
+              <span>Inactive</span>
+            </label>
+          </div>
+
+          <!-- One-line daily note -->
+          <div>
+            <div class="text-sm font-medium mb-1">Quick note (per-day)</div>
+            <div class="text-xs text-slate-500 mb-2">Click a day in the calendar to add a brief note like “In at 10am”. Notes appear on Supervisor dashboard and get lowest score until approved.</div>
+          </div>
+
+          <!-- Bulk set -->
+          <div class="grid sm:grid-cols-2 gap-4 items-end">
+            <div>
+              <label class="text-sm font-medium">From</label>
+              <input id="rangeFrom" type="date" class="block border rounded-lg px-2 py-1 w-full">
+            </div>
+            <div>
+              <label class="text-sm font-medium">Until</label>
+              <input id="rangeUntil" type="date" class="block border rounded-lg px-2 py-1 w-full">
+            </div>
+            <div class="sm:col-span-2">
+              <div class="flex items-center gap-6">
+                <div class="flex items-center gap-3">
+                  <span class="text-sm">Set to:</span>
+                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="prefer"> Prefer</label>
+                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="available" checked> Available</label>
+                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="no"> Do Not</label>
+                </div>
+                <div class="flex items-center gap-4 text-sm">
+                  <span>Half-days:</span>
+                  <!-- changed to checkboxes per your request -->
+                  <label class="flex items-center gap-1"><input id="bulkAM" type="checkbox" checked> AM</label>
+                  <label class="flex items-center gap-1"><input id="bulkPM" type="checkbox" checked> PM</label>
+                </div>
+                <button id="btnApplyBulk" class="ml-auto px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-sm">Apply</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Frictionless Shift Swap -->
+          <div>
+            <button id="btnSwap" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm">Frictionless Shift Swap</button>
+            <div id="swapCurtain" class="hidden mt-3 border rounded-xl p-3 bg-slate-50">
+              <div class="font-medium mb-2">Frictionless Shift Swap</div>
+              <div class="text-xs text-slate-600 mb-3">Pick one of your committed shifts, then choose a qualified replacement. If no disqualifiers, the swap auto-approves; otherwise it alerts a supervisor with your suggested alternate.</div>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-sm font-medium">My committed shift</label>
+                  <select id="swapMine" class="mt-1 w-full border rounded-lg px-2 py-1 text-sm"></select>
+                </div>
+                <div>
+                  <label class="text-sm font-medium">Replacement</label>
+                  <select id="swapAlt" class="mt-1 w-full border rounded-lg px-2 py-1 text-sm"></select>
+                </div>
+              </div>
+              <div class="mt-3 flex gap-2">
+                <button id="swapSubmit" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm">Submit swap</button>
+                <button id="swapCancel" class="px-3 py-1.5 rounded-lg border text-sm">Cancel</button>
+              </div>
+            </div>
+          </div>
+
         </div>
-      </div>
-<!-- ===== Bulk tools (AM/PM as CHECKBOXES) ===== -->
-<div id="bulkTools" style="max-width:1100px;margin:10px auto 0;padding:8px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
-  <!-- Optional flags (wire later if desired) -->
-  <label style="display:flex;gap:6px;align-items:center">
-    <input type="checkbox" id="bulkReserve" /> <span>Reserve mode (never auto-assign me)</span>
-  </label>
-  <label style="display:flex;gap:6px;align-items:center">
-    <input type="checkbox" id="bulkType3" /> <span>Type III driver approved</span>
-  </label>
-  <label style="display:flex;gap:6px;align-items:center">
-    <input type="checkbox" id="bulkInactive" /> <span>Inactive</span>
-  </label>
-
-  <span class="muted">Bulk from</span>
-  <input type="date" id="bulkFrom" />
-  <span class="muted">to</span>
-  <input type="date" id="bulkTo" />
-
-  <span class="muted">Set to:</span>
-  <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="bulkState" value="prefer" /> Prefer</label>
-  <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="bulkState" value="available" checked /> Available</label>
-  <label style="display:flex;gap:6px;align-items:center"><input type="radio" name="bulkState" value="no" /> Do Not</label>
-
-  <!-- AM/PM are CHECKBOXES (not radios) -->
-  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="bulkAM" checked /> AM</label>
-  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="bulkPM" checked /> PM</label>
-
-  <button id="bulkApplyBtn" class="nav">Apply</button>
-</div>
-<!-- ===== /Bulk tools ===== -->
-
-      <div id="calHost" class="grid"></div>
-    </main>
-
-    <footer class="tabbar">
-      <div class="tabbar-inner">
-        <a class="tab active" href="/member.html">My Calendar</a>
-        <a class="tab" href="/supervisor.html">Supervisor</a>
-      </div>
-    </footer>
+      </details>
+      <div class="mt-2 text-[11px] text-slate-500">AM/PM toggles auto-commit after 3s. Dates &gt; 4 weeks show “Pre-commit”.</div>
+    </div>
   </div>
+
 <script>
-// ===== Bulk helpers =====
-function datesBetweenIncl(startStr, endStr){
-  const out=[]; const a=new Date(startStr), b=new Date(endStr);
-  if (isNaN(a)||isNaN(b)) return out;
-  for (let d=new Date(a); d<=b; d.setDate(d.getDate()+1)) {
-    out.push(d.toISOString().slice(0,10));
+const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+const PRECOMMIT_AFTER_DAYS = 28;
+
+let members=[], memberById={}, currentUserId=null;
+let windowStart = startOfMonth(new Date());
+let monthsShown = 2;
+let stateCache=null; // { shifts, availability, prefs }
+let commitTimers={};
+
+init();
+
+async function init(){
+  members = await j(BASE+"/api/users");
+  members.forEach(m=>memberById[m.id]=m);
+  populateMemberSelect(members);
+  currentUserId = members[0]?.id || null;
+  document.getElementById("memberSelect").value=currentUserId;
+
+  hookUI();
+  await refresh();
+  document.getElementById("windowRange").textContent = fmtRange(windowStart, addMonths(windowStart, monthsShown, 1));
+}
+
+function hookUI(){
+  document.getElementById("prevBtn").onclick=()=>{ windowStart=addMonths(windowStart,-1); refresh(); };
+  document.getElementById("nextBtn").onclick=()=>{ windowStart=addMonths(windowStart, 1); refresh(); };
+  document.getElementById("monthsCount").onchange=e=>{ monthsShown=+e.target.value; refresh(); };
+  document.getElementById("memberSelect").onchange=e=>{ currentUserId=e.target.value; refresh(); };
+
+  document.getElementById("btnApplyBulk").onclick=applyBulk;
+  document.getElementById("btnSwap").onclick=()=>document.getElementById("swapCurtain").classList.remove("hidden");
+  document.getElementById("swapCancel").onclick=()=>document.getElementById("swapCurtain").classList.add("hidden");
+
+  // Persistent flags
+  ["flagReserve","flagType3","flagInactive"].forEach(id=>{
+    document.getElementById(id).onchange=saveFlags;
+  });
+}
+
+async function refresh(){
+  const startStr = toISO(windowStart);
+  const endStr = toISO(addMonths(windowStart, monthsShown, 1, 0));
+  stateCache = await j(`${BASE}/api/state?start=${startStr}&end=${endStr}`);
+
+  // hydrate flags for current user (reserve/type3/inactive)
+  const me = (stateCache.users || []).find(u=>u.id===currentUserId) || {};
+  document.getElementById("flagReserve").checked = !!me.reserve;
+  document.getElementById("flagType3").checked = !!me.type3_driver;
+  document.getElementById("flagInactive").checked = !!me.inactive;
+
+  renderMonths();
+  populateSwapChoices();
+  document.getElementById("windowRange").textContent = fmtRange(windowStart, addMonths(windowStart, monthsShown, 1));
+}
+
+function renderMonths(){
+  const root = g("userView"); root.innerHTML="";
+  for(let i=0;i<monthsShown;i++){
+    const first = addMonths(startOfMonth(windowStart), i);
+    root.appendChild(renderMonth(first));
   }
-  return out;
+}
+
+function renderMonth(firstDay){
+  const wrap = el("div","mb-6");
+  wrap.appendChild(el("div","text-sm font-semibold mb-2", firstDay.toLocaleString(undefined,{month:"long",year:"numeric"})));
+  const grid = el("div","grid grid-cols-7 gap-2");
+  const start = startOfWeek(firstDay), end=endOfMonth(firstDay);
+  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d=>grid.appendChild(el("div","text-xs text-slate-500 px-1",d)));
+
+  const cutoff = addDays(new Date(), PRECOMMIT_AFTER_DAYS);
+
+  for(let d=start; d<= addDays(end, 6-dayOfWeek(end)); d=addDays(d,1)){
+    const inMonth = d.getMonth()===firstDay.getMonth();
+    const key = toISO(d);
+    const card = el("div","daycard "+(inMonth?"":"ghost"));
+
+    card.appendChild(el("div","text-xs font-medium text-slate-700 mb-2", String(d.getDate())));
+
+    ["AM","PM"].forEach(half=>{
+      const row = el("div","flex items-center justify-between mb-1");
+      const cur = (stateCache.availability[currentUserId]?.[key]?.[half]) || "unset";
+      const precommit = d>cutoff;
+
+      const b = el("button",`half-btn half-${cur}`,half);
+      b.onclick = ()=>cycleHalf(key, half, precommit);
+
+      // quick note launcher
+      const noteBtn = el("button","text-xs underline decoration-dotted ml-2", "note");
+      noteBtn.onclick = ()=>editNote(key);
+
+      const left = el("div","flex items-center"); left.appendChild(b); left.appendChild(noteBtn);
+      row.appendChild(left);
+
+      // status pill + assignee names if approved
+      const sh = stateCache.shifts[key]?.[half];
+      const pill = el("span","status-pill "+(sh?("status-"+sh.status):"status-unassigned"), sh?sh.status:"unassigned");
+      row.appendChild(pill);
+
+      if (precommit) row.appendChild(el("span","precommit ml-2","PRE-COMMIT"));
+      card.appendChild(row);
+    });
+
+    grid.appendChild(card);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function editNote(dateKey){
+  const prev = (stateCache.notes?.[currentUserId]?.[dateKey]||"");
+  const val = prompt("Brief note (e.g. ‘In at 10am’)", prev || "In at 10am");
+  if (val===null) return;
+  j(BASE+"/api/note",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:dateKey,note:val.slice(0,60)})})
+    .then(refresh);
+}
+
+function cycleHalf(dateKey, half, precommit){
+  const avail = stateCache.availability[currentUserId] ||= {};
+  const day = avail[dateKey] ||= { AM:"unset", PM:"unset" };
+  const order = ["unset","available","prefer","no"];
+  const next = order[(order.indexOf(day[half])+1)%order.length];
+  day[half]=next; // optimistic
+  renderMonths();
+
+  const key=dateKey+"|"+half;
+  clearTimeout(commitTimers[key]);
+  commitTimers[key]=setTimeout(()=>{
+    j(BASE+"/api/availability",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:dateKey,half,state:next})})
+      .then(refresh);
+  },3000);
 }
 
 async function applyBulk(){
-  const userId = currentUserId;
-  if(!userId){ alert("Select a member first."); return; }
+  const from=v("rangeFrom"), until=v("rangeUntil");
+  if(!from||!until) return alert("Pick a date range.");
+  const state = document.querySelector('input[name="bulkState"]:checked').value;
+  const doAM = g("bulkAM").checked, doPM=g("bulkPM").checked;
+  const dates = enumerateDates(new Date(from), new Date(until));
 
-  const from = document.getElementById('bulkFrom').value;
-  const to   = document.getElementById('bulkTo').value;
-  if(!from || !to){ alert("Pick a start and end date."); return; }
-
-  const state = (document.querySelector('input[name="bulkState"]:checked')||{}).value;
-  if(!state){ alert("Pick a state (Prefer / Available / Do Not)."); return; }
-
-  const useAM = document.getElementById('bulkAM').checked;
-  const usePM = document.getElementById('bulkPM').checked;
-  if(!useAM && !usePM){ alert("Choose AM and/or PM."); return; }
-
-  document.getElementById('status').textContent = "Applying bulk changes…";
-
-  const dates = datesBetweenIncl(from, to);
-  // Send sequentially (simple + friendlier to the API)
-  for (const d of dates){
-    if (useAM) await postAvailability(userId, d, "AM", state);
-    if (usePM) await postAvailability(userId, d, "PM", state);
+  for(const d of dates){
+    const key=toISO(d);
+    if(doAM) await j(BASE+"/api/availability",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:key,half:"AM",state})});
+    if(doPM) await j(BASE+"/api/availability",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,date:key,half:"PM",state})});
   }
-
-  // Optional: wire these later to a user-flags endpoint if you want
-  // const reserve  = document.getElementById('bulkReserve').checked;
-  // const type3    = document.getElementById('bulkType3').checked;
-  // const inactive = document.getElementById('bulkInactive').checked;
-  // await fetch(`${API_BASE}/api/user/flags`, {
-  //   method: "POST", headers: {"Content-Type":"application/json"},
-  //   body: JSON.stringify({ userId, reserve, type3_driver: type3, inactive })
-  // });
-
-  document.getElementById('status').textContent = "Bulk changes saved.";
-  // Refresh the view so chips/tips reflect the new state
-  await render();
+  refresh();
 }
 
-// Hook up the button once DOM exists
-window.addEventListener('DOMContentLoaded', ()=>{
-  const btn = document.getElementById('bulkApplyBtn');
-  if (btn) btn.addEventListener('click', applyBulk);
-});
-</script>
+async function saveFlags(){
+  const reserve = g("flagReserve").checked?1:0;
+  const type3 = g("flagType3").checked?1:0;
+  const inactive = g("flagInactive").checked?1:0;
+  await j(BASE+"/api/user/flags",{method:"POST",headers:ct(),body:JSON.stringify({userId:currentUserId,reserve,type3,inactive})});
+  refresh();
+}
 
-  <script>
-    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    // identify current user (persisted)
-    if (!localStorage.getItem("sc_me_id")) localStorage.setItem("sc_me_id","uq2w4or");
-    const ME = localStorage.getItem("sc_me_id");
-
-    const sleep = ms => new Promise(r=>setTimeout(r,ms));
-    const fmt = d => d.toISOString().slice(0,10);
-    function addDays(d,n){const x=new Date(d); x.setDate(x.getDate()+n); return x;}
-
-    const STATES = ["blank","prefer","available","no"]; // UI rotation
-
-    function stateToButtonClass(s){
-      if (s==="prefer") return "active-prefer";
-      if (s==="available") return "active-available";
-      if (s==="no") return "active-no";
-      return "";
-    }
-
-    function nextState(current){
-      const i = STATES.indexOf(current ?? "blank");
-      return STATES[(i+1) % STATES.length];
-    }
-
-    function colorForShift(status){
-      if (status==="approved") return "health-ok";
-      if (status==="proposed") return "health-warn";
-      return "muted";
-    }
-
-    // Debounced saver per (date,half)
-    const pendingSaves = new Map(); // key "YYYY-MM-DD|AM"
-    function scheduleSave(date, half, state){
-      const key = `${date}|${half}`;
-      if (pendingSaves.has(key)) clearTimeout(pendingSaves.get(key));
-      const t = setTimeout(async ()=>{
-        pendingSaves.delete(key);
-        // translate "blank" -> do not send (we treat as unset)
-        const payload = { userId: ME, date, half, state: state==="blank" ? "unset" : state };
-        await fetch(`${API}/api/availability`,{
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(payload)
-        });
-      }, 1500);
-      pendingSaves.set(key, t);
-    }
-
-    async function loadState(start,end){
-      const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
-      return r.json();
-    }
-
-    function renderWeek(container, dateISO, dayData, myAvail={}){
-      const card = document.createElement("div");
-      card.className = "card";
-      const d = new Date(dateISO);
-      const label = d.toLocaleDateString(undefined,{weekday:"long", month:"short", day:"numeric"});
-      const amStatus = dayData?.AM?.status ?? "unassigned";
-      const pmStatus = dayData?.PM?.status ?? "unassigned";
-
-      const myAM = (myAvail["AM"] ?? "blank");
-      const myPM = (myAvail["PM"] ?? "blank");
-
-      card.innerHTML = `
-        <div class="shift">
-          <div class="shift-head">
-            <div class="shift-title">${label}</div>
-            <div class="pill ${colorForShift(amStatus)}">AM: ${amStatus}</div>
-          </div>
-          <div class="segment" data-date="${dateISO}" data-half="AM">
-            <button class="${stateToButtonClass(myAM)}" data-state="prefer">Prefer</button>
-            <button class="${stateToButtonClass(myAM)}" data-state="available">Available</button>
-            <button class="${stateToButtonClass(myAM)}" data-state="blank">Blank</button>
-            <button class="${stateToButtonClass(myAM)}" data-state="no">No</button>
-          </div>
-        </div>
-
-        <div class="shift" style="margin-top:10px">
-          <div class="shift-head">
-            <div class="shift-title"></div>
-            <div class="pill ${colorForShift(pmStatus)}">PM: ${pmStatus}</div>
-          </div>
-          <div class="segment" data-date="${dateISO}" data-half="PM">
-            <button class="${stateToButtonClass(myPM)}" data-state="prefer">Prefer</button>
-            <button class="${stateToButtonClass(myPM)}" data-state="available">Available</button>
-            <button class="${stateToButtonClass(myPM)}" data-state="blank">Blank</button>
-            <button class="${stateToButtonClass(myPM)}" data-state="no">No</button>
-          </div>
-        </div>
-      `;
-
-      container.appendChild(card);
-    }
-
-    function markActive(segmentEl, chosen){
-      segmentEl.querySelectorAll("button").forEach(b=>{
-        b.classList.remove("active-prefer","active-available","active-no");
-      });
-      const btn = Array.from(segmentEl.querySelectorAll("button")).find(b => b.dataset.state===chosen);
-      if (!btn) return;
-      const cls = stateToButtonClass(chosen);
-      if (cls) btn.classList.add(cls);
-    }
-
-    async function boot(){
-      const host = document.getElementById("calHost");
-      host.innerHTML = `<div class="card"><div class="muted">Loading…</div></div>`;
-
-      const start = new Date(); // today
-      const end = addDays(start, 13); // 2 weeks
-      const state = await loadState(fmt(start), fmt(end));
-      host.innerHTML = "";
-
-      // Build quick index for my availability
-      const myAvailIndex = state.availability?.[ME] || {};
-
-      // Render each day
-      let cursor = new Date(start);
-      while (cursor <= end){
-        const iso = fmt(cursor);
-        const day = state.shifts?.[iso] || {};
-        const myAvail = myAvailIndex?.[iso] || {};
-        renderWeek(host, iso, day, myAvail);
-        cursor = addDays(cursor,1);
+// Swap UI (basic happy-path)
+function populateSwapChoices(){
+  const mineSel = g("swapMine"); mineSel.innerHTML="";
+  const altSel = g("swapAlt"); altSel.innerHTML="";
+  const committed = []; // {label, date, half}
+  Object.entries(stateCache.shifts||{}).forEach(([date, halves])=>{
+    ["AM","PM"].forEach(h=>{
+      const s=halves[h];
+      if(s?.status==="approved" && (s.assignees||[]).includes(currentUserId)){
+        committed.push({label:`${date} ${h}`, date, half:h});
       }
+    });
+  });
+  committed.forEach(x=>opt(mineSel, `${x.date}|${x.half}`, x.label));
+  members.filter(m=>m.id!==currentUserId && !m.inactive).forEach(m=>opt(altSel, m.id, m.name));
 
-      // Wire the 4-state segments
-      host.addEventListener("click", (e)=>{
-        const btn = e.target.closest("button[data-state]");
-        if (!btn) return;
-        const seg = btn.closest(".segment");
-        const date = seg.dataset.date;
-        const half = seg.dataset.half;
+  g("swapSubmit").onclick=async ()=>{
+    const mine = mineSel.value.split("|"); if(mine.length<2) return;
+    const alt = altSel.value;
+    await j(BASE+"/api/swap",{method:"POST",headers:ct(),body:JSON.stringify({date:mine[0],half:mine[1],from:currentUserId,to:alt})});
+    g("swapCurtain").classList.add("hidden");
+    refresh();
+  };
+}
 
-        // compute next chosen by rotating from whichever button was clicked:
-        const current = seg.querySelector(".active-prefer") ? "prefer"
-                       : seg.querySelector(".active-available") ? "available"
-                       : seg.querySelector(".active-no") ? "no"
-                       : "blank";
-        const chosen = nextState(current);
-
-        markActive(seg, chosen);
-        scheduleSave(date, half, chosen);
-      });
-    }
-
-    boot();
-  </script>
+/* helpers */
+function g(id){return document.getElementById(id)}
+function v(id){return g(id).value}
+function el(t,c,txt){const n=document.createElement(t); if(c) n.className=c; if(txt!=null) n.textContent=txt; return n;}
+function opt(sel,val,txt){const o=document.createElement("option");o.value=val;o.textContent=txt;sel.appendChild(o);}
+function ct(){return {"Content-Type":"application/json"};}
+async function j(u,o){const r=await fetch(u,o); if(!r.ok) throw new Error("HTTP "+r.status); return r.json();}
+function toISO(d){return d.toISOString().slice(0,10)}
+function startOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1)}
+function endOfMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0)}
+function startOfWeek(d){const k=(d.getDay()+6)%7;const x=new Date(d);x.setDate(d.getDate()-k);x.setHours(0,0,0,0);return x}
+function dayOfWeek(d){return (d.getDay()+6)%7}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function addMonths(d,n, plusOneDayEdgeFix = 0){const x=new Date(d); const dd=x.getDate(); x.setMonth(x.getMonth()+n); if(plusOneDayEdgeFix && x.getDate()<dd) x.setDate(0); return x}
+function enumerateDates(a,b){const out=[];let d=new Date(a);d.setHours(12);const e=new Date(b);e.setHours(12);while(d<=e){out.push(new Date(d));d.setDate(d.getDate()+1)}return out}
+function fmtRange(a,b){return `${toISO(a)} — ${toISO(b)}`}
+</script>
 </body>
 </html>

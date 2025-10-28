@@ -1,504 +1,135 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>ShiftCommander</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <title>ShiftCommander — Supervisor</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .chip { @apply inline-block px-2 py-0.5 rounded text-xs font-medium; }
-    .chip-prefer     { @apply bg-purple-100 text-purple-700; }
-    .chip-available  { @apply bg-green-100 text-green-700; }
-    .chip-no         { @apply bg-red-100 text-red-700; }
-    .seat            { @apply w-full border rounded px-2 py-1 text-sm bg-white; }
-    .half-btn        { @apply inline-flex items-center justify-center w-9 h-7 rounded border text-sm; }
-    .half-AM { @apply mr-1; } .half-PM { @apply ml-1; }
-    .half-unset      { @apply bg-gray-50 text-gray-500 border-gray-200; }
-    .half-prefer     { @apply bg-purple-100 text-purple-700 border-purple-200; }
-    .half-available  { @apply bg-green-100 text-green-700 border-green-200; }
-    .half-no         { @apply bg-red-100 text-red-700 border-red-200; }
-    .status-pill     { @apply text-[10px] px-2 py-0.5 rounded-full; }
-    .status-unassigned { @apply bg-gray-100 text-gray-500; }
-    .status-proposed   { @apply bg-yellow-100 text-yellow-700; }
-    .status-approved   { @apply bg-green-100 text-green-800; }
-    .precommit       { @apply text-[10px] text-purple-600; }
-    .daycard         { @apply border rounded-lg p-3 bg-white shadow-sm h-full; }
-    .daycard-committed{ @apply border-2 border-gray-400; } /* bolder border after commit */
-    .ghost { opacity:.4; }
-    .name-chip { @apply inline-flex items-center text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 mr-1; }
-    .assist-blurb { @apply text-[11px] ml-2 italic text-amber-700; } /* “Needs EMT/ALS/Driver” */
-  </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <div class="max-w-6xl mx-auto p-4">
-    <!-- Header -->
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-6xl mx-auto px-4 py-5">
     <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <div class="text-lg font-semibold">ShiftCommander</div>
+        <div class="text-xs px-2 py-0.5 rounded bg-slate-200">Supervisor</div>
+      </div>
+      <nav class="flex items-center gap-2">
+        <a href="./member.html" class="px-3 py-1 rounded border text-sm">Member</a>
+        <a href="./supervisor.html" class="px-3 py-1 rounded bg-slate-900 text-white text-sm">Supervisor</a>
+        <a href="./wallboard.html" class="px-3 py-1 rounded border text-sm">Wallboard</a>
+      </nav>
+    </div>
+
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm">Week board (starting <span id="wkStart"></span>)</div>
       <div class="flex items-center gap-2">
-        <h1 class="text-xl font-semibold">ShiftCommander</h1>
-        <span id="live-dot" class="text-xs px-2 py-0.5 rounded bg-gray-200">Live</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <select id="memberSelect" class="border rounded px-2 py-1 text-sm"></select>
-        <button id="btnUser" class="px-3 py-1 rounded bg-blue-600 text-white text-sm">User View</button>
-        <button id="btnSup"  class="px-3 py-1 rounded border text-sm">Supervisor</button>
+        <button id="prev" class="px-3 py-1 rounded-lg border text-sm">Prev week</button>
+        <button id="next" class="px-3 py-1 rounded-lg border text-sm">Next week</button>
       </div>
     </div>
 
-    <!-- Legend -->
-    <div class="flex items-center gap-3 text-xs mb-3">
-      <div class="chip chip-prefer">Prefer</div>
-      <div class="chip chip-available">Available</div>
-      <div class="chip chip-no">Do Not</div>
-      <div class="status-pill status-unassigned">Unassigned</div>
-      <div class="status-pill status-proposed">Proposed</div>
-      <div class="status-pill status-approved">Approved</div>
-      <div class="precommit">“Pre-commit” shown &gt;4 weeks</div>
-    </div>
+    <div id="board" class="grid md:grid-cols-2 gap-4"></div>
 
-    <!-- Month controls -->
-    <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center gap-2">
-        <button id="prevBtn" class="px-2 py-1 border rounded text-sm">Prev</button>
-        <div class="text-sm">Months</div>
-        <select id="monthsCount" class="border rounded px-2 py-1 text-sm">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-        <button id="nextBtn" class="px-2 py-1 border rounded text-sm">Next</button>
-      </div>
-      <div id="signedAs" class="text-sm"></div>
-    </div>
-
-    <!-- Views -->
-    <div id="userView"></div>
-
-    <div id="supControls" class="hidden mb-2">
-      <div class="flex items-center gap-4">
-        <label class="text-sm font-medium">At-a-glance:</label>
-        <label class="text-sm flex items-center gap-1"><input type="radio" name="supMode" value="week" checked> Week</label>
-        <label class="text-sm flex items-center gap-1"><input type="radio" name="supMode" value="month"> Month</label>
-        <label class="text-sm flex items-center gap-1"><input type="checkbox" id="chkCommittedOnly"> Committed only</label>
-        <button id="btnRanked" class="ml-auto text-sm underline">Ranked (ugly) view</button>
-      </div>
-    </div>
-    <div id="supView" class="hidden"></div>
-
-    <!-- Preferences curtain (unchanged) -->
-    <div class="mt-6">
-      <details class="bg-white rounded-lg border shadow-sm">
-        <summary class="px-4 py-3 cursor-pointer font-semibold">Preferences &amp; bulk tools</summary>
-        <div class="p-4 space-y-5">
-          <div class="space-y-2">
-            <label class="flex items-center gap-2">
-              <input id="chkPrefer24" type="checkbox" class="h-4 w-4">
-              <span>Prefer 24s</span>
-            </label>
-            <div class="text-xs text-gray-500">AM/PM toggles auto-commit after 3s. Dates &gt;4 weeks show Pre-commit.</div>
-          </div>
-
-          <div class="grid sm:grid-cols-2 gap-4 items-end">
-            <div>
-              <label class="text-sm font-medium">From</label>
-              <input id="rangeFrom" type="date" class="block border rounded px-2 py-1 w-full">
-            </div>
-            <div>
-              <label class="text-sm font-medium">Until</label>
-              <input id="rangeUntil" type="date" class="block border rounded px-2 py-1 w-full">
-            </div>
-            <div class="sm:col-span-2">
-              <div class="flex items-center gap-5">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm">Set to:</span>
-                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="available" checked> Available</label>
-                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="prefer"> Prefer</label>
-                  <label class="flex items-center gap-1 text-sm"><input type="radio" name="bulkState" value="no"> Do Not</label>
-                </div>
-                <div class="flex items-center gap-3 text-sm">
-                  <span>Half-days:</span>
-                  <label class="flex items-center gap-1"><input id="bulkAM" type="checkbox" checked> AM</label>
-                  <label class="flex items-center gap-1"><input id="bulkPM" type="checkbox"> PM</label>
-                </div>
-                <button id="btnApplyBulk" class="ml-auto px-3 py-1 rounded bg-emerald-600 text-white text-sm">Apply</button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">Avoid co-workers (backup list)</label>
-            <div id="avoidList" class="mt-2 grid sm:grid-cols-3 gap-2"></div>
-          </div>
-        </div>
-      </details>
+    <div class="mt-6 border rounded-2xl bg-white p-4 shadow-sm">
+      <div class="font-semibold mb-2">Roster admin</div>
+      <div id="roster" class="space-y-2"></div>
+      <div class="text-[11px] text-slate-500 mt-2">Use “Inactive” to hide a member and “Type III” to mark approvals. “Reserve” stops auto-assign but lets them volunteer; many systems reward reserves with a small fairness nudge.</div>
     </div>
   </div>
 
-  <!-- Ranked drawer -->
-  <div id="rankDrawer" class="hidden fixed inset-0 bg-black/40">
-    <div class="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-xl p-4 overflow-y-auto">
-      <div class="flex items-center justify-between mb-3">
-        <div class="font-semibold">Ranked candidates (what-if)</div>
-        <button id="closeRanked" class="text-sm underline">Close</button>
-      </div>
-      <div id="rankBody" class="space-y-4"></div>
-    </div>
-  </div>
+<script>
+const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+let members=[], memberById={}, state=null, weekStart=startOfWeek(new Date());
 
-  <script>
-    // ===== CONFIG =====
-    const BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    const PRECOMMIT_AFTER_DAYS = 28;
+init();
 
-    // ===== STATE =====
-    let members = []; let memberById = {};
-    let currentUserId = null;
-    let windowStart = startOfMonth(new Date());
-    let monthsShown = 2;
-    let stateCache = null;           // {shifts, availability, prefs}
-    let commitTimers = {};
-    let supMode = "week";
+async function init(){
+  members = await j(BASE+"/api/users"); members.forEach(m=>memberById[m.id]=m);
+  await refresh();
+  g("prev").onclick=()=>{ weekStart=addDays(weekStart,-7); refresh(); }
+  g("next").onclick=()=>{ weekStart=addDays(weekStart, 7); refresh(); }
+}
 
-    // ===== INIT =====
-    (async function init(){
-      members = await fetchJSON(BASE + "/api/users");
-      members.forEach(m => memberById[m.id] = m);
-      populateMemberSelect(members);
+async function refresh(){
+  const start = toISO(weekStart);
+  const end = toISO(addDays(weekStart, 13)); // 2 weeks window for context
+  state = await j(`${BASE}/api/state?start=${start}&end=${end}`);
 
-      currentUserId = members[0]?.id || null;
-      if(!currentUserId){ document.getElementById("signedAs").textContent="No members found."; return; }
-      document.getElementById("memberSelect").value = currentUserId;
-      document.getElementById("signedAs").textContent = "Logged in as: " + memberById[currentUserId].name;
+  g("wkStart").textContent = toISO(weekStart);
+  renderBoard();
+  renderRoster();
+}
 
-      // hooks
-      document.getElementById("btnUser").onclick = ()=> toggleView("user");
-      document.getElementById("btnSup").onclick  = ()=> toggleView("sup");
-      document.getElementById("prevBtn").onclick = ()=>{ windowStart = addMonths(windowStart,-1); refresh(); };
-      document.getElementById("nextBtn").onclick = ()=>{ windowStart = addMonths(windowStart,+1); refresh(); };
-      document.getElementById("monthsCount").onchange = e=>{ monthsShown=+e.target.value; refresh(); };
-      document.getElementById("memberSelect").onchange = e=>{
-        currentUserId = e.target.value;
-        document.getElementById("signedAs").textContent = "Logged in as: " + memberById[currentUserId].name;
-        refresh();
-      };
-      document.getElementById("chkPrefer24").onchange = onSavePrefs;
-      document.getElementById("btnApplyBulk").onclick = applyBulk;
+function renderBoard(){
+  const board=g("board"); board.innerHTML="";
+  for(let i=0;i<7;i++){
+    const d=addDays(weekStart,i), key=toISO(d);
+    const card=div("border rounded-2xl p-3 bg-white shadow-sm");
+      card.appendChild(div("text-sm font-semibold mb-2", d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})));
+      ["AM","PM"].forEach(half=>{
+        const wrap=div("mb-3");
+          wrap.appendChild(div("text-xs font-medium mb-1", half));
+          const row=div("grid grid-cols-2 gap-2 items-center");
+            const s1=input("seat"), s2=input("seat");
+            const shift=state.shifts[key]?.[half];
+            const ids=shift?.assignees || [];
+            s1.value=memberById[ids[0]]?.name || "";
+            s2.value=memberById[ids[1]]?.name || "";
 
-      // supervisor controls
-      document.getElementsByName("supMode").forEach(r=> r.onchange = e => { supMode = e.target.value; renderSupervisorView(); });
-      document.getElementById("chkCommittedOnly").onchange = renderSupervisorView;
-      document.getElementById("btnRanked").onclick = openRanked;
-      document.getElementById("closeRanked").onclick = closeRanked;
-      document.getElementById("rankDrawer").onclick = (e)=>{ if(e.target.id==="rankDrawer") closeRanked(); };
+            const lockLbl=div("text-xs inline-flex items-center gap-2");
+              const lock=document.createElement("input"); lock.type="checkbox";
+              lock.checked = (shift?.status==="approved");
+              lock.onchange=()=>post("/api/shift/status",{date:key,half,status:lock.checked?"approved":"proposed"});
+              lockLbl.append("Lock "); lockLbl.prepend(lock);
 
-      renderAvoidList();
-      await refresh();
-    })();
+            s1.onblur=()=>seat(0,s1.value,key,half);
+            s2.onblur=()=>seat(1,s2.value,key,half);
 
-    // ===== FETCH HELPERS =====
-    async function fetchJSON(url, opts){ const r=await fetch(url,opts); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
-
-    async function refresh(){
-      const startStr = toISO(windowStart);
-      const endStr   = toISO(addMonths(windowStart, monthsShown, -1, 31));
-      stateCache = await fetchJSON(`${BASE}/api/state?start=${startStr}&end=${endStr}`);
-
-      const p = stateCache.prefs[currentUserId] || { prefer24s:false, notes:"" };
-      document.getElementById("chkPrefer24").checked = !!p.prefer24s;
-
-      renderUserView();
-      renderSupervisorView();
-    }
-
-    // ===== USER VIEW (months) =====
-    function renderUserView(){
-      const root = document.getElementById("userView");
-      root.innerHTML = "";
-      const frag = document.createDocumentFragment();
-      for(let i=0;i<monthsShown;i++){
-        const first = addMonths(startOfMonth(windowStart), i);
-        frag.appendChild(renderMonth(first));
-      }
-      root.appendChild(frag);
-      toggleView("user", true);
-    }
-
-    function renderMonth(firstDay){
-      const monthWrap = el("div","mb-6");
-      const title = firstDay.toLocaleString(undefined,{month:"long",year:"numeric"});
-      monthWrap.appendChild(el("div","text-sm font-semibold mb-2", title));
-
-      const grid = el("div","grid grid-cols-7 gap-2");
-      const start = startOfWeek(firstDay);
-      const end   = endOfMonth(firstDay);
-
-      ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => grid.appendChild(el("div","text-xs text-gray-500 px-1",d)));
-
-      const cutoff = addDays(new Date(), PRECOMMIT_AFTER_DAYS);
-
-      for(let d=start; d<=addDays(end, 6 - dayOfWeek(end)); d=addDays(d,1)){
-        const inMonth = d.getMonth()===firstDay.getMonth();
-        const key = toISO(d);
-        const committed = d <= cutoff; // inside commit window == “solid”
-        const dayCard = el("div","daycard "+(!inMonth?"ghost":"")+(committed?" daycard-committed":""));
-
-        // date
-        dayCard.appendChild(el("div","text-xs font-medium text-gray-700 mb-2", String(d.getDate())));
-
-        ["AM","PM"].forEach(half=>{
-          const row = el("div","mb-1");
-          const flex = el("div","flex items-center justify-between");
-          // toggle
-          const state = (stateCache.availability[currentUserId]?.[key]?.[half]) || "unset";
-          const precommit = d > cutoff;
-          const b = el("button", `half-btn half-${half} half-${state}`, half);
-          b.onclick = ()=> cycleHalf(key,half,precommit);
-          flex.appendChild(b);
-
-          // status pill
-          const shift = stateCache.shifts[key]?.[half];
-          const pill = el("span","status-pill " + (shift ? ("status-"+shift.status) : "status-unassigned"), shift ? shift.status : "unassigned");
-          flex.appendChild(pill);
-
-          if (d > cutoff) flex.appendChild(el("span","precommit ml-2","PRE-COMMIT"));
-          row.appendChild(flex);
-
-          // AFTER COMMIT: show seat names + short assist blurb
-          if (committed && shift){
-            const namesWrap = el("div","mt-1");
-            (shift.assignees||[]).forEach(id=>{
-              if(memberById[id]) namesWrap.appendChild(el("span","name-chip", memberById[id].name));
-            });
-            // placeholder assist text from server (optional); if present show
-            if (shift.tip) namesWrap.appendChild(el("span","assist-blurb", shift.tip));
-            row.appendChild(namesWrap);
-          }
-
-          dayCard.appendChild(row);
-        });
-
-        grid.appendChild(dayCard);
-      }
-
-      monthWrap.appendChild(grid);
-      return monthWrap;
-    }
-
-    // toggle half (debounced 3s)
-    function cycleHalf(dateKey, half){
-      const avail = stateCache.availability[currentUserId] ||= {};
-      const day   = avail[dateKey] ||= { AM:"unset", PM:"unset" };
-      const order = ["unset","prefer","available","no"]; // PREFER -> AVAILABLE -> Do Not (red) -> blank
-      const next  = order[(order.indexOf(day[half])+1)%order.length];
-      day[half]   = next;
-      renderUserView(); // optimistic
-      const key = dateKey+"|"+half;
-      clearTimeout(commitTimers[key]);
-      commitTimers[key] = setTimeout(async ()=>{
-        await fetchJSON(BASE+"/api/availability", {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: currentUserId, date:dateKey, half, state: next })
-        });
-        await refresh();
-      }, 3000);
-    }
-
-    // ===== SUPERVISOR VIEW =====
-    function renderSupervisorView(){
-      document.getElementById("supControls").classList.remove("hidden");
-      const root = document.getElementById("supView");
-      root.innerHTML = "";
-      const committedOnly = document.getElementById("chkCommittedOnly").checked;
-      const cutoff = addDays(new Date(), PRECOMMIT_AFTER_DAYS);
-
-      if (supMode==="week") {
-        const weekStart = startOfWeek(windowStart);
-        const board = el("div","grid md:grid-cols-2 gap-4");
-        for(let i=0;i<7;i++){
-          const d = addDays(weekStart,i);
-          const key = toISO(d);
-          const card = el("div","daycard"+(d<=cutoff?" daycard-committed":""));
-          const title = d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
-          card.appendChild(el("div","text-sm font-semibold mb-2", title));
-
-          ["AM","PM"].forEach(half=>{
-            const wrap = el("div","mb-3");
-            wrap.appendChild(el("div","text-xs font-medium mb-1", half));
-            const row = el("div","grid grid-cols-2 gap-2 items-center");
-
-            const s1 = el("input","seat",""); const s2 = el("input","seat","");
-            const shift = stateCache.shifts[key]?.[half];
-            if (committedOnly && (!shift || shift.status!=="approved")) return;
-            const ids = shift?.assignees || [];
-            s1.value = memberById[ids[0]]?.name || "";
-            s2.value = memberById[ids[1]]?.name || "";
-
-            const lockWrap = el("label","text-xs inline-flex items-center gap-2");
-            const lock = el("input","",null,{type:"checkbox"});
-            lock.checked = (shift?.status==="approved");
-            lock.onchange = async ()=>{
-              await fetchJSON(BASE+"/api/shift/status",{
-                method:"POST", headers:{"Content-Type":"application/json"},
-                body: JSON.stringify({ date:key, half, status: lock.checked?"approved":"proposed" })
-              });
-              await refresh();
-            };
-            lockWrap.appendChild(lock); lockWrap.appendChild(document.createTextNode("Lock"));
-
-            async function updateSeat(inp, idx){
-              const name = inp.value.trim();
-              const match = members.find(m=> m.name.toLowerCase()===name.toLowerCase());
-              const id = match?.id;
-              if (!id) return;
-              await fetchJSON(BASE+"/api/shift/assign",{
-                method:"POST", headers:{"Content-Type":"application/json"},
-                body: JSON.stringify({ date:key, half, userId:id })
-              });
-              await refresh();
-            }
-            s1.onblur = ()=> updateSeat(s1,0);
-            s2.onblur = ()=> updateSeat(s2,1);
-
-            row.appendChild(s1); row.appendChild(s2); row.appendChild(lockWrap);
-            wrap.appendChild(row);
-            card.appendChild(wrap);
-          });
-          board.appendChild(card);
-        }
-        root.appendChild(board);
-      } else {
-        // Month “at-a-glance” for supervisor, with names + locks
-        const frag = document.createDocumentFragment();
-        for(let i=0;i<monthsShown;i++){
-          const first = addMonths(startOfMonth(windowStart), i);
-          const title = first.toLocaleString(undefined,{month:"long",year:"numeric"});
-          const wrap = el("div","mb-6");
-          wrap.appendChild(el("div","text-sm font-semibold mb-2",title));
-          const grid = el("div","grid grid-cols-7 gap-2");
-          ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => grid.appendChild(el("div","text-xs text-gray-500 px-1",d)));
-
-          const start = startOfWeek(first);
-          const end   = endOfMonth(first);
-          for(let d=start; d<=addDays(end,6-dayOfWeek(end)); d=addDays(d,1)){
-            const inMonth = d.getMonth()===first.getMonth();
-            const key = toISO(d);
-            const committed = d<=cutoff;
-            const dayCard = el("div","daycard "+(!inMonth?"ghost":"")+(committed?" daycard-committed":""));
-            if (committedOnly && !hasApproved(key)) { grid.appendChild(dayCard); continue; }
-            dayCard.appendChild(el("div","text-xs font-medium text-gray-700 mb-2", String(d.getDate())));
-            ["AM","PM"].forEach(half=>{
-              const line = el("div","flex items-center justify-between mb-1");
-              line.appendChild(el("div","text-xs font-medium", half));
-              const shift = stateCache.shifts[key]?.[half];
-              const pill = el("span","status-pill " + (shift?("status-"+shift.status):"status-unassigned"), shift ? shift.status : "unassigned");
-              line.appendChild(pill);
-              dayCard.appendChild(line);
-
-              if (shift){
-                const names = el("div","flex items-center flex-wrap gap-1 mb-1");
-                (shift.assignees||[]).forEach(id=>{ if(memberById[id]) names.appendChild(el("span","name-chip", memberById[id].name)); });
-                dayCard.appendChild(names);
-              }
-            });
-            grid.appendChild(dayCard);
-          }
-          wrap.appendChild(grid);
-          frag.appendChild(wrap);
-        }
-        root.appendChild(frag);
-      }
-    }
-
-    function hasApproved(key){
-      const sh = stateCache.shifts[key] || {};
-      return (sh.AM?.status==="approved" || sh.PM?.status==="approved");
-    }
-
-    // ===== RANKED DRAWER =====
-    async function openRanked(){
-      document.getElementById("rankDrawer").classList.remove("hidden");
-      const body = document.getElementById("rankBody");
-      body.innerHTML = "";
-      // build for the current week window
-      const start = startOfWeek(windowStart);
-      for(let i=0;i<7;i++){
-        const d = addDays(start,i); const key = toISO(d);
-        ["AM","PM"].forEach(async half=>{
-          const sec = el("div","border rounded p-3");
-          sec.appendChild(el("div","text-sm font-semibold mb-1", d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+" • "+half));
-          try{
-            const ranks = await fetchJSON(`${BASE}/api/rank?date=${key}&half=${half}`);
-            // ranks = { winners:[ids], need:"Needs EMT", list:[{id,score,reason[]}, ...] }
-            if (ranks.need) sec.appendChild(el("div","assist-blurb", ranks.need));
-            const list = el("ol","mt-2 list-decimal pl-5 space-y-1");
-            (ranks.list||[]).forEach(r=>{
-              const li = el("li","text-sm");
-              li.textContent = `${memberById[r.id]?.name||r.id} (${r.score})`;
-              list.appendChild(li);
-            });
-            sec.appendChild(list);
-          }catch(e){
-            sec.appendChild(el("div","text-xs text-gray-500","Ranking API not available yet."));
-          }
-          body.appendChild(sec);
-        });
-      }
-    }
-    function closeRanked(){ document.getElementById("rankDrawer").classList.add("hidden"); }
-
-    // ===== PREFS / BULK =====
-    async function onSavePrefs(){
-      const prefer24s = document.getElementById("chkPrefer24").checked;
-      await fetchJSON(BASE+"/api/prefs",{
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ userId: currentUserId, prefer24s })
+          row.append(s1,s2,lockLbl);
+        wrap.appendChild(row);
+      card.appendChild(wrap);
       });
-      await refresh();
-    }
+    board.appendChild(card);
+  }
+}
 
-    async function applyBulk(){
-      const from  = document.getElementById("rangeFrom").value;
-      const until = document.getElementById("rangeUntil").value;
-      if(!from || !until) return alert("Pick a date range.");
-      const state = document.querySelector('input[name="bulkState"]:checked').value;
-      const doAM  = document.getElementById("bulkAM").checked;
-      const doPM  = document.getElementById("bulkPM").checked;
-      const dates = enumerateDates(new Date(from), new Date(until));
-      for(const d of dates){
-        const key = toISO(d);
-        if (doAM) await fetchJSON(BASE+"/api/availability",{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: currentUserId, date:key, half:"AM", state })});
-        if (doPM) await fetchJSON(BASE+"/api/availability",{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: currentUserId, date:key, half:"PM", state })});
-      }
-      await refresh();
-    }
+function renderRoster(){
+  const box=g("roster"); box.innerHTML="";
+  members.forEach(m=>{
+    const row=div("flex items-center gap-3 text-sm bg-slate-50 border rounded px-2 py-1");
+    const dot=div("h-2 w-2 rounded-full "+(m.inactive?"bg-slate-300":"bg-emerald-500"));
+    const name=div("", m.name+" — "+m.role);
+    const cRes = cb(m.reserve, e=>flags(m.id,{reserve:e.target.checked?1:0}));
+    const cT3  = cb(m.type3_driver, e=>flags(m.id,{type3:e.target.checked?1:0}));
+    const cIn  = cb(m.inactive, e=>flags(m.id,{inactive:e.target.checked?1:0}));
+    row.append(dot,name, labelBox("Reserve",cRes), labelBox("Type III",cT3), labelBox("Inactive",cIn));
+    box.appendChild(row);
+  });
+}
 
-    // ===== AVOID LIST (placeholder) =====
-    function renderAvoidList(){
-      const box = document.getElementById("avoidList"); box.innerHTML="";
-      members.filter(m=>m.id!==currentUserId).forEach(m=>{
-        const row = el("label","flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1");
-        const c = el("input","",null,{type:"checkbox"});
-        row.appendChild(c); row.appendChild(document.createTextNode(m.name));
-        box.appendChild(row);
-      });
-    }
+/* actions */
+async function seat(idx,name,date,half){
+  const m = members.find(x=>x.name.toLowerCase()===name.trim().toLowerCase());
+  if(!m) return; // silently ignore typos
+  await post("/api/shift/assign",{date,half,userId:m.id,seat:idx});
+  refresh();
+}
+async function flags(userId, patch){
+  await post("/api/user/flags", {userId, ...patch});
+  refresh();
+}
 
-    // ===== UTIL =====
-    function el(tag, cls, text, attrs){ const n=document.createElement(tag); if(cls) n.className=cls; if(text!==undefined&&text!==null) n.textContent=text; if(attrs) for(const k in attrs) n.setAttribute(k,attrs[k]); return n; }
-    function populateMemberSelect(list){ const sel=document.getElementById("memberSelect"); sel.innerHTML=""; list.forEach(m=>{ const o=document.createElement("option"); o.value=m.id; o.textContent=`${m.name} (${m.role})`; sel.appendChild(o); }); }
-    function toggleView(which,force){
-      const user=document.getElementById("userView"); const sup=document.getElementById("supView"); const supCtl=document.getElementById("supControls");
-      if(which==="user"){ user.classList.remove("hidden"); sup.classList.add("hidden"); supCtl.classList.add("hidden"); }
-      else if(which==="sup"){ sup.classList.remove("hidden"); user.classList.add("hidden"); supCtl.classList.remove("hidden"); }
-      else if(!force){ const supVisible=!sup.classList.contains("hidden"); if(supVisible){ user.classList.remove("hidden"); sup.classList.add("hidden"); supCtl.classList.add("hidden"); } else { sup.classList.remove("hidden"); user.classList.add("hidden"); supCtl.classList.remove("hidden"); } }
-    }
-    function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-    function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-    function startOfWeek(d){ const day=(d.getDay()+6)%7; const out=new Date(d); out.setDate(d.getDate()-day); out.setHours(0,0,0,0); return out; }
-    function dayOfWeek(d){ return (d.getDay()+6)%7; }
-    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function addMonths(d,n,forceLastDay=0,setDayOverride=null){ const x=new Date(d); const day=x.getDate(); x.setMonth(x.getMonth()+n); if(setDayOverride) x.setDate(setDayOverride); if(forceLastDay && x.getDate()<day) x.setDate(0); return x; }
-    function toISO(d){ return d.toISOString().slice(0,10); }
-    function enumerateDates(a,b){ const out=[]; let d=new Date(a); d.setHours(12,0,0,0); const end=new Date(b); end.setHours(12,0,0,0); while(d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1);} return out; }
-  </script>
+/* utils */
+function g(id){return document.getElementById(id)}
+function j(u,o){return fetch(u,o).then(r=>{if(!r.ok)throw new Error();return r.json()})}
+function post(p,b){return j(BASE+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)})}
+function div(c,t){const n=document.createElement("div"); if(c)n.className=c; if(t!=null)n.textContent=t; return n}
+function cb(v,fn){const i=document.createElement("input"); i.type="checkbox"; i.checked=!!v; i.onchange=fn; return i}
+function labelBox(t,el){const n=div("flex items-center gap-2 ml-2"); n.append(el, div("",t)); return n}
+function input(cls){const i=document.createElement("input"); i.className="w-full border rounded px-2 py-1 text-sm "+(cls||""); return i}
+function toISO(d){return d.toISOString().slice(0,10)}
+function startOfWeek(d){const k=(d.getDay()+6)%7;const x=new Date(d);x.setDate(d.getDate()-k);x.setHours(0,0,0,0);return x}
+function addDays(d,n){const x=new Date(d);x.setDate(d.getDate()+n);return x}
+</script>
 </body>
 </html>
