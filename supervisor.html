@@ -1,216 +1,94 @@
+<!-- supervisor.html (drop-in replacement or merge the "Notes" panel) -->
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>ShiftCommander · Supervisor</title>
-  <style>
-    /* same design tokens as member for visual continuity */
-    :root{--bg:#0b0c0f;--panel:#111319;--ink:#e8e8ea;--muted:#a4a7ae;--brand:#0a84ff;--ok:#30d158;--warn:#ffd60a;--bad:#ff453a;--pill:#2a2e37;--card:#151824;--line:#2a2e37;--shadow:0 10px 30px rgba(0,0,0,.35);--radius:16px}
-    @media (prefers-color-scheme: light){:root{--bg:#f7f8fb;--panel:#ffffff;--ink:#0b0c0f;--muted:#60636b;--card:#ffffff;--line:#e9ebf0;--pill:#eef1f7;--shadow:0 10px 30px rgba(0,0,0,.1)}}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
-    .bar{position:sticky;top:0;z-index:10;backdrop-filter:saturate(180%) blur(20px);background:color-mix(in oklab, var(--panel), transparent 25%);border-bottom:1px solid var(--line)}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
-    .brand{display:flex;gap:10px;align-items:center}
-    .chip{padding:6px 10px;border-radius:999px;background:var(--pill);color:var(--muted);font-weight:600;font-size:12px}
-    .title{font-weight:800;letter-spacing:.2px}
-    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-    .btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
-    .btn.primary{background:var(--brand);border-color:var(--brand);color:white}
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(7,1fr)}
-    .head{display:grid;grid-template-columns:repeat(7,1fr);color:var(--muted);padding:8px 4px}
-    .day{background:var(--card);border:2px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;min-height:120px}
-    .day.committed{border-color:var(--ink)}
-    .day header{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:700}
-    .row{display:flex;gap:10px;padding:10px;border-bottom:1px dashed var(--line);align-items:center}
-    .pill{font-size:12px;color:var(--muted);background:var(--pill);padding:4px 8px;border-radius:999px}
-    .rank{display:flex;gap:6px;align-items:center}
-    .names{font-size:13px;color:var(--muted)}
-    .flags{display:flex;gap:14px;align-items:center;margin-top:8px}
-    .toast{position:fixed;bottom:16px;left:50%;translate:-50% 0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow)}
-    .hidden{display:none}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center}
-    .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:900px;width:95%;max-height:80vh;overflow:auto;box-shadow:var(--shadow);padding:16px}
-    table{width:100%;border-collapse:collapse}
-    td,th{padding:8px;border-bottom:1px solid var(--line);text-align:left}
-    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShiftCommander • Supervisor</title>
+<style>
+  :root{--bg:#0c0f14;--panel:#141a22;--ink:#e8eef7;--muted:#8ea0b6;--ring:#2b394b}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#10161d)}
+  h1{margin:0;font-size:18px;font-weight:700}
+  .tabs{margin-left:auto;display:flex;gap:6px}
+  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c6d2df;text-decoration:none}
+  .tab.active{background:var(--ring);color:var(--ink)}
+  .wrap{padding:16px;display:grid;gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:8px;border-bottom:1px solid var(--ring);text-align:left}
+  th{color:#b9c6d5}
+  .muted{color:var(--muted)}
+</style>
 </head>
 <body>
-  <div class="bar">
-    <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-      <div class="brand">
-        <div class="chip">ShiftCommander</div>
-        <div class="title">Supervisor</div>
-      </div>
-      <div class="controls">
-        <button class="btn" id="prevBtn">‹</button>
-        <button class="btn" id="nextBtn">›</button>
-        <button class="btn primary" id="thisBtn">This Month</button>
-        <button class="btn" id="uglyBtn">Ranked “Ugly List”</button>
+<header>
+  <h1>ShiftCommander <span class="muted" style="margin-left:6px">Supervisor</span></h1>
+  <nav class="tabs">
+    <a class="tab" href="/member.html">Member</a>
+    <a class="tab active" href="/supervisor.html">Supervisor</a>
+    <a class="tab" href="/wallboard.html">Wallboard</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <!-- existing supervisor content goes above/below as needed -->
+
+  <div class="panel">
+    <div class="row">
+      <strong>Notes (member → supervisor)</strong>
+      <span class="muted" id="noteWindow"></span>
+      <div style="margin-left:auto">
+        <button id="prev" title="Prev week">◀</button>
+        <button id="next" title="Next week">▶</button>
       </div>
     </div>
+    <table>
+      <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
+      <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+    </table>
   </div>
+</div>
 
-  <div class="wrap">
-    <div class="head" id="dowHead"></div>
-    <div class="grid" id="calGrid"></div>
+<script>
+(() => {
+  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const tbody = document.getElementById('notesBody');
+  const winLbl = document.getElementById('noteWindow');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
 
-    <h3 style="margin:18px 6px 8px">Roster Flags</h3>
-    <div id="roster" class="wrap" style="padding:0">
-      <!-- filled from /api/users -->
-    </div>
-  </div>
+  let anchor = new Date(); // week anchor (Monday)
+  function monday(d){ const c=new Date(d); const k=(c.getDay()+6)%7; c.setDate(c.getDate()-k); return c; }
+  function iso(d){ return d.toISOString().slice(0,10); }
 
-  <div class="modal" id="uglyModal" role="dialog" aria-modal="true">
-    <div class="sheet">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <h2>Ranked Candidates (preview)</h2>
-        <button class="btn" onclick="uglyClose()">Close</button>
-      </div>
-      <p class="pill">Shows Prefer › Available › Unset › No (penalized). Add another truck? This preview shows depth.</p>
-      <div id="uglyTable"></div>
-    </div>
-  </div>
+  async function jget(u){ const r=await fetch(u); if(!r.ok) throw 0; return r.json(); }
 
-  <div class="toast hidden" id="toast">Saved</div>
+  async function load(){
+    const start = monday(anchor);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    winLbl.textContent = `(${iso(start)} → ${iso(end)})`;
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
 
-  <script>
-    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    const fmt = d => d.toISOString().slice(0,10);
-    const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x}
-    const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
-    const endOfMonth   = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
-
-    let viewStart, viewEnd, base=new Date(), state=null, users=[];
-
-    // Head row
-    document.getElementById('dowHead').innerHTML = dows.map(d=>`<div class="pill" style="background:transparent;color:var(--muted)">${d}</div>`).join("");
-
-    async function fetchState(a,b){ const r=await fetch(`${API}/api/state?start=${fmt(a)}&end=${fmt(b)}`); return r.json() }
-    async function fetchUsers(){ const r=await fetch(`${API}/api/users`); return r.json() }
-
-    function renderMonth(d){
-      const start = startOfMonth(d);
-      const end   = endOfMonth(d);
-      const gridStart = addDays(start, -start.getDay());
-      const gridEnd   = addDays(end, 6 - end.getDay());
-      viewStart = gridStart; viewEnd = gridEnd;
-
-      const days=[]; let c=new Date(gridStart);
-      while(c<=gridEnd){ days.push(new Date(c)); c=addDays(c,1) }
-
-      const cal = document.getElementById('calGrid');
-      cal.innerHTML = "";
-      for(const day of days){
-        const ds = fmt(day);
-        const title = day.toLocaleString([], { month:"short", day:"numeric" });
-        const committed = false; // placeholder: flip true after commit date if you track it
-        const AM = (state?.shifts?.[ds]?.AM)||{assignees:[],status:"unassigned"};
-        const PM = (state?.shifts?.[ds]?.PM)||{assignees:[],status:"unassigned"};
-        const amNames = AM.assignees.map(id => (users.find(u=>u.id===id)?.name)||id).join(", ") || "—";
-        const pmNames = PM.assignees.map(id => (users.find(u=>u.id===id)?.name)||id).join(", ") || "—";
-
-        cal.insertAdjacentHTML("beforeend", `
-          <div class="day ${committed?'committed':''}">
-            <header><div>${title}</div><div class="pill">Nudge: Needs ALS</div></header>
-            <div class="row">
-              <div class="pill">AM</div>
-              <div class="names">${amNames}</div>
-              <div class="rank"><span class="ok">●</span><span class="pill">Score 3</span></div>
-            </div>
-            <div class="row" style="border-bottom:0">
-              <div class="pill">PM</div>
-              <div class="names">${pmNames}</div>
-              <div class="rank"><span class="warn">●</span><span class="pill">Score 1</span></div>
-            </div>
-          </div>
-        `);
-      }
+    // try notes endpoint; if missing, show message
+    try{
+      const data = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
+      const rows = data?.rows || []; // expected: [{date:'YYYY-MM-DD', half:'AM', user_id:'u1', user_name:'Alex', note:'...'}]
+      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="4" class="muted">No notes.</td></tr>`; return; }
+      tbody.innerHTML = rows.map(r=>(
+        `<tr><td>${r.date}</td><td>${r.half}</td><td>${r.user_name||r.user_id||''}</td><td>${(r.note||'').replace(/</g,'&lt;')}</td></tr>`
+      )).join('');
+    }catch{
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`;
     }
+  }
 
-    function buildRoster(){
-      const host = document.getElementById('roster');
-      host.innerHTML = "";
-      users.forEach(u=>{
-        const can = (u.can_drive||[]).join(", ") || "—";
-        host.insertAdjacentHTML("beforeend", `
-          <div style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--card);box-shadow:var(--shadow)">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-              <div><strong>${u.name}</strong> · <span class="pill">${u.role}</span> · <span class="sub">#${u.member_no||'—'}</span></div>
-              <div class="flags">
-                <label><input type="checkbox" data-inactive-user="${u.id}" ${u.inactive?'checked':''}/> Inactive</label>
-                <label><input type="checkbox" data-reserve-user="${u.id}" ${u.reserve?'checked':''}/> Reserve</label>
-                <label><input type="checkbox" data-type3-user="${u.id}" ${u.type3_driver?'checked':''}/> Type III driver</label>
-              </div>
-            </div>
-            <div class="sub" style="margin-top:6px">Can drive: ${can}</div>
-          </div>
-        `);
-      });
+  prev.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()-7); load(); });
+  next.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()+7); load(); });
 
-      host.addEventListener("change", async (e)=>{
-        const t=e.target;
-        const id = t.dataset.inactiveUser || t.dataset.reserveUser || t.dataset.type3User;
-        if(!id) return;
-        const payload = {
-          user_id: id,
-          inactive: !!document.querySelector(`[data-inactive-user="${id}"]`)?.checked,
-          reserve: !!document.querySelector(`[data-reserve-user="${id}"]`)?.checked,
-          type3_driver: !!document.querySelector(`[data-type3-user="${id}"]`)?.checked
-        };
-        // Server update (implement in Worker)
-        await fetch(`${API}/api/user-flags`, {method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        showToast("Roster updated");
-      }, { once:true }); // once attaches a single listener; page lifetime OK
-    }
-
-    function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>t.classList.add('hidden'),900) }
-
-    function buildUglyList(){
-      // Naive ranked table demo based on availability map
-      const tableHost = document.getElementById('uglyTable');
-      const rows = [];
-      for (const [date, halves] of Object.entries(state.shifts||{})){
-        for (const half of ["AM","PM"]){
-          const rank = [];
-          for (const u of users){
-            const st = state.availability?.[u.id]?.[date]?.[half] || "unset";
-            let score = st==="prefer"?3: st==="available"?1: st==="no"?-9: 0;
-            if(u.inactive) score -= 5;
-            if(u.reserve) score += 0.5; // small encouragement
-            rank.push({date, half, user: u.name, score});
-          }
-          rank.sort((a,b)=>b.score-a.score);
-          rows.push({ date, half, top: rank.slice(0,5) });
-        }
-      }
-      const html = rows.slice(0,60).map(r=>{
-        const best = r.top.map(x=>`${x.user} (${x.score})`).join(", ");
-        return `<tr><td>${r.date}</td><td>${r.half}</td><td>${best}</td></tr>`;
-      }).join("");
-      tableHost.innerHTML = `<table><thead><tr><th>Date</th><th>Half</th><th>Top candidates</th></tr></thead><tbody>${html}</tbody></table>`;
-    }
-
-    function uglyOpen(){ document.getElementById('uglyModal').style.display='flex'; buildUglyList() }
-    function uglyClose(){ document.getElementById('uglyModal').style.display='none' }
-    window.uglyClose = uglyClose;
-
-    async function loadAndRender(){
-      users = await fetchUsers();
-      state = await fetchState(startOfMonth(base), endOfMonth(base));
-      renderMonth(base);
-      buildRoster();
-    }
-
-    document.getElementById('uglyBtn').onclick = uglyOpen;
-    document.getElementById('prevBtn').onclick = ()=>{ base=new Date(base.getFullYear(),base.getMonth()-1,1); loadAndRender() }
-    document.getElementById('nextBtn').onclick = ()=>{ base=new Date(base.getFullYear(),base.getMonth()+1,1); loadAndRender() }
-    document.getElementById('thisBtn').onclick = ()=>{ base=new Date(); loadAndRender() }
-
-    loadAndRender();
-  </script>
+  load();
+})();
+</script>
 </body>
 </html>

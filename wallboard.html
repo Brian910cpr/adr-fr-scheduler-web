@@ -1,70 +1,192 @@
+<!-- wallboard.html — Public read-only monthly board (drop-in) -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>ShiftCommander • Wallboard</title>
 <style>
-  :root{ --bg:#0c0f14; --panel:#141a22; --ring:#314056; --ink:#e8eef7; --muted:#8aa; --need:#d9a400; --ok:#18a957; }
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#0f141b)}
-  h1{margin:0;font-size:18px;font-weight:700}
-  .tabs{margin-left:auto;display:flex;gap:6px}
-  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c5cfdb;text-decoration:none}
-  .tab.active{background:var(--ring);color:var(--ink)}
-  .wrap{padding:14px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-  .card{position:relative;border:1px solid var(--ring);background:#10161d;border-radius:12px;padding:10px;min-height:96px}
-  .date{font-weight:700;margin-bottom:6px}
-  .line{border:1px dashed #2b394b;border-radius:8px;padding:6px 8px;margin-top:6px}
-  .assignees{color:#cdd6e2}
-  .nudge{position:absolute;top:8px;right:8px;display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--need)}
-  .nudge.ok{background:var(--ok)}
-  .needtxt{position:absolute;top:6px;right:22px;color:#f3d76c;font-size:12px}
+  :root{
+    --bg:#0c0f14; --panel:#10161d; --frame:#141a22; --ring:#2b394b;
+    --ink:#e8eef7; --muted:#8ea0b6;
+    --chip:#0f141b; --ok:#18a957; --warn:#ffb020; --bad:#e05252; --info:#2e86ff;
+    --als:#b066ff; --emt:#2dd4bf; --drv:#7aa2ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;
+          padding:14px 16px;border-bottom:1px solid var(--ring);
+          background:linear-gradient(180deg,var(--frame),var(--panel))}
+  h1{margin:0;font-size:18px;font-weight:800}
+  .sub{color:var(--muted);font-weight:600;margin-left:6px}
+  .controls{display:flex;gap:8px;align-items:center}
+  button{background:var(--chip);color:var(--ink);border:1px solid var(--ring);border-radius:10px;padding:8px 10px;cursor:pointer}
+  .wrap{padding:12px 16px}
+  .board{background:var(--frame);border:1px solid var(--ring);border-radius:14px;padding:12px}
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .month{font-weight:800}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;color:var(--muted);font-size:12px;padding:0 2px 8px}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .day{background:var(--panel);border:1px solid var(--ring);border-radius:12px;min-height:128px;padding:8px;position:relative}
+  .dim{opacity:.35}
+  .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted);font-weight:700}
+  .shift{margin-top:18px;border-top:1px dashed var(--ring);padding-top:8px}
+  .shift:first-of-type{margin-top:6px;border-top:none;padding-top:0}
+  .sh-title{font-size:12px;color:#cbd6e2;font-weight:800;margin-bottom:6px}
+  .assignees{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;font-weight:700;border:1px solid transparent}
+  .role-ALS{background:color-mix(in oklab, var(--als) 18%, black);border-color:var(--als);color:#fff}
+  .role-EMT{background:color-mix(in oklab, var(--emt) 18%, black);border-color:var(--emt);color:#031b19}
+  .role-Driver{background:color-mix(in oklab, var(--drv) 18%, black);border-color:var(--drv);color:#0b1320}
+  .role-Other{background:#253140;border-color:#3a4a60;color:#d6e1ee}
+  .nudge{margin-top:6px;font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid var(--ring);
+         display:inline-flex;align-items:center;gap:6px}
+  .need{background:color-mix(in oklab, var(--bad) 15%, black);color:#ffecec;border-color:var(--bad)}
+  .ok{background:color-mix(in oklab, var(--ok) 10%, black);color:#dcffe9;border-color:var(--ok)}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;color:var(--muted);font-size:12px;margin-top:10px}
+  .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
+  .d-als{background:var(--als)} .d-emt{background:var(--emt)} .d-drv{background:var(--drv)}
+  .d-need{background:var(--bad)} .d-ok{background:var(--ok)}
+  .foot{color:var(--muted);font-size:12px;margin-top:8px}
+  @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} .dow{display:none} }
 </style>
 </head>
 <body>
 <header>
-  <h1>ShiftCommander <span style="color:var(--muted);font-weight:600;margin-left:6px;">Public (read-only)</span></h1>
-  <nav class="tabs">
-    <a class="tab" href="/member.html">Member</a>
-    <a class="tab" href="/supervisor.html">Supervisor</a>
-    <a class="tab active" href="/wallboard.html">Wallboard</a>
-  </nav>
+  <div>
+    <h1>ShiftCommander <span class="sub">Public wallboard</span></h1>
+  </div>
+  <div class="controls">
+    <button id="prev">◀</button>
+    <div id="mon" class="sub" style="min-width:12ch;text-align:center"></div>
+    <button id="next">▶</button>
+  </div>
 </header>
 
 <div class="wrap">
-  <div id="grid" class="grid"></div>
+  <div class="board">
+    <div class="head">
+      <div class="month" id="monthTitle">Month YYYY</div>
+      <div class="foot" id="windowLbl"></div>
+    </div>
+    <div class="dow"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
+    <div id="grid" class="grid"></div>
+    <div class="legend">
+      <span><span class="dot d-als"></span>ALS</span>
+      <span><span class="dot d-emt"></span>EMT</span>
+      <span><span class="dot d-drv"></span>Driver</span>
+      <span><span class="dot d-ok"></span>Fully covered</span>
+      <span><span class="dot d-need"></span>Needs coverage</span>
+    </div>
+  </div>
 </div>
 
 <script>
-(async () => {
+(() => {
   const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+
   const grid = document.getElementById('grid');
+  const monthTitle = document.getElementById('monthTitle');
+  const windowLbl = document.getElementById('windowLbl');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
+  const monLbl = document.getElementById('mon');
 
-  const [state, users] = await Promise.all([
-    fetch(API + '/api/state?start=' + spanStart() + '&end=' + spanEnd()).then(r=>r.json()),
-    fetch(API + '/api/users').then(r=>r.json())
-  ]);
+  let anchor = new Date(); anchor.setDate(1);
+  let users = [];  // [{id,name,role,...}] for role lookup
 
-  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  const iso = d => d.toISOString().slice(0,10);
+  const addDays = (d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
+  const calStart = (d)=>{ const f=new Date(d.getFullYear(), d.getMonth(), 1);
+    const w=(f.getDay()+6)%7; const s=new Date(f); s.setDate(f.getDate()-w); return s; };
 
-  const dates = Object.keys(state.shifts).sort();
-  for(const d of dates){
-    const card = document.createElement('div');
-    card.className = 'card';
+  async function jget(u){ const r=await fetch(u); if(!r.ok) throw new Error(u+' → '+r.status); return r.json(); }
 
-    const needInfo = computeNeed(state.shifts[d], userById);
-    const nudge = document.createElement('span');
-    nudge.className = 'nudge' + (needInfo.ok ? ' ok' : '');
-    card.appendChild(nudge);
-    if(!needInfo.ok){
-      const t = document.createElement('span');
-      t.className = 'needtxt';
-      t.textContent = needInfo.text;
-      card.appendChild(t);
+  function roleOf(id){
+    const u = usersById[id]; return u?.role || 'Other';
+  }
+  function tagFor(id){
+    const u = usersById[id] || {name:id,role:'Other'};
+    const r = u.role;
+    const div = document.createElement('span');
+    div.className = 'tag role-'+(r==='ALS'?'ALS':r==='EMT'?'EMT':r==='Driver'?'Driver':'Other');
+    div.textContent = u.name || id;
+    return div;
+  }
+  function needsFor(ids){
+    // Public nudge logic:
+    // none -> "Needs ALS & EMT"
+    // has only ALS -> "Needs EMT"
+    // has only EMT -> "Needs ALS"
+    // has both -> "OK"
+    // (Drivers are informative, not required for the OK state here)
+    let hasALS=false, hasEMT=false;
+    ids.forEach(id => {
+      const r = roleOf(id);
+      if(r==='ALS') hasALS=true;
+      if(r==='EMT') hasEMT=true;
+    });
+    if(ids.length===0) return {ok:false, text:'Needs ALS & EMT'};
+    if(hasALS && hasEMT) return {ok:true, text:'Covered'};
+    if(hasALS && !hasEMT) return {ok:false, text:'Needs EMT'};
+    if(!hasALS && hasEMT) return {ok:false, text:'Needs ALS'};
+    return {ok:false, text:'Needs ALS & EMT'};
+  }
+
+  let usersById = {};
+  async function load(){
+    users = await jget(API+'/api/users');
+    usersById = Object.fromEntries(users.map(u=>[u.id,u]));
+
+    const start = calStart(anchor);
+    const end = addDays(start, 41);
+    const window = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
+
+    monthTitle.textContent = anchor.toLocaleString(undefined,{month:'long',year:'numeric'});
+    monLbl.textContent = anchor.toLocaleString(undefined,{month:'short',year:'numeric'});
+    windowLbl.textContent = `${iso(start)} → ${iso(end)}`;
+
+    grid.innerHTML = '';
+    for(let i=0;i<42;i++){
+      const d = addDays(start,i);
+      const day = document.createElement('div');
+      const inMonth = d.getMonth()===anchor.getMonth();
+      day.className = 'day' + (inMonth?'':' dim');
+
+      const dnum = document.createElement('div');
+      dnum.className='dnum'; dnum.textContent=d.getDate();
+      day.appendChild(dnum);
+
+      const dateISO = iso(d);
+      const sh = (window.shifts && window.shifts[dateISO]) || {};
+      ['AM','PM'].forEach(half=>{
+        const box = document.createElement('div'); box.className='shift';
+        const title = document.createElement('div'); title.className='sh-title'; title.textContent=half;
+        const asg = (sh[half]?.assignees)||[];
+        const row = document.createElement('div'); row.className='assignees';
+        asg.forEach(id => row.appendChild(tagFor(id)));
+        const nudge = document.createElement('div');
+        const need = needsFor(asg);
+        nudge.className = 'nudge ' + (need.ok ? 'ok' : 'need');
+        nudge.textContent = need.ok ? 'Fully covered' : need.text;
+
+        box.appendChild(title);
+        box.appendChild(row);
+        box.appendChild(nudge);
+        day.appendChild(box);
+      });
+
+      grid.appendChild(day);
     }
+  }
 
-    const dateEl = document.createElement('div');
-    dateEl.className = 'date';
-    dateEl.textContent = new Date(d+'T00:00:00').toLocaleDateString
+  prev.addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()-1); load(); });
+  next.addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()+1); load(); });
+
+  load().catch(e=>{
+    grid.innerHTML = `<div style="color:#f99">API error. ${String(e&&e.message||e)}</div>`;
+  });
+})();
+</script>
+</body>
+</html>

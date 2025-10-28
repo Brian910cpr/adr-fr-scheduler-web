@@ -1,3 +1,4 @@
+<!-- member.html (drop-in replacement) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -25,23 +26,24 @@
   .month-title{font-weight:700}
   .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:0 4px 8px 4px;color:var(--muted);font-size:12px}
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  .day{position:relative;background:var(--card);border:1px dashed var(--ring);border-radius:12px;min-height:110px;padding:8px}
+  .day{position:relative;background:var(--card);border:1px dashed var(--ring);border-radius:12px;min-height:128px;padding:8px}
   .day.dim{opacity:.35}
   .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted);font-weight:700}
   .shifts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:18px}
+  .half{display:flex;flex-direction:column;gap:6px}
   .pill{display:flex;align-items:center;justify-content:center;height:32px;border-radius:999px;border:1px solid transparent;color:#0e151b;font-weight:800;cursor:pointer;user-select:none;transition:transform .05s}
   .pill:active{transform:scale(.98)}
   .state-prefer{background:var(--ok)}
   .state-available{background:var(--avail)}
   .state-no{background:var(--no)}
   .state-unset{background:#2b394b;color:var(--ink)}
-  .note-mini{margin-left:6px;font-size:12px;padding:3px 7px;border-radius:999px;background:transparent;color:#9aa6b2;border:1px solid var(--ring);cursor:pointer}
+  .note-mini{font-size:12px;padding:4px 8px;border-radius:999px;background:transparent;color:#9aa6b2;border:1px solid var(--ring);cursor:pointer;align-self:center}
+  .note-mini.has{background:#fff;color:#000;border-color:#fff}
   .legend{display:flex;gap:14px;align-items:center;color:var(--ink-soft);font-size:12px;padding:10px 2px}
   .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
   .dot.prefer{background:var(--ok)} .dot.avail{background:var(--avail)} .dot.none{background:#2b394b} .dot.no{background:var(--no)}
   .msg{color:var(--no);padding:0 16px}
 
-  /* Tools panel */
   details.tools{margin:12px 16px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
   details.tools>summary{cursor:pointer;padding:10px 12px;font-weight:700;list-style:none}
   .tools-body{padding:10px 12px;display:grid;gap:14px}
@@ -49,8 +51,7 @@
   .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:var(--chip)}
   .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--ring);background:var(--chip);cursor:pointer}
   .btn.primary{background:#1b2431}
-  textarea{width:100%}
-  /* Note modal */
+
   .note-modal{position:fixed;inset:0;background:rgba(7,10,14,.82);display:none;align-items:center;justify-content:center;padding:16px}
   .note-modal.show{display:flex}
   .note-card{width:min(520px,96vw);background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
@@ -132,8 +133,10 @@
 
       <div class="row" style="gap:12px;align-items:flex-end">
         <div>
-          <div style="font-weight:600;margin-bottom:6px">Weekly pattern (repeat until date)</div>
+          <div style="font-weight:600;margin-bottom:6px">Weekly pattern (repeat between dates)</div>
           <div class="row">
+            <span>Start</span> <input type="date" id="patternStart">
+            <span>Repeat until</span> <input type="date" id="patternUntil">
             <label class="chip"><input type="checkbox" class="wday" value="Mon"> Mon</label>
             <label class="chip"><input type="checkbox" class="wday" value="Tue"> Tue</label>
             <label class="chip"><input type="checkbox" class="wday" value="Wed"> Wed</label>
@@ -141,8 +144,6 @@
             <label class="chip"><input type="checkbox" class="wday" value="Fri"> Fri</label>
             <label class="chip"><input type="checkbox" class="wday" value="Sat"> Sat</label>
             <label class="chip"><input type="checkbox" class="wday" value="Sun"> Sun</label>
-            <span>Repeat until</span>
-            <input type="date" id="patternUntil">
             <label class="chip"><input type="checkbox" id="patAM" checked> AM</label>
             <label class="chip"><input type="checkbox" id="patPM" checked> PM</label>
             <label>Set to
@@ -209,15 +210,14 @@
   const bulkState = document.getElementById('bulkState');
   const bulkAM = document.getElementById('bulkAM');
   const bulkPM = document.getElementById('bulkPM');
-  const applyBulk = document.getElementById('applyBulk');
-  const wdayBoxes = () => [...document.querySelectorAll('.wday')];
+  const patternStart = document.getElementById('patternStart');
   const patternUntil = document.getElementById('patternUntil');
   const patternState = document.getElementById('patternState');
   const patAM = document.getElementById('patAM');
   const patPM = document.getElementById('patPM');
+  const applyBulk = document.getElementById('applyBulk');
   const applyPattern = document.getElementById('applyPattern');
   const avoidList = document.getElementById('avoidList');
-  const saveAvoid = document.getElementById('saveAvoid');
 
   // Notes
   const noteModal = document.getElementById('noteModal');
@@ -247,7 +247,7 @@
     no:'pill state-no', unset:'pill state-unset'
   }[s] || 'pill state-unset');
 
-  let windowData = { availability:{}, prefs:{}, notes:{} };
+  let windowData = { availability:{}, prefs:{}, notes:{} }; // notes optional
 
   // Basic fetch with error surfacing
   async function jget(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+' → '+r.status); return r.json(); }
@@ -266,7 +266,13 @@
   async function loadWindow(){
     const start = startOfCalendar(anchor);
     const end = addDays(start,41);
+    // base state
     windowData = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
+    // optional notes fetch (ignore if endpoint missing)
+    try{
+      const notes = await jget(`${API}/api/notes?user_id=${encodeURIComponent(currentUser)}&start=${iso(start)}&end=${iso(end)}`);
+      windowData.notes = notes?.notes || {};
+    }catch(e){ /* ok if 404 */ }
     hydratePrefs();
     render();
   }
@@ -274,10 +280,16 @@
   function hydratePrefs(){
     const p = windowData.prefs?.[currentUser] || {};
     pref24.checked = !!p.prefer24s;
-    // if your prefs API also stores type3/inactive in users, mirror them:
     const me = users.find(u=>u.id===currentUser);
     type3.checked = !!(p.type3_driver ?? me?.type3_driver);
     inactive.checked = !!(me?.inactive);
+  }
+
+  function noteExists(dateISO, half){
+    const nuser = windowData.notes?.[currentUser] || {};
+    const nday = nuser[dateISO] || {};
+    const text = (nday[half]||'').trim();
+    return text.length>0;
   }
 
   function render(){
@@ -309,7 +321,7 @@
         const state = dmap[half] || 'unset';
 
         const wrap = document.createElement('div');
-        wrap.style.display='flex';wrap.style.alignItems='center';wrap.style.justifyContent='center';
+        wrap.className='half';
 
         const el = document.createElement('div');
         el.className = pillClass(state);
@@ -325,34 +337,45 @@
         });
 
         const nb = document.createElement('button');
-        nb.className = 'note-mini';
+        nb.className = 'note-mini' + (noteExists(dateISO,half)?' has':'');
         nb.textContent = 'note';
         nb.title = 'Note to supervisor for this shift';
-        nb.addEventListener('click', ()=> openNote(dateISO, half));
+        nb.addEventListener('click', ()=> openNote(dateISO, half, nb));
 
-        wrap.appendChild(el); wrap.appendChild(nb);
+        wrap.appendChild(el);
+        wrap.appendChild(nb);
         return wrap;
       }
     }
   }
 
-  function openNote(dateISO, half){
-    noteCtx = {dateISO, half};
+  function openNote(dateISO, half, buttonEl){
+    noteCtx = {dateISO, half, buttonEl};
     noteMeta.textContent = `${dateISO} • ${half}`;
-    noteText.value = '';
+    const existing = windowData.notes?.[currentUser]?.[dateISO]?.[half] || '';
+    noteText.value = existing;
     noteModal.classList.add('show');
   }
   noteClose.addEventListener('click', ()=> noteModal.classList.remove('show'));
   noteSave.addEventListener('click', async ()=>{
     if(!noteCtx || !currentUser) return;
+    const text = noteText.value.trim();
     try{
-      await jpost(API + '/api/note', { user_id: currentUser, date: noteCtx.dateISO, half: noteCtx.half, note: noteText.value.trim() });
+      await jpost(API + '/api/note', { user_id: currentUser, date: noteCtx.dateISO, half: noteCtx.half, note: text });
+      // update local cache so the button style reflects presence
+      windowData.notes ||= {};
+      windowData.notes[currentUser] ||= {};
+      windowData.notes[currentUser][noteCtx.dateISO] ||= {};
+      windowData.notes[currentUser][noteCtx.dateISO][noteCtx.half] = text;
+      if(noteCtx.buttonEl){
+        if(text) noteCtx.buttonEl.classList.add('has'); else noteCtx.buttonEl.classList.remove('has');
+      }
       flash('Note saved'); noteModal.classList.remove('show');
     }catch(e){ flash('Note save failed'); }
   });
 
   // Tools actions
-  savePrefs.addEventListener('click', async ()=>{
+  document.getElementById('savePrefs').addEventListener('click', async ()=>{
     try{
       await jpost(API + '/api/prefs', { user_id: currentUser, prefer24s: !!pref24.checked, type3_driver: !!type3.checked, inactive: !!inactive.checked });
       flash('Preferences saved');
@@ -371,16 +394,19 @@
   });
 
   applyPattern.addEventListener('click', async ()=>{
-    const until=patternUntil.value; if(!until) return flash('Pick an until date');
-    const days=wdayBoxes().filter(b=>b.checked).map(b=>b.value); if(!days.length) return flash('Select weekdays');
-    const halves=[patAM.checked&&'AM', patPM.checked&&'PM'].filter(Boolean); if(!halves.length) return flash('Select AM and/or PM');
+    const from=patternStart.value; const until=patternUntil.value;
+    if(!from || !until) return flash('Pick start & until dates');
+    const days=[...document.querySelectorAll('.wday')].filter(b=>b.checked).map(b=>b.value);
+    if(!days.length) return flash('Select weekdays');
+    const halves=[patAM.checked&&'AM', patPM.checked&&'PM'].filter(Boolean);
+    if(!halves.length) return flash('Select AM and/or PM');
     try{
-      await jpost(API + '/api/weekly-pattern', { user_id: currentUser, days, until, state: patternState.value, halves });
+      await jpost(API + '/api/weekly-pattern', { user_id: currentUser, start: from, until, days, state: patternState.value, halves });
       flash('Pattern applied'); await loadWindow();
     }catch(e){ flash('Pattern failed'); }
   });
 
-  saveAvoid.addEventListener('click', async ()=>{
+  document.getElementById('saveAvoid').addEventListener('click', async ()=>{
     try{ await jpost(API + '/api/avoid', { user_id: currentUser, avoid: avoidList.value }); flash('Avoid list saved'); }
     catch(e){ flash('Save failed'); }
   });
@@ -389,7 +415,6 @@
   prevBtn.addEventListener('click', async ()=>{ anchor.setMonth(anchor.getMonth()-1); await loadWindow(); });
   nextBtn.addEventListener('click', async ()=>{ anchor.setMonth(anchor.getMonth()+1); await loadWindow(); });
 
-  // boot
   (async () => {
     try{ await loadUsers(); await loadWindow(); }
     catch(e){ msg.textContent = 'API error: ' + (e?.message||e); }
