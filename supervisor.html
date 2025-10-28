@@ -1,157 +1,94 @@
-<!-- supervisor.html — Week-at-a-glance calendar with arrows; Month view toggle; Options restored -->
-<!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ShiftCommander · Supervisor</title>
+<!-- supervisor.html (drop-in replacement or merge the "Notes" panel) -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShiftCommander • Supervisor</title>
 <style>
-:root{--bg:#0d1117;--panel:#161b22;--ink:#e6edf3;--muted:#8b949e;--line:#2a2f37;--accent:#58a6ff}
-html,body{background:var(--bg);color:var(--ink);margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial}
-.wrap{max-width:1200px;margin:20px auto;padding:0 12px}
-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-select,button,input{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px}
-.board{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
-.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-.day{border:1px dashed #2b313a;border-radius:12px;padding:10px;min-height:120px}
-.date{font-weight:800;font-size:18px;margin-bottom:6px}
-.slot{display:flex;gap:8px;align-items:center;margin:4px 0}
-.badge{background:#1b2430;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-weight:700}
-.names{font-weight:700}
-.optCard{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
-.leg{color:var(--muted);font-size:12px;margin-top:6px}
+  :root{--bg:#0c0f14;--panel:#141a22;--ink:#e8eef7;--muted:#8ea0b6;--ring:#2b394b}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#10161d)}
+  h1{margin:0;font-size:18px;font-weight:700}
+  .tabs{margin-left:auto;display:flex;gap:6px}
+  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c6d2df;text-decoration:none}
+  .tab.active{background:var(--ring);color:var(--ink)}
+  .wrap{padding:16px;display:grid;gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:8px;border-bottom:1px solid var(--ring);text-align:left}
+  th{color:#b9c6d5}
+  .muted{color:var(--muted)}
 </style>
-</head><body><div class="wrap">
-  <header>
-    <h2 style="margin:0">ShiftCommander <span style="color:var(--muted)">Supervisor</span></h2>
-    <button id="prev">◀</button><div id="label" style="min-width:200px;text-align:center"></div><button id="next">▶</button>
-    <label style="margin-left:10px"><input type="checkbox" id="monthToggle"> Month at a glance</label>
-  </header>
+</head>
+<body>
+<header>
+  <h1>ShiftCommander <span class="muted" style="margin-left:6px">Supervisor</span></h1>
+  <nav class="tabs">
+    <a class="tab" href="/member.html">Member</a>
+    <a class="tab active" href="/supervisor.html">Supervisor</a>
+    <a class="tab" href="/wallboard.html">Wallboard</a>
+  </nav>
+</header>
 
-  <section class="board">
-    <div id="grid" class="grid7"></div>
-    <div class="leg">Week view scrolls by 7-day blocks; Month view shows a 6-row calendar.</div>
-  </section>
+<div class="wrap">
+  <!-- existing supervisor content goes above/below as needed -->
 
-  <section class="optCard">
-    <h3 style="margin:0 0 6px 0">Options</h3>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-      <label>Jump to week starting <input type="date" id="jump"></label>
-      <button id="jumpBtn">Go</button>
+  <div class="panel">
+    <div class="row">
+      <strong>Notes (member → supervisor)</strong>
+      <span class="muted" id="noteWindow"></span>
+      <div style="margin-left:auto">
+        <button id="prev" title="Prev week">◀</button>
+        <button id="next" title="Next week">▶</button>
+      </div>
     </div>
-  </section>
+    <table>
+      <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
+      <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-const API = p => `https://adr-fr-scheduler-api.brian-9ac.workers.dev${p}`;
-const fmt = d => d.toISOString().slice(0,10);
-const label = d => d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+(() => {
+  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const tbody = document.getElementById('notesBody');
+  const winLbl = document.getElementById('noteWindow');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
 
-let users = [], id2name = {};
-let cursor = new Date(); // week start (Mon)
-cursor.setDate(cursor.getDate() - ((cursor.getDay()+6)%7));
+  let anchor = new Date(); // week anchor (Monday)
+  function monday(d){ const c=new Date(d); const k=(c.getDay()+6)%7; c.setDate(c.getDate()-k); return c; }
+  function iso(d){ return d.toISOString().slice(0,10); }
 
-function monFirst(d){ return (d.getDay()+6)%7; }
-function monthBounds(dt){
-  const first = new Date(dt.getFullYear(), dt.getMonth(), 1);
-  const start = new Date(first); start.setDate(first.getDate()-monFirst(first));
-  const end = new Date(start); end.setDate(start.getDate()+41);
-  return {start,end};
-}
+  async function jget(u){ const r=await fetch(u); if(!r.ok) throw 0; return r.json(); }
 
-async function loadUsers(){ users = await (await fetch(API('/api/users'))).json(); id2name = Object.fromEntries(users.map(u=>[u.id,u.name])); }
+  async function load(){
+    const start = monday(anchor);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    winLbl.textContent = `(${iso(start)} → ${iso(end)})`;
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
 
-async function loadState(start,end){
-  const res = await fetch(API(`/api/state?start=${fmt(start)}&end=${fmt(end)}`));
-  return await res.json();
-}
-
-function renderWeek(data){
-  const grid = document.getElementById('grid');
-  grid.className = 'grid7';
-  const cells = [];
-  for(let i=0;i<7;i++){
-    const d = new Date(cursor); d.setDate(cursor.getDate()+i);
-    const ymd = fmt(d);
-    const s = data.shifts?.[ymd] || {};
-    const am = (s.AM?.assignees||[]).map(id=>id2name[id]).join(", ");
-    const pm = (s.PM?.assignees||[]).map(id=>id2name[id]).join(", ");
-    cells.push(`
-      <div class="day">
-        <div class="date">${label(d)}</div>
-        <div class="slot"><span class="badge">AM</span> <span class="names">${am || '—'}</span></div>
-        <div class="slot"><span class="badge">PM</span> <span class="names">${pm || '—'}</span></div>
-      </div>
-    `);
+    // try notes endpoint; if missing, show message
+    try{
+      const data = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
+      const rows = data?.rows || []; // expected: [{date:'YYYY-MM-DD', half:'AM', user_id:'u1', user_name:'Alex', note:'...'}]
+      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="4" class="muted">No notes.</td></tr>`; return; }
+      tbody.innerHTML = rows.map(r=>(
+        `<tr><td>${r.date}</td><td>${r.half}</td><td>${r.user_name||r.user_id||''}</td><td>${(r.note||'').replace(/</g,'&lt;')}</td></tr>`
+      )).join('');
+    }catch{
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`;
+    }
   }
-  grid.innerHTML = cells.join('');
-  document.getElementById('label').textContent =
-    `${label(cursor)} → ${label(new Date(cursor.getFullYear(),cursor.getMonth(),cursor.getDate()+6))}`;
-}
 
-function renderMonth(data){
-  const grid = document.getElementById('grid');
-  grid.className = 'grid7';
-  const base = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  const {start} = monthBounds(base);
-  const cells = [];
-  for(let i=0;i<42;i++){
-    const d = new Date(start); d.setDate(start.getDate()+i);
-    const ymd = fmt(d);
-    const s = data.shifts?.[ymd] || {};
-    const am = (s.AM?.assignees||[]).map(id=>id2name[id]).join(", ");
-    const pm = (s.PM?.assignees||[]).map(id=>id2name[id]).join(", ");
-    const op = d.getMonth()===base.getMonth()?1:.45;
-    cells.push(`
-      <div class="day" style="opacity:${op}">
-        <div class="date">${d.getDate()}</div>
-        <div class="slot"><span class="badge">AM</span> <span class="names">${am || '—'}</span></div>
-        <div class="slot"><span class="badge">PM</span> <span class="names">${pm || '—'}</span></div>
-      </div>
-    `);
-  }
-  grid.innerHTML = cells.join('');
-  document.getElementById('label').textContent =
-    base.toLocaleString(undefined,{month:'long',year:'numeric'});
-}
+  prev.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()-7); load(); });
+  next.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()+7); load(); });
 
-async function draw(){
-  const monthMode = document.getElementById('monthToggle').checked;
-  if (monthMode){
-    const base = new Date(cursor.getFullYear(),cursor.getMonth(),1);
-    const {start,end} = monthBounds(base);
-    const data = await loadState(start,end);
-    renderMonth(data);
-  } else {
-    const start = new Date(cursor);
-    const end = new Date(cursor); end.setDate(start.getDate()+6);
-    const data = await loadState(start,end);
-    renderWeek(data);
-  }
-}
-
-document.getElementById('prev').onclick = async ()=>{
-  if (document.getElementById('monthToggle').checked){
-    cursor = new Date(cursor.getFullYear(), cursor.getMonth()-1, 1);
-  } else {
-    cursor.setDate(cursor.getDate()-7);
-  }
-  await draw();
-};
-document.getElementById('next').onclick = async ()=>{
-  if (document.getElementById('monthToggle').checked){
-    cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
-  } else {
-    cursor.setDate(cursor.getDate()+7);
-  }
-  await draw();
-};
-document.getElementById('monthToggle').onchange = draw;
-document.getElementById('jumpBtn').onclick = async ()=>{
-  const v = (document.getElementById('jump').value)||"";
-  if (!v) return;
-  const d = new Date(v);
-  d.setDate(d.getDate() - ((d.getDay()+6)%7));
-  cursor = d; await draw();
-};
-
-(async function(){ await loadUsers(); await draw(); })();
+  load();
+})();
 </script>
-</body></html>
+</body>
+</html>
