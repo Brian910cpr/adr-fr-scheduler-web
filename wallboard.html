@@ -1,72 +1,70 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>ShiftCommander · Wallboard</title>
-  <style>
-    :root{--bg:#0b0c0f;--panel:#0f1117;--ink:#e8e8ea;--muted:#a4a7ae;--line:#2a2e37;--card:#151824;--ok:#30d158;--warn:#ffd60a;--bad:#ff453a}
-    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
-    .head{display:flex;justify-content:space-between;align-items:center}
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(7,1fr);margin-top:12px}
-    .cell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:110px}
-    .sub{color:var(--muted);font-size:12px}
-    .row{display:flex;gap:10px;align-items:center}
-    .dot{width:8px;height:8px;border-radius:50%}
-    .ok{background:var(--ok)}.warn{background:var(--warn)}.bad{background:var(--bad)}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShiftCommander • Wallboard</title>
+<style>
+  :root{ --bg:#0c0f14; --panel:#141a22; --ring:#314056; --ink:#e8eef7; --muted:#8aa; --need:#d9a400; --ok:#18a957; }
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#0f141b)}
+  h1{margin:0;font-size:18px;font-weight:700}
+  .tabs{margin-left:auto;display:flex;gap:6px}
+  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c5cfdb;text-decoration:none}
+  .tab.active{background:var(--ring);color:var(--ink)}
+  .wrap{padding:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .card{position:relative;border:1px solid var(--ring);background:#10161d;border-radius:12px;padding:10px;min-height:96px}
+  .date{font-weight:700;margin-bottom:6px}
+  .line{border:1px dashed #2b394b;border-radius:8px;padding:6px 8px;margin-top:6px}
+  .assignees{color:#cdd6e2}
+  .nudge{position:absolute;top:8px;right:8px;display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--need)}
+  .nudge.ok{background:var(--ok)}
+  .needtxt{position:absolute;top:6px;right:22px;color:#f3d76c;font-size:12px}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="head">
-      <h1 style="margin:0;font-weight:800">ShiftCommander · Wallboard</h1>
-      <div class="sub" id="when"></div>
-    </div>
-    <div id="grid" class="grid" aria-live="polite"></div>
-  </div>
-  <script>
-    const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    const fmt= d=>d.toISOString().slice(0,10);
-    const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x}
-    const startOfMonth=d=>new Date(d.getFullYear(),d.getMonth(),1);
-    const endOfMonth=d=>new Date(d.getFullYear(),d.getMonth()+1,0);
-    let base=new Date();
+<header>
+  <h1>ShiftCommander <span style="color:var(--muted);font-weight:600;margin-left:6px;">Public (read-only)</span></h1>
+  <nav class="tabs">
+    <a class="tab" href="/member.html">Member</a>
+    <a class="tab" href="/supervisor.html">Supervisor</a>
+    <a class="tab active" href="/wallboard.html">Wallboard</a>
+  </nav>
+</header>
 
-    function names(ids, users){ return ids.map(id=>users.find(u=>u.id===id)?.name||id).join(", ") || "—" }
+<div class="wrap">
+  <div id="grid" class="grid"></div>
+</div>
 
-    async function render(){
-      const start=startOfMonth(base), end=endOfMonth(base);
-      document.getElementById('when').textContent = start.toLocaleString([], {month:"long", year:"numeric"});
-      const [state, users] = await Promise.all([
-        fetch(`${API}/api/state?start=${fmt(start)}&end=${fmt(end)}`).then(r=>r.json()),
-        fetch(`${API}/api/users`).then(r=>r.json())
-      ]);
-      const days=[]; let c=new Date(start); c.setDate(1-c.getDay());
-      const last=new Date(end); last.setDate(last.getDate()+(6-last.getDay()));
-      while(c<=last){ days.push(new Date(c)); c=addDays(c,1) }
+<script>
+(async () => {
+  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const grid = document.getElementById('grid');
 
-      const g=document.getElementById('grid'); g.innerHTML="";
-      for(const d of days){
-        const ds=fmt(d);
-        const am=state.shifts?.[ds]?.AM||{assignees:[]};
-        const pm=state.shifts?.[ds]?.PM||{assignees:[]};
-        g.insertAdjacentHTML("beforeend",`
-          <div class="cell">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>${d.toLocaleString([], {month:"short",day:"numeric"})}</div>
-              <div class="sub">Nudge: Needs EMT</div>
-            </div>
-            <div class="row sub" style="margin-top:6px"><div class="dot ok"></div><div>AM</div><div>${names(am.assignees,users)}</div></div>
-            <div class="row sub" style="margin-top:6px"><div class="dot warn"></div><div>PM</div><div>${names(pm.assignees,users)}</div></div>
-          </div>
-        `);
-      }
+  const [state, users] = await Promise.all([
+    fetch(API + '/api/state?start=' + spanStart() + '&end=' + spanEnd()).then(r=>r.json()),
+    fetch(API + '/api/users').then(r=>r.json())
+  ]);
 
-      // Auto-return to current month after 20s if someone scrolled away
-      setTimeout(()=>{ base=new Date(); render() }, 20000);
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+
+  const dates = Object.keys(state.shifts).sort();
+  for(const d of dates){
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const needInfo = computeNeed(state.shifts[d], userById);
+    const nudge = document.createElement('span');
+    nudge.className = 'nudge' + (needInfo.ok ? ' ok' : '');
+    card.appendChild(nudge);
+    if(!needInfo.ok){
+      const t = document.createElement('span');
+      t.className = 'needtxt';
+      t.textContent = needInfo.text;
+      card.appendChild(t);
     }
-    render();
-  </script>
-</body>
-</html>
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'date';
+    dateEl.textContent = new Date(d+'T00:00:00').toLocaleDateString

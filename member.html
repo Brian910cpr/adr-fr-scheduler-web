@@ -8,7 +8,7 @@
   :root{
     --bg:#0c0f14; --panel:#141a22; --muted:#7e8ca0; --ink:#e8eef7; --ink-soft:#c5cfdb;
     --ring:#314056; --card:#10161d; --card2:#0f141b; --ok:#18a957; --avail:#2e86ff;
-    --warn:#d9a400; --no:#d34b4b; --note:#9aa6b2;
+    --no:#d34b4b; --note:#9aa6b2;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
@@ -30,15 +30,13 @@
   .day.dim{opacity:0.35}
   .dnum{position:absolute;top:6px;right:8px;font-size:12px;color:var(--muted)}
   .shifts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:18px}
-  .pill{display:flex;align-items:center;justify-content:center;height:28px;border-radius:999px;border:1px solid var(--ring);color:var(--ink-soft);cursor:pointer;user-select:none;transition:transform .05s}
+  .pill{display:flex;align-items:center;justify-content:center;height:30px;border-radius:999px;border:1px solid transparent;color:#0e151b;font-weight:700;cursor:pointer;user-select:none;transition:transform .05s}
   .pill:active{transform:scale(.98)}
-  .AM::before,.PM::before{content:attr(data-label);font-weight:700;margin-right:6px;color:var(--ink)}
-  .AM[data-label="AM"]::before{}
-  .PM[data-label="PM"]::before{}
-  .state-prefer{background:color-mix(in srgb, var(--ok) 18%, transparent);border-color:color-mix(in srgb, var(--ok) 55%, var(--ring));color:var(--ink)}
-  .state-available{background:color-mix(in srgb, var(--avail) 16%, transparent);border-color:color-mix(in srgb, var(--avail) 55%, var(--ring));color:var(--ink)}
-  .state-unset{background:transparent}
-  .state-no{background:color-mix(in srgb, var(--no) 16%, transparent);border-color:color-mix(in srgb, var(--no) 55%, var(--ring));color:var(--ink)}
+  .AM::before,.PM::before{content:attr(data-label);margin-right:0}
+  .state-prefer{background:var(--ok)}
+  .state-available{background:var(--avail)}
+  .state-unset{background:#2b394b;color:var(--ink)}
+  .state-no{background:var(--no)}
   .note-btn{position:absolute;left:8px;top:6px;font-size:12px;color:var(--note);background:transparent;border:0;cursor:pointer}
   .note-pop{position:absolute;inset:0;background:rgba(7,10,14,.97);border:1px solid var(--ring);border-radius:12px;padding:10px;display:none}
   .note-pop.show{display:block}
@@ -52,7 +50,6 @@
   .dot.avail{background:var(--avail)}
   .dot.none{background:#2b394b}
   .dot.no{background:var(--no)}
-  .sr{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
   .msg{color:var(--no);padding:0 16px}
 </style>
 </head>
@@ -60,9 +57,9 @@
   <header>
     <h1>ShiftCommander <span style="color:var(--muted);font-weight:600;margin-left:6px;">Member</span></h1>
     <nav class="tabs">
-      <a class="tab active" href="member.html">Member</a>
-      <a class="tab" href="supervisor.html">Supervisor</a>
-      <a class="tab" href="wallboard.html">Wallboard</a>
+      <a class="tab active" href="/member.html">Member</a>
+      <a class="tab" href="/supervisor.html">Supervisor</a>
+      <a class="tab" href="/wallboard.html">Wallboard</a>
     </nav>
   </header>
 
@@ -109,39 +106,27 @@
 
   let users = [];
   let currentUser = null;
-  let anchor = new Date(); // first day shown belongs to this month
-  anchor.setDate(1);
+  let anchor = new Date(); anchor.setDate(1);
 
-  // --- utilities
   const iso = d => d.toISOString().slice(0,10);
   const addDays = (d,n) => { const c=new Date(d); c.setDate(c.getDate()+n); return c; };
   const startOfCalendar = (d) => {
-    // Monday-based start
-    const day = (d.getDay()+6)%7; // 0..6 with Mon=0
-    const first = new Date(d);
-    first.setDate(1);
-    const shift = (day === 0) ? 0 : day;
+    const first = new Date(d.getFullYear(), d.getMonth(), 1);
+    const weekdayMon0 = (first.getDay()+6)%7;
     const calStart = new Date(first);
-    calStart.setDate(first.getDate() - shift);
+    calStart.setDate(first.getDate() - weekdayMon0);
     return calStart;
   };
 
   const STATES = ['unset','prefer','available','no'];
-  const nextState = (s) => {
-    const i = STATES.indexOf(s);
-    return STATES[(i+1)%STATES.length];
-  };
+  const nextState = (s) => STATES[(STATES.indexOf(s)+1)%STATES.length];
+  const pillClassFor = (s) => ({
+    prefer:'pill state-prefer',
+    available:'pill state-available',
+    no:'pill state-no',
+    unset:'pill state-unset'
+  }[s] || 'pill state-unset');
 
-  const pillClassFor = (s) => {
-    switch(s){
-      case 'prefer': return 'pill state-prefer';
-      case 'available': return 'pill state-available';
-      case 'no': return 'pill state-no';
-      default: return 'pill state-unset';
-    }
-  };
-
-  // --- data cache for visible window
   let windowData = { availability:{}, prefs:{} };
 
   async function loadUsers() {
@@ -154,11 +139,9 @@
   }
 
   async function loadWindow() {
-    // 6 weeks view
     const start = startOfCalendar(anchor);
-    const end = addDays(start, 6*7-1);
-    const qs = `?start=${iso(start)}&end=${iso(end)}`;
-    const r = await fetch(API + '/api/state' + qs);
+    const end = addDays(start, 42-1);
+    const r = await fetch(API + '/api/state?start='+iso(start)+'&end='+iso(end));
     if(!r.ok) throw new Error('state fetch failed');
     windowData = await r.json();
     render();
@@ -182,14 +165,12 @@
       dnum.textContent = d.getDate();
       dayDiv.appendChild(dnum);
 
-      // note button (opt-in popover)
       const nb = document.createElement('button');
       nb.className = 'note-btn';
       nb.textContent = '📝';
-      nb.title = 'Add a note to this date';
+      nb.title = 'Note to supervisor';
       dayDiv.appendChild(nb);
 
-      // shifts
       const shifts = document.createElement('div');
       shifts.className = 'shifts';
       const sAM = makePill('AM', dateISO, 'AM');
@@ -197,15 +178,14 @@
       shifts.append(sAM, sPM);
       dayDiv.appendChild(shifts);
 
-      // popover (stays overlay, cell size constant)
       const pop = document.createElement('div');
       pop.className = 'note-pop';
       pop.innerHTML = `
         <div class="note-head">
-          <strong>Notes – ${dateISO}</strong>
-          <label><input type="checkbox" id="enable-${dateISO}"> activate notes</label>
+          <strong>Note to supervisor</strong>
+          <label><input type="checkbox" id="enable-${dateISO}"> activate note</label>
         </div>
-        <textarea id="ta-${dateISO}" placeholder="Optional note for this date (kept small to avoid clutter)"></textarea>
+        <textarea id="ta-${dateISO}" placeholder="e.g., 'In at 10am'"></textarea>
         <div class="note-actions">
           <button data-act="close">Close</button>
           <button data-act="save">Save</button>
@@ -231,7 +211,6 @@
         }
       });
       dayDiv.appendChild(pop);
-
       nb.addEventListener('click', () => pop.classList.add('show'));
 
       grid.appendChild(dayDiv);
@@ -239,7 +218,6 @@
   }
 
   function makePill(label, dateISO, half) {
-    // current user’s state for this date/half
     const userMap = windowData.availability[currentUser] || {};
     const dayMap = userMap[dateISO] || {};
     const state = dayMap[half] || 'unset';
@@ -248,24 +226,20 @@
     el.className = pillClassFor(state);
     el.dataset.state = state;
     el.dataset.label = label;
-    el.classList.add(label); // AM/PM class
+    el.classList.add(label);
     el.setAttribute('data-label', label);
-    el.textContent = ''; // label rendered via ::before
 
     el.addEventListener('click', async () => {
       const next = nextState(el.dataset.state);
-      el.className = pillClassFor(next) + ' ' + label;
+      el.className = pillClassFor(next)+' '+label;
       el.dataset.state = next;
-      // optimistic save
       try{
         await fetch(API + '/api/availability', {
           method:'POST',
           headers:{'content-type':'application/json'},
           body: JSON.stringify({ user_id: currentUser, date: dateISO, half, state: next })
         });
-      }catch{
-        flash('Save failed'); // leave optimistic UI
-      }
+      }catch{ flash('Save failed'); }
     });
     return el;
   }
@@ -276,28 +250,13 @@
     flash._t = setTimeout(()=> msg.textContent='', 1600);
   }
 
-  // --- events
-  memberSel.addEventListener('change', async () => {
-    currentUser = memberSel.value;
-    await loadWindow();
-  });
-  prevBtn.addEventListener('click', async () => {
-    anchor.setMonth(anchor.getMonth()-1);
-    await loadWindow();
-  });
-  nextBtn.addEventListener('click', async () => {
-    anchor.setMonth(anchor.getMonth()+1);
-    await loadWindow();
-  });
+  memberSel.addEventListener('change', async () => { currentUser = memberSel.value; await loadWindow(); });
+  prevBtn.addEventListener('click', async () => { anchor.setMonth(anchor.getMonth()-1); await loadWindow(); });
+  nextBtn.addEventListener('click', async () => { anchor.setMonth(anchor.getMonth()+1); await loadWindow(); });
 
-  // init
   (async () => {
-    try{
-      await loadUsers();
-      await loadWindow();
-    }catch(e){
-      msg.textContent = 'API error: ' + (e?.message || e);
-    }
+    try{ await loadUsers(); await loadWindow(); }
+    catch(e){ msg.textContent = 'API error: ' + (e?.message || e); }
   })();
 })();
 </script>
