@@ -1,74 +1,209 @@
-<!doctype html><html><head><meta charset="utf-8"><title>ShiftCommander — Supervisor</title>
-<style>body{font-family:system-ui;background:#f6f7f9;margin:0} .wrap{max-width:1000px;margin:20px auto}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:12px 0}
-table{width:100%;border-collapse:collapse} th,td{border-bottom:1px solid #eee;padding:8px;text-align:left} .btn{padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer}
-</style></head><body><div class="wrap">
-<h2>Supervisor</h2>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ShiftCommander • Supervisor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0b1220;color:#e6ebf5}
+    header{padding:16px 20px;border-bottom:1px solid #1f2a44;display:flex;gap:12px;align-items:center}
+    .brand{font-weight:700;font-size:18px}
+    .chip{display:inline-flex;align-items:center;border:1px solid #1f2a44;padding:6px 10px;border-radius:999px;gap:8px;background:#0f1830}
+    .wrap{padding:20px;max-width:1100px;margin:0 auto;display:grid;gap:24px}
+    .card{background:#0f1830;border:1px solid #1f2a44;border-radius:16px;padding:16px}
+    .card h2{margin:0 0 12px 0;font-size:16px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #1f2a44;text-align:left;font-size:14px}
+    thead th{font-weight:600;color:#c8d2ea}
+    .muted{color:#9fb2d9}
+    .pill{font-size:12px;border:1px solid #2a3b6a;border-radius:999px;padding:2px 8px;background:#101c3a;color:#cfe0ff}
+    .row-actions{display:flex;gap:18px;align-items:center}
+    .note-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+    .note-cell{background:#0b152d;border:1px dashed #213361;border-radius:12px;padding:10px}
+    .note-cell h4{margin:0 0 8px 0;font-size:12px;color:#9fb2d9}
+    .note-cell input{width:100%;background:#081127;border:1px solid #213361;color:#e6ebf5;border-radius:8px;padding:8px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .toolbar input,.toolbar select,.toolbar button{
+      background:#0b152d;border:1px solid #213361;color:#e6ebf5;border-radius:8px;padding:8px 10px;font-size:14px
+    }
+    .toolbar button{cursor:pointer}
+    .reserve-tag{display:none;margin-left:auto}
+    .ok{color:#64f0a5}
+    .warn{color:#ffd666}
+    .bad{color:#ff7b7b}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">ADR-FR • Supervisor</div>
+    <div id="reserveChip" class="chip reserve-tag">Reserve Member</div>
+  </header>
 
-<div class="card">
-  <h3>Members</h3>
-  <table id="roster"><thead><tr><th>Name</th><th>Role</th><th>Member#</th><th>TypeIII</th><th>Inactive</th><th>Avoid (comma names)</th><th></th></tr></thead><tbody></tbody></table>
-</div>
+  <div class="wrap">
+    <!-- Roster -->
+    <section class="card">
+      <h2>Roster</h2>
+      <div class="muted" style="margin-bottom:10px">
+        Toggle Type-III approval or mark a member Inactive. Changes save instantly.
+      </div>
+      <table id="rosterTable">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Role</th>
+            <th>Member #</th>
+            <th>Can Drive</th>
+            <th class="muted">Notes</th>
+            <th>Supervisor Controls</th>
+          </tr>
+        </thead>
+        <tbody><!-- filled by JS --></tbody>
+      </table>
+    </section>
 
-<div class="card">
-  <h3>Swap requests</h3>
-  <table id="swaps"><thead><tr><th>Date</th><th>Half</th><th>From</th><th>To</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-</div>
+    <!-- Bulk + Quick tools -->
+    <section class="card">
+      <h2>Quick Tools</h2>
+      <div class="toolbar">
+        <label>Bulk from <input id="bulkFrom" placeholder="MM/DD/YYYY"></label>
+        <label>to <input id="bulkUntil" placeholder="MM/DD/YYYY"></label>
+        <div>
+          State:
+          <label><input type="radio" name="bulkState" value="prefer" checked> Prefer</label>
+          <label><input type="radio" name="bulkState" value="available"> Available</label>
+          <label><input type="radio" name="bulkState" value="no"> Do Not Schedule</label>
+        </div>
+        <div>
+          Half:
+          <label><input type="radio" name="bulkHalf" value="AM" checked> AM</label>
+          <label><input type="radio" name="bulkHalf" value="PM"> PM</label>
+        </div>
+        <button id="btnApplyBulk">Apply to My Calendar</button>
+        <label class="chip">
+          <input id="prefReserve" type="checkbox"> Reserve status (never auto-assign)
+        </label>
+      </div>
+    </section>
 
-<script>
-const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-let roster=[];
-(async function boot(){
-  roster = await (await fetch(API+"/api/users")).json();
-  const tb = document.querySelector("#roster tbody");
-  tb.innerHTML = roster.map(u=>`
-    <tr data-id="${u.id}">
-      <td>${u.name}</td><td>${u.role}</td><td>${u.member_no||""}</td>
-      <td><input type="checkbox" class="typeIII" ${u.typeIII?'checked':''}></td>
-      <td><input type="checkbox" class="inactive" ${u.inactive?'checked':''}></td>
-      <td><input type="text" class="avoid" value="${(u.avoid||[]).map(idToName).join(', ')}"></td>
-      <td><button class="btn save">Save</button></td>
-    </tr>`).join('');
-  tb.querySelectorAll('.save').forEach(btn=>btn.onclick=saveRow);
+    <!-- Notes strip (7 days) -->
+    <section class="card">
+      <h2>Notes (pop into supervisor view)</h2>
+      <div class="muted" style="margin-bottom:10px">
+        Ultra-brief notes (e.g., “In at 10am”). Auto-save after you stop typing.
+      </div>
+      <div id="noteStrip" class="note-grid"><!-- filled by JS --></div>
+    </section>
+  </div>
 
-  await loadSwaps();
-})();
-function idToName(id){ const x=roster.find(r=>r.id===id); return x?x.name:id; }
-function nameToId(name){ const x=roster.find(r=>r.name.toLowerCase()===name.trim().toLowerCase()); return x?x.id:null; }
+  <!-- Modules -->
+  <script src="/js/sc-preferences.js"></script>
+  <script>
+    // ===== CONFIG =====
+    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
 
-async function saveRow(e){
-  const tr = e.target.closest('tr'); const id = tr.dataset.id;
-  const typeIII = tr.querySelector('.typeIII').checked;
-  const inactive = tr.querySelector('.inactive').checked;
-  const avoidNames = tr.querySelector('.avoid').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const avoid = avoidNames.map(nameToId).filter(Boolean);
-  await fetch(API+"/api/profile",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:id,typeIII,inactive,avoid})});
-  alert("Saved.");
-}
+    // Pretend we’re “logged in” as a supervisor; pick yourself if you store me-id
+    // If you already set localStorage.sc_me_id elsewhere, this will use it.
+    if (!localStorage.getItem("sc_me_id")) {
+      // pick one of your real users (change as needed)
+      localStorage.setItem("sc_me_id", "uq2w4or");
+    }
 
-async function loadSwaps(){
-  const swaps = await (await fetch(API+"/api/swaps")).json();
-  const tb = document.querySelector("#swaps tbody");
-  tb.innerHTML = swaps.map(s=>`
-    <tr data-id="${s.id}">
-      <td>${s.date}</td><td>${s.half}</td>
-      <td>${idToName(s.from_user)||s.from_user}</td>
-      <td>${s.to_user? (idToName(s.to_user)||s.to_user) : '-'}</td>
-      <td>${s.status}</td>
-      <td>
-        ${s.status==='requested'
-          ? `<button class="btn approve">Approve</button> <button class="btn deny">Deny</button>`
-          : ``}
-      </td>
-    </tr>`).join('');
-  tb.querySelectorAll('.approve').forEach(b=>b.onclick=()=>decide(b,true));
-  tb.querySelectorAll('.deny').forEach(b=>b.onclick=()=>decide(b,false));
-}
-async function decide(btn, ok){
-  const id = btn.closest('tr').dataset.id;
-  await fetch(API+"/api/swap/approve",{method:"POST",headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ id, approve: ok })});
-  await loadSwaps();
-}
-</script>
-</div></body></html>
+    // ===== DATA LOADERS =====
+    async function fetchUsers() {
+      const r = await fetch(`${API}/api/users`);
+      return r.json();
+    }
+    function ymd(n){ return n.toISOString().slice(0,10); }
+    function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+    async function renderRoster() {
+      const tbody = document.querySelector("#rosterTable tbody");
+      tbody.innerHTML = `<tr><td class="muted" colspan="6">Loading…</td></tr>`;
+
+      const users = await fetchUsers();
+      if (!Array.isArray(users) || !users.length) {
+        tbody.innerHTML = `<tr><td class="muted" colspan="6">No users found.</td></tr>`;
+        return;
+      }
+
+      // Fetch extended flags per user (inactive, reserve, type3) via a lightweight state call
+      // If you expose /api/users/flags, swap this in; for now, we’ll assume defaults false
+      const rows = users.map(u => {
+        const canDrive = (u.can_drive || []).join(", ");
+        const notes = (u.notes || "");
+        // IMPORTANT: data-* attributes let the SCPreferences module catch the change
+        return `
+          <tr>
+            <td>${escapeHtml(u.name)}</td>
+            <td>${escapeHtml(u.role || "")}</td>
+            <td>${escapeHtml(u.member_no || "")}</td>
+            <td><span class="pill">${escapeHtml(canDrive || "—")}</span></td>
+            <td class="muted">${escapeHtml(notes)}</td>
+            <td class="row-actions">
+              <label title="Prevent login & scheduling">
+                <input type="checkbox" data-inactive-user="${u.id}"> Inactive
+              </label>
+              <label title="Approved to drive Type-III">
+                <input type="checkbox" data-type3-user="${u.id}"> Type-III Driver
+              </label>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      tbody.innerHTML = rows;
+    }
+
+    function renderNoteStrip() {
+      const host = document.getElementById("noteStrip");
+      host.innerHTML = "";
+      const start = new Date(); // today
+      for (let i=0;i<7;i++){
+        const d = addDays(start, i);
+        const label = d.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"});
+        const iso = ymd(d);
+        host.insertAdjacentHTML("beforeend", `
+          <div class="note-cell">
+            <h4>${label}</h4>
+            <input class="noteInput" data-date="${iso}" placeholder="In at 10am">
+          </div>
+        `);
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    async function refresh() {
+      await renderRoster();
+      // if you want, also refetch /api/state and paint your big calendar here
+      return true;
+    }
+    window.refresh = refresh; // SCPreferences will call this after writes
+
+    // ===== INIT MODULE =====
+    window.SCPreferences.init({
+      apiBase: API,
+      getMeId: () => localStorage.getItem("sc_me_id") || "",
+      onStateRefresh: refresh,
+      els: {
+        reserve: document.getElementById("prefReserve"),
+        bulkFrom: document.getElementById("bulkFrom"),
+        bulkUntil: document.getElementById("bulkUntil"),
+        bulkStateRadios: document.querySelectorAll('input[name="bulkState"]'),
+        bulkHalfRadios: document.querySelectorAll('input[name="bulkHalf"]'),
+        bulkApplyBtn: document.getElementById("btnApplyBulk"),
+        noteSelector: '#noteStrip input.noteInput',
+        reserveChip: document.getElementById("reserveChip"),
+      }
+    });
+
+    // First paint
+    renderNoteStrip();
+    refresh();
+  </script>
+</body>
+</html>

@@ -1,334 +1,488 @@
-<!-- FILE: web/index.html  (single-page UI)
-     Talks to: https://adr-fr-scheduler-api.brian-9ac.workers.dev
-     Features:
-      • 2-month calendar
-      • AM/PM 4-way toggle (Prefer, Available, Unset, Do not)
-      • Per-shift note (click the tiny 📝 icon)
-      • Supervisor mode: set Type III / Inactive, approve notes, and quick assign
-      • Frictionless Swap: pick your assigned shift → suggest or select replacement
--->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ShiftCommander</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root { --bg:#0e1726; --panel:#121c2d; --ink:#e6eefc; --mut:#9db1d1; --green:#34d399; --yellow:#fbbf24; --red:#ef4444; --line:#1f2a40; --pill:#1a2438; --blue:#3b82f6; }
-  * { box-sizing:border-box; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif }
-  body { margin:0; background:linear-gradient(180deg,#0b1423,#0e1726); color:var(--ink); }
-  header { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:14px 18px; background:#0a1320; position:sticky; top:0; z-index:2; border-bottom:1px solid #0f1a2a;}
-  .brand { font-weight:700; letter-spacing:.2px; }
-  .row { display:flex; gap:12px; align-items:center }
-  select, input, button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
-  button { background:#1e293b; cursor:pointer }
-  main { max-width:1100px; margin:18px auto; padding:0 12px; }
-  .legend { display:flex; gap:14px; align-items:center; font-size:12px; color:var(--mut); margin:10px 0 18px }
-  .legend i { display:inline-block; width:16px; height:16px; border-radius:6px; border:1px solid var(--line); margin-right:6px; vertical-align:-3px }
-  .g { background:var(--green,.8) } .y{ background:var(--yellow)} .r{ background:var(--red)} .u{ background:var(--pill)}
-  .grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
-  .month { margin-top:14px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; min-height:96px; position:relative }
-  .dow { color:var(--mut); font-size:12px; margin:0 0 6px 2px }
-  .date { position:absolute; top:8px; right:10px; color:var(--mut); font-size:12px }
-  .pills { display:flex; gap:8px; margin-top:18px }
-  .pill { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border:1px solid var(--line); border-radius:999px; background:var(--pill); font-size:12px; cursor:pointer; user-select:none }
-  .pill.g { background:rgba(52,211,153,.18); border-color:rgba(52,211,153,.4) }
-  .pill.y { background:rgba(251,191,36,.18); border-color:rgba(251,191,36,.4) }
-  .pill.r { background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.4) }
-  .pill small { color:var(--mut) }
-  .note { position:absolute; bottom:8px; right:8px; color:var(--mut); font-size:12px; cursor:pointer }
-  .warn { color:var(--yellow); font-size:12px; }
-  .section { margin-top:22px; border-top:1px dashed #20304a; padding-top:16px }
-  .stack { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
-  .tag { padding:4px 8px; border-radius:999px; background:#17243a; border:1px solid var(--line); font-size:12px }
-  details { border:1px solid var(--line); background:#101a2b; border-radius:12px; padding:10px 12px }
-  details summary { cursor:pointer; color:var(--ink) }
-  table { width:100%; border-collapse:collapse; font-size:14px; }
-  td, th { border-bottom:1px solid var(--line); padding:8px 6px; text-align:left }
-  .btn { background:var(--blue); border-color:transparent }
-  .mut { color:var(--mut) }
-</style>
+  <meta charset="utf-8" />
+  <title>ADR-FR ShiftCommander</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--bg:#0b1720;--bg2:#0e2230;--text:#eaf4ff;--muted:#aac1d4;--accent:#3ea6ff;--ok:#2ecc71;--warn:#f1c40f;--bad:#e74c3c;--chip:#1b3a50}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 420px,#0a141b 100%);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    .nav{display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:#0a151e}
+    .nav img{height:22px}
+    .nav a{color:#d8e9f6;text-decoration:none;opacity:.85}
+    .wrap{max-width:1180px;margin:28px auto;padding:0 18px}
+    h1{margin:8px 0 0;font-size:28px}
+    .subtitle{margin:6px 0 24px;color:var(--muted)}
+    .card{background:#102231;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin:12px 0}
+    .row{display:flex;gap:12px;align-items:center}
+    .between{display:flex;justify-content:space-between;align-items:center}
+    .tag{display:inline-block;background:var(--chip);padding:3px 8px;border-radius:999px;font-size:12px}
+    .btn{background:#17354a;border:1px solid rgba(255,255,255,.12);color:#e9f4ff;border-radius:8px;padding:8px 12px;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:default}
+    input,select,textarea{background:#0e2130;color:#eaf4ff;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:8px}
+    label{cursor:pointer}
+    .legend{display:flex;gap:12px;color:#a6bfd3;font-size:12px}
+    .legend .dot{width:10px;height:10px;border-radius:50%}
+    .green{background:#2ecc71}.yellow{background:#f1c40f}.red{background:#e74c3c}
+    /* Calendar */
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+    .day{background:#0f1f2c;border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:8px 8px 12px;min-height:112px;display:flex;flex-direction:column}
+    .day h4{margin:0 0 8px;color:#b9d0e0;font-weight:600;font-size:12px;display:flex;justify-content:space-between}
+    .halves{display:flex;gap:8px;flex-wrap:wrap}
+    .half{font-size:12px;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 8px;cursor:pointer;user-select:none;background:#112636}
+    .half.prefer{background:rgba(46,204,113,.12);border-color:rgba(46,204,113,.45)}
+    .half.available{background:rgba(241,196,15,.12);border-color:rgba(241,196,15,.45)}
+    .half.no{background:rgba(231,76,60,.12);border-color:rgba(231,76,60,.45)}
+    .half.unset{}
+    .noteRow{display:flex;gap:6px;margin-top:8px}
+    .noteRow input{flex:1}
+    .advice{margin-top:6px;font-size:12px;color:#cbdcec;opacity:.9}
+    /* Supervisor roster */
+    .adminRow{display:flex;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .adminRow small{opacity:.65}
+    .pill{padding:2px 6px;border-radius:6px;background:#153246;font-size:11px}
+    /* Modal */
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center}
+    .modal{background:#0f2030;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;max-width:520px;width:92%}
+    .modal h3{margin:0 0 8px}
+  </style>
 </head>
 <body>
-
-<header>
-  <div class="brand">ShiftCommander</div>
-  <div class="row">
-    <label class="mut">Member&nbsp;#</label><input id="memberNo" style="width:90px" placeholder="1001" />
-    <button id="signIn" class="btn">Sign in</button>
-    <button id="userView">User View</button>
-    <button id="superView">Supervisor</button>
-  </div>
-</header>
-
-<main>
-  <div class="legend">
-    <span><i class="g"></i>Prefer</span>
-    <span><i class="y"></i>Available</span>
-    <span><i class="u"></i>Unset</span>
-    <span><i class="r"></i>Do not</span>
+  <div class="nav">
+    <img src="/assets/adr-fr-logo-light.svg" alt="ADR-FR Logo" />
+    <a href="/">Home</a>
+    <a href="/join">Join</a>
+    <a href="/schedule">Schedule</a>
+    <a href="/resources">Resources</a>
+    <div style="margin-left:auto" class="legend">
+      <div class="row" style="gap:6px;"><span class="dot green"></span> Prefer</div>
+      <div class="row" style="gap:6px;"><span class="dot yellow"></span> Available</div>
+      <div class="row" style="gap:6px;"><span class="dot red"></span> Do Not</div>
+    </div>
   </div>
 
-  <div id="months"></div>
+  <div class="wrap">
+    <h1>Active Scheduling Window</h1>
+    <div class="subtitle">Connected to Worker API • Auto-commit every 3 seconds • Server-side scoring</div>
 
-  <div class="section">
-    <details>
-      <summary>Frictionless Shift Swap</summary>
-      <div class="stack" style="margin-top:10px">
-        <input id="swapDate" type="date">
-        <select id="swapHalf">
-          <option>AM</option><option>PM</option>
-        </select>
-        <button id="swapSuggest">Suggest replacement(s)</button>
+    <!-- Who am I -->
+    <div class="card row">
+      <div>Member #</div>
+      <input id="inpMemberNo" placeholder="e.g., 1001" style="width:120px" />
+      <button id="btnLoadMe" class="btn">Load me</button>
+      <div id="whoami" class="tag" style="display:none"></div>
+      <div id="reserveChip" class="tag" style="display:none;background:#153246">Reserve</div>
+      <button id="btnSwap" class="btn" style="margin-left:auto">Frictionless Shift Swap</button>
+    </div>
+
+    <!-- Calendar -->
+    <div class="card">
+      <div class="between">
+        <div class="row" style="gap:8px">
+          <button id="prev" class="btn">Prev</button>
+          <div>Months <select id="months"><option>1</option><option selected>2</option><option>3</option></select></div>
+          <button id="next" class="btn">Next</button>
+        </div>
+        <div id="windowLabel" class="tag"></div>
       </div>
-      <div id="swapOut" class="section"></div>
-    </details>
+      <div id="cal" class="calendar" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Preferences (member) -->
+    <div class="card">
+      <div class="row">
+        <label class="row"><input id="prefReserve" type="checkbox" /> Reserve mode (never auto-assign me)</label>
+        <label class="row" title="Supervisor-set"><input id="prefType3Approved" type="checkbox" disabled /> Type III driver approved</label>
+        <label class="row" title="Supervisor-set"><input id="prefInactivePreview" type="checkbox" disabled /> Inactive</label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div>Bulk from <input id="bulkFrom" placeholder="mm/dd/yyyy" style="width:140px" /></div>
+        <div>to <input id="bulkUntil" placeholder="mm/dd/yyyy" style="width:140px" /></div>
+        <div class="row" style="gap:8px">
+          <label class="row"><input type="radio" name="bulkState" value="prefer" /> Prefer</label>
+          <label class="row"><input type="radio" name="bulkState" value="available" checked /> Available</label>
+          <label class="row"><input type="radio" name="bulkState" value="no" /> Do Not</label>
+        </div>
+        <div class="row" style="gap:8px">
+          <label class="row"><input type="radio" name="bulkHalf" value="AM" checked /> AM</label>
+          <label class="row"><input type="radio" name="bulkHalf" value="PM" /> PM</label>
+        </div>
+        <button id="btnApplyBulk" class="btn">Apply</button>
+      </div>
+    </div>
+
+    <!-- Supervisor -->
+    <div class="card">
+      <div class="row"><strong>Supervisor</strong> <span class="tag">Roster admin</span></div>
+      <div id="rosterAdminPanel" class="section" style="margin-top:10px"></div>
+    </div>
   </div>
 
-  <div class="section" id="superPanel" style="display:none">
-    <h3>Supervisor tools</h3>
-    <table>
-      <thead><tr><th>Name</th><th>Role</th><th>Type III</th><th>Inactive</th><th>Save</th></tr></thead>
-      <tbody id="superRows"></tbody>
-    </table>
-    <p class="mut">Per-shift notes appear on cards; approve them in place using the 📝 dialog.</p>
+  <!-- Swap Modal -->
+  <div id="swapBack" class="modalBackdrop">
+    <div class="modal">
+      <h3>Frictionless Shift Swap</h3>
+      <p>Select an assigned shift to give up, then pick a replacement. If they’re valid (no disqualifying flags/restrictions), it will auto-approve.</p>
+      <div class="row">
+        <div style="flex:1">
+          <div>My assigned shift</div>
+          <select id="swapMyShift" style="width:100%"></select>
+        </div>
+        <div style="flex:1">
+          <div>Replacement</div>
+          <select id="swapCandidate" style="width:100%"></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;justify-content:flex-end">
+        <button id="swapCancel" class="btn">Cancel</button>
+        <button id="swapSubmit" class="btn">Submit</button>
+      </div>
+      <div id="swapMsg" class="tag" style="margin-top:10px;display:none"></div>
+    </div>
   </div>
-</main>
 
-<script>
-const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-let me = null;           // current user row
-let users = {};          // id -> {name,role,type3_driver,inactive}
-let stateCache = null;   // /api/state payload
-let debounceTimers = new Map(); // key "uid|date|half" => timer
+  <script>
+    // Config
+    const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    let ME_ID = localStorage.getItem("sc_me_id") || "";
+    let USERS = [];
+    let STATE = null; // /api/state payload
+    let windowStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    let monthsSpan = 2;
+    let pendingSaves = new Map(); // key `${date}|${half}` -> {state, timeoutId}
+    const saveDelayMs = 3000;
 
-document.getElementById("signIn").onclick = async () => {
-  const no = (document.getElementById("memberNo").value || "").trim();
-  if (!no) return alert("Enter your member number");
-  const list = await fetch(API+"/api/users").then(r=>r.json());
-  me = list.find(u => u.member_no === no);
-  if (!me) return alert("No user with that member #");
-  await reload();
-};
+    // DOM
+    const elWho = document.getElementById("whoami");
+    const elResChip = document.getElementById("reserveChip");
+    const elReserve = document.getElementById("prefReserve");
+    const elType3 = document.getElementById("prefType3Approved");
+    const elInactive = document.getElementById("prefInactivePreview");
+    const elCal = document.getElementById("cal");
+    const elWindow = document.getElementById("windowLabel");
+    const elMonths = document.getElementById("months");
+    const elSwapBack = document.getElementById("swapBack");
+    const elSwapMy = document.getElementById("swapMyShift");
+    const elSwapCand = document.getElementById("swapCandidate");
+    const elSwapMsg = document.getElementById("swapMsg");
 
-document.getElementById("userView").onclick = () => {
-  document.getElementById("superPanel").style.display = "none";
-};
-document.getElementById("superView").onclick = () => {
-  document.getElementById("superPanel").style.display = "";
-  buildSupervisor();
-};
+    // Boot
+    document.getElementById("btnLoadMe").addEventListener("click", handleLoadMe);
+    document.getElementById("prev").addEventListener("click", ()=>{ windowStart = addMonths(windowStart, -monthsSpan); refresh();});
+    document.getElementById("next").addEventListener("click", ()=>{ windowStart = addMonths(windowStart, +monthsSpan); refresh();});
+    elMonths.addEventListener("change", ()=>{ monthsSpan = parseInt(elMonths.value,10)||2; refresh(); });
+    document.getElementById("btnApplyBulk").addEventListener("click", applyBulk);
+    document.getElementById("btnSwap").addEventListener("click", openSwap);
+    document.getElementById("swapCancel").addEventListener("click", ()=> elSwapBack.style.display="none");
+    document.getElementById("swapSubmit").addEventListener("click", submitSwap);
 
-async function reload() {
-  const now = new Date();
-  const m1 = new Date(now.getFullYear(), now.getMonth(), 1);
-  const m2 = new Date(now.getFullYear(), now.getMonth()+1, 0);
-  const start = toKey(m1); const end = toKey(m2);
-  stateCache = await fetch(`${API}/api/state?start=${start}&end=${end}`).then(r=>r.json());
-  users = stateCache.users || {};
-  renderMonths(m1, m2);
-  buildSupervisor();
-}
+    // Load users roster up-front
+    (async function init(){
+      try { USERS = await (await fetch(`${API}/api/users`)).json(); } catch {}
+      if (ME_ID) syncMeBanner();
+      refresh();
+    })();
 
-function renderMonths(m1, m2) {
-  const root = document.getElementById("months");
-  root.innerHTML = "";
-  root.appendChild(monthBlock(m1));
-  const m2Start = new Date(m1.getFullYear(), m1.getMonth()+1, 1);
-  root.appendChild(monthBlock(m2Start));
-}
-function monthBlock(d0) {
-  const wrap = document.createElement("div"); wrap.className = "month";
-  const title = document.createElement("h3");
-  title.textContent = d0.toLocaleString(undefined,{month:"long", year:"numeric"});
-  wrap.appendChild(title);
-  const grid = document.createElement("div"); grid.className = "grid";
-  // headers
-  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(h=>{
-    const s = document.createElement("div"); s.className="mut"; s.textContent=h; grid.appendChild(s);
-  });
+    async function handleLoadMe(){
+      const memberNo = (document.getElementById("inpMemberNo").value||"").trim();
+      if (!memberNo) return;
+      if (!USERS.length) USERS = await (await fetch(`${API}/api/users`)).json();
+      const me = USERS.find(u => (u.member_no||"")===memberNo);
+      if (!me) { alert("Member not found"); return; }
+      ME_ID = me.id; localStorage.setItem("sc_me_id", ME_ID);
+      syncMeBanner();
+      refresh();
+    }
 
-  // compute first Monday grid
-  const first = new Date(d0.getFullYear(), d0.getMonth(), 1);
-  const startOffset = (first.getDay() + 6) % 7; // Mon=0
-  let day = new Date(first); day.setDate(first.getDate() - startOffset);
-  for (let i=0;i<42;i++) {
-    grid.appendChild(dayCard(new Date(day)));
-    day.setDate(day.getDate()+1);
-  }
+    function syncMeBanner(){
+      const me = USERS.find(u => u.id===ME_ID);
+      if (!me) return;
+      elWho.style.display=""; elWho.textContent = `${me.name} • ${me.role}`;
+      elResChip.style.display = me.reserve ? "" : "none";
+      elReserve.checked = !!me.reserve;
+      elType3.checked = !!me.type3_driver;
+      elInactive.checked = !!me.inactive;
+    }
 
-  wrap.appendChild(grid);
-  return wrap;
-}
+    function addMonths(d, n){ const dt=new Date(d); dt.setMonth(dt.getMonth()+n); return dt;}
+    function fmt(d){ return d.toISOString().slice(0,10); }
 
-function dayCard(d) {
-  const k = toKey(d);
-  const inMonth = (d.getMonth() === (new Date(stateCache ? Object.keys(stateCache.shifts||{})[0]||k : k)).getMonth());
-  const card = document.createElement("div"); card.className="card";
-  const date = document.createElement("div"); date.className="date"; date.textContent=d.getDate(); card.appendChild(date);
-  const p = document.createElement("div"); p.className="pills";
+    async function refresh(){
+      const start = new Date(windowStart);
+      const end = new Date(windowStart.getFullYear(), windowStart.getMonth()+monthsSpan, 0);
+      elWindow.textContent = `${fmt(start)} → ${fmt(end)}`;
+      STATE = await (await fetch(`${API}/api/state?start=${fmt(start)}&end=${fmt(end)}`)).json();
+      renderCalendar(start, end);
+      buildRosterAdmin();
+      if (ME_ID) fillSwapLists();
+    }
 
-  ["AM","PM"].forEach(half=>{
-    const pill = document.createElement("div"); pill.className="pill"; pill.innerHTML = `<strong>${half}</strong>`;
-    setPillColor(pill, getMyState(k, half));
-    pill.onclick = () => cycleState(k, half, pill);
-    p.appendChild(pill);
+    function renderCalendar(start, end){
+      elCal.innerHTML="";
+      const days = enumerateDays(start, end);
+      for (const d of days){
+        const dKey = fmt(d);
+        const box = document.createElement("div");
+        box.className = "day";
+        const title = document.createElement("h4");
+        title.innerHTML = `<span>${dKey}</span><span class="pill">${adviceFor(dKey)}</span>`;
+        box.appendChild(title);
 
-    const n = getMyNote(k, half);
-    const noteBtn = document.createElement("div");
-    noteBtn.className = "note";
-    noteBtn.textContent = "📝";
-    noteBtn.title = n?.note ? (n.note + (n.note_approved ? "" : " (pending)")) : "Add note";
-    noteBtn.onclick = () => editNote(k, half);
-    const shell = document.createElement("div");
-    shell.style.position="relative"; shell.appendChild(pill); shell.appendChild(noteBtn);
-    p.appendChild(shell);
-  });
+        const halves = document.createElement("div"); halves.className="halves";
+        ["AM","PM"].forEach(half=>{
+          const btn = document.createElement("div");
+          btn.className = "half unset";
+          btn.textContent = half;
+          applyMyStateClass(btn, myState(dKey, half));
 
-  // warning text if shift is yellow/red (very light heuristic demo)
-  const sh = (stateCache.shifts||{})[k];
-  if (sh && (sh.AM || sh.PM)) {
-    ["AM","PM"].forEach(half=>{
-      const box = document.createElement("div"); box.style.marginTop="6px"; box.style.fontSize="12px";
-      const s = sh[half];
-      if (!s) return;
-      const tip = briefTip(k, half, s.assignees || []);
-      if (tip) { box.className="warn"; box.textContent = half+": "+tip; card.appendChild(box); }
-    })
-  }
+          btn.addEventListener("click", ()=>{
+            const next = cycle(myState(dKey, half)); // prefer -> available -> unset -> no -> prefer …
+            queueAvailabilitySave(dKey, half, next);
+            applyMyStateClass(btn, next);
+          });
 
-  card.appendChild(p);
-  return card;
-}
+          halves.appendChild(btn);
+        });
+        box.appendChild(halves);
 
-// brief suggestion to clear condition (server-side scoring would be richer)
-function briefTip(date, half, assignees) {
-  // collect roles of current assignees
-  const roles = assignees.map(id => (users[id]?.role || "").toUpperCase());
-  if (roles.length === 0) return "Needs crew";
-  if (!roles.includes("ALS")) return "Needs ALS";
-  if (!roles.includes("EMT")) return "Needs EMT";
-  return "";
-}
+        // ultra-brief note
+        const noteRow = document.createElement("div"); noteRow.className = "noteRow";
+        const note = document.createElement("input");
+        note.placeholder = "In at 10am";
+        note.value = getMyNote(dKey) || "";
+        note.addEventListener("input", debounce(()=>{
+          if (!ME_ID) return;
+          fetch(`${API}/api/note`, {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ userId: ME_ID, date: dKey, text: note.value.slice(0,60) })
+          });
+        }, 600));
+        noteRow.appendChild(note);
+        box.appendChild(noteRow);
 
-function setPillColor(el, st) {
-  el.classList.remove("g","y","r");
-  if (st === "prefer") el.classList.add("g");
-  else if (st === "available") el.classList.add("y");
-  else if (st === "no") el.classList.add("r");
-}
+        // supervisor hint text per shift color (server-side logic summarized)
+        const adv = document.createElement("div");
+        adv.className = "advice";
+        adv.textContent = shiftHint(dKey);
+        box.appendChild(adv);
 
-function getMyState(date, half) {
-  if (!me || !stateCache) return "unset";
-  const a = (stateCache.availability||{})[me.id];
-  const rec = a ? a[date] : null;
-  const v = rec ? rec[half] : null;
-  return v ? (v.state || "unset") : "unset";
-}
-function getMyNote(date, half) {
-  if (!me || !stateCache) return null;
-  const a = (stateCache.availability||{})[me.id];
-  const rec = a ? a[date] : null;
-  return rec ? rec[half] : null;
-}
+        elCal.appendChild(box);
+      }
+    }
 
-function cycleState(date, half, pillEl) {
-  if (!me) { alert("Sign in first."); return; }
-  const cur = getMyState(date, half);
-  const next = cur === "prefer" ? "available" : cur === "available" ? "unset" : cur === "unset" ? "no" : "prefer";
-  setPillColor(pillEl, next);
-  // debounce auto-commit
-  const key = me.id+"|"+date+"|"+half;
-  clearTimeout(debounceTimers.get(key));
-  debounceTimers.set(key, setTimeout(async ()=>{
-    await fetch(API+"/api/availability", {
-      method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ userId: me.id, date, half, state: next })
+    function enumerateDays(start, end){
+      const out=[]; const d=new Date(start);
+      while (d<=end){ out.push(new Date(d)); d.setDate(d.getDate()+1); }
+      return out;
+    }
+
+    // 4-state cycle
+    function cycle(cur){
+      const order = ["prefer","available","unset","no"];
+      const i = Math.max(0, order.indexOf(cur));
+      return order[(i+1)%order.length];
+    }
+    function myState(date, half){
+      if (!STATE || !STATE.availability || !ME_ID) return "unset";
+      return STATE.availability[ME_ID]?.[date]?.[half] || "unset";
+    }
+    function applyMyStateClass(el, state){
+      el.classList.remove("prefer","available","no","unset");
+      el.classList.add(state);
+    }
+
+    // 3-second auto-commit
+    function queueAvailabilitySave(date, half, state){
+      if (!ME_ID) { alert("Load your member # first."); return; }
+      const key = `${date}|${half}`;
+      const existing = pendingSaves.get(key);
+      if (existing) clearTimeout(existing.timeoutId);
+      const timeoutId = setTimeout(async ()=>{
+        try{
+          await fetch(`${API}/api/availability`, {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ userId: ME_ID, date, half, state })
+          });
+          // Pull fresh server state so colors/advice reflect global logic
+          const curStart = new Date(windowStart);
+          const curEnd = new Date(windowStart.getFullYear(), windowStart.getMonth()+monthsSpan, 0);
+          STATE = await (await fetch(`${API}/api/state?start=${fmt(curStart)}&end=${fmt(curEnd)}`)).json();
+          renderCalendar(curStart, curEnd);
+        } finally {
+          pendingSaves.delete(key);
+        }
+      }, saveDelayMs);
+      pendingSaves.set(key, {state, timeoutId});
+    }
+
+    // Notes (per-user, per-date) – using STATE.notes if provided; fallback none
+    function getMyNote(date){
+      const n = STATE?.notes?.[ME_ID]?.[date];
+      return n || "";
+    }
+
+    // Supervisor shift hint (simple summary from STATE.shifts)
+    function shiftHint(date){
+      const s = STATE?.shifts?.[date];
+      if (!s) return "";
+      // very light example copy; your server can compute text and include it in STATE if preferred
+      const am = s.AM?.assignees?.length||0, pm = s.PM?.assignees?.length||0;
+      // you can expand this with ALS/EMT mix if Worker returns composition
+      if (am===0 && pm===0) return "Needs crew";
+      if (am===0) return "AM needs crew";
+      if (pm===0) return "PM needs crew";
+      return "Looks okay";
+    }
+
+    // Reserve toggle
+    elReserve.addEventListener("change", async e=>{
+      if (!ME_ID){ alert("Load your member # first."); e.target.checked=!e.target.checked; return; }
+      const on = !!e.target.checked;
+      await fetch(`${API}/api/me/reserve`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:ME_ID, reserve:on})});
+      const me = USERS.find(u=>u.id===ME_ID); if (me) me.reserve = on;
+      elResChip.style.display = on ? "" : "none";
     });
-    // lazy refresh for subsequent cards
-    stateCache.availability ||= {};
-    (stateCache.availability[me.id] ||= {});
-    (stateCache.availability[me.id][date] ||= { AM:null, PM:null })[half] = { state: next, note:"", note_approved:true };
-  }, 3000));
-}
 
-async function editNote(date, half) {
-  if (!me) { alert("Sign in first."); return; }
-  const cur = getMyNote(date, half);
-  const val = prompt("Enter a super brief note (e.g. 'In at 10am'):", cur?.note || "");
-  if (val === null) return;
-  await fetch(API+"/api/availability", {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ userId: me.id, date, half, state: getMyState(date,half), note: val })
-  });
-  await reload();
-}
+    // Supervisor roster admin
+    function buildRosterAdmin(){
+      const host = document.getElementById("rosterAdminPanel");
+      if (!USERS.length) { host.textContent="Roster unavailable."; return; }
+      host.innerHTML="";
+      USERS.forEach(u=>{
+        const row = document.createElement("div");
+        row.className = "adminRow";
+        row.innerHTML = `
+          <div style="min-width:240px"><strong>${esc(u.name)}</strong> <small>${esc(u.role||"")}</small> <span class="pill">#${esc(u.member_no||"—")}</span></div>
+          <label class="row"><input type="checkbox" class="f-inactive"> Inactive</label>
+          <label class="row"><input type="checkbox" class="f-type3"> Type III driver</label>
+          <span class="tag saveNote" style="display:none">Saved</span>
+        `;
+        const ci = row.querySelector(".f-inactive");
+        const ct = row.querySelector(".f-type3");
+        const saved = row.querySelector(".saveNote");
+        ci.checked = !!u.inactive;
+        ct.checked = !!u.type3_driver;
 
-// ---------- Supervisor ----------
-function buildSupervisor() {
-  const tbody = document.getElementById("superRows");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-  const list = Object.entries(users).map(([id,u])=>({ id, ...u }))
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  for (const u of list) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${u.name}</td>
-      <td>${u.role}</td>
-      <td><input type="checkbox" ${u.type3_driver?"checked":""} data-k="t3"></td>
-      <td><input type="checkbox" ${u.inactive?"checked":""} data-k="in"></td>
-      <td><button class="btn">Save</button></td>
-    `;
-    tr.querySelector("button").onclick = async ()=>{
-      const t3 = tr.querySelector('input[data-k="t3"]').checked;
-      const ina = tr.querySelector('input[data-k="in"]').checked;
-      await fetch(API+"/api/user/flags", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ userId: u.id, type3_driver: t3, inactive: ina })
+        ci.addEventListener("change", async ()=>{
+          await fetch(`${API}/api/me/inactive`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:u.id, inactive:ci.checked})});
+          u.inactive = ci.checked; flash(saved);
+        });
+        ct.addEventListener("change", async ()=>{
+          await fetch(`${API}/api/me/type3`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:u.id, type3:ct.checked})});
+          u.type3_driver = ct.checked; flash(saved);
+        });
+
+        host.appendChild(row);
       });
-      await reload();
-    };
-    tbody.appendChild(tr);
+    }
+
+    function flash(el){ el.style.display=""; setTimeout(()=>el.style.display="none",900); }
+    function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+    // Frictionless swap
+    function openSwap(){
+      if (!ME_ID){ alert("Load your member # first."); return; }
+      fillSwapLists();
+      elSwapMsg.style.display="none";
+      elSwapBack.style.display="flex";
+    }
+
+    function fillSwapLists(){
+      // My assigned shifts in window (from STATE.shifts)
+      const my = [];
+      for (const [date, halves] of Object.entries(STATE?.shifts||{})){
+        for (const half of ["AM","PM"]){
+          const a = halves[half]?.assignees||[];
+          if (a.includes(ME_ID)) my.push(`${date}|${half}`);
+        }
+      }
+      elSwapMy.innerHTML = my.map(k=>`<option value="${k}">${k.replace("|"," • ")}</option>`).join("") || `<option value="">(none)</option>`;
+
+      // Candidates: all active users (non-inactive); you can filter here by role/Type-III as you like
+      const cands = USERS.filter(u=>!u.inactive && u.id!==ME_ID);
+      elSwapCand.innerHTML = cands.map(u=>`<option value="${u.id}">${esc(u.name)} • ${esc(u.role||"")}</option>`).join("");
+    }
+
+    async function submitSwap(){
+      const key = elSwapMy.value;
+      if (!key){ elSwapMsg.textContent = "No shift selected."; elSwapMsg.style.display=""; return; }
+      const [date, half] = key.split("|");
+      const replacement = elSwapCand.value;
+
+      // Call Worker to validate & swap (server enforces disqualifiers, reserves, Type-III, etc.)
+      const res = await fetch(`${API}/api/shift/swap`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ fromUserId: ME_ID, toUserId: replacement, date, half })
+      }).then(r=>r.json()).catch(()=>({error:"network"}));
+
+      if (res?.ok){
+        elSwapMsg.textContent = "Swap approved.";
+        elSwapMsg.style.display="";
+        // refresh state
+        await refresh();
+        setTimeout(()=> elSwapBack.style.display="none", 700);
+      } else {
+        elSwapMsg.textContent = res?.error || "Swap denied.";
+        elSwapMsg.style.display="";
+      }
+    }
+
+    // Bulk apply
+    async function applyBulk(){
+      if (!ME_ID){ alert("Load your member # first."); return; }
+      const from = (document.getElementById("bulkFrom").value||"").trim();
+      const until = (document.getElementById("bulkUntil").value||"").trim();
+      const state = [...document.querySelectorAll("input[name=bulkState]")].find(r=>r.checked)?.value || "available";
+      const half =  [...document.querySelectorAll("input[name=bulkHalf]")].find(r=>r.checked)?.value   || "AM";
+      if (!from || !until){ alert("Enter a date range."); return; }
+      const dates = rangeDates(from, until);
+      for (const d of dates){
+        await fetch(`${API}/api/availability`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ userId: ME_ID, date:d, half, state })
+        });
+      }
+      refresh();
+    }
+
+    function rangeDates(mdyFrom, mdyUntil){
+      const [m1,d1,y1] = mdyFrom.split("/").map(x=>parseInt(x,10));
+      const [m2,d2,y2] = mdyUntil.split("/").map(x=>parseInt(x,10));
+      const start = new Date(y1,m1-1,d1), end = new Date(y2,m2-1,d2);
+      const out=[]; const cur=new Date(start);
+      while (cur<=end){ out.push(fmt(cur)); cur.setDate(cur.getDate()+1); }
+      return out;
+    }
+  </script>
+<!-- index.html (tail, before </body>) -->
+<script src="/js/sc-preferences.js"></script>
+<script>
+  // Example wiring that matches the IDs/classes from the index I sent
+  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  function refreshAll() {
+    // re-pull /api/state and re-render your calendar/roster
+    if (window.refresh) return window.refresh(); // if you exposed refresh()
+    return Promise.resolve();
   }
-}
-
-// ---------- Swap ----------
-document.getElementById("swapSuggest").onclick = async ()=>{
-  if (!me) return alert("Sign in first.");
-  const date = document.getElementById("swapDate").value;
-  const half = document.getElementById("swapHalf").value;
-  if (!date) return alert("Choose a date");
-  const out = document.getElementById("swapOut"); out.innerHTML = "…";
-  const res = await fetch(API+"/api/shift/swap", {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ userId: me.id, date, half })
-  }).then(r=>r.json());
-  if (res.error) { out.textContent = res.error; return; }
-  const frag = document.createElement("div");
-  frag.className="stack";
-  (res.suggestions||[]).forEach(s=>{
-    const b = document.createElement("button");
-    b.textContent = `${s.name} (${s.role})`;
-    b.onclick = async ()=>{
-      const ok = confirm(`Swap yourself with ${s.name} on ${date} ${half}?`);
-      if (!ok) return;
-      const done = await fetch(API+"/api/shift/swap", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ userId: me.id, date, half, replacementId: s.id })
-      }).then(r=>r.json());
-      if (done.error) alert(done.error); else { alert("Swap approved."); await reload(); }
-    };
-    frag.appendChild(b);
+  window.SCPreferences.init({
+    apiBase: API,
+    getMeId: () => localStorage.getItem("sc_me_id") || "",
+    onStateRefresh: refreshAll,
+    els: {
+      reserve: document.getElementById("prefReserve"),
+      type3: document.getElementById("prefType3Approved"),
+      inactive: document.getElementById("prefInactivePreview"),
+      bulkFrom: document.getElementById("bulkFrom"),
+      bulkUntil: document.getElementById("bulkUntil"),
+      bulkStateRadios: document.querySelectorAll('input[name="bulkState"]'),
+      bulkHalfRadios: document.querySelectorAll('input[name="bulkHalf"]'),
+      bulkApplyBtn: document.getElementById("btnApplyBulk"),
+      noteSelector: '.noteRow input[data-date]',   // ensure your note inputs include data-date="YYYY-MM-DD"
+      reserveChip: document.getElementById("reserveChip"),
+    },
   });
-  out.innerHTML = "";
-  out.appendChild(frag);
-};
-
-function toKey(d) { const dt = new Date(d); return dt.toISOString().slice(0,10); }
 </script>
+
 </body>
 </html>
