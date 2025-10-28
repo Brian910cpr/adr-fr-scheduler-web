@@ -1,4 +1,4 @@
-<!-- supervisor.html (calendar week-at-a-glance with month toggle; larger dates; keeps options) -->
+<!-- supervisor.html (drop-in replacement or merge the "Notes" panel) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,31 +6,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>ShiftCommander • Supervisor</title>
 <style>
-  :root{--bg:#0c0f14;--panel:#141a22;--ring:#2b394b;--ink:#e8eef7;--muted:#8ba0b8;--card:#10161d;--ok:#18a957;--warn:#ffbf3c;--danger:#d34b4b}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
+  :root{--bg:#0c0f14;--panel:#141a22;--ink:#e8eef7;--muted:#8ea0b6;--ring:#2b394b}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),#10161d)}
   h1{margin:0;font-size:18px;font-weight:700}
   .tabs{margin-left:auto;display:flex;gap:6px}
-  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c8d2de;text-decoration:none}
-  .tab.active{background:var(--ring);color:#fff}
-  .controls{display:flex;gap:10px;align-items:center;padding:10px 16px}
-  button,input,select{background:#0f141b;color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 10px}
-  .stage{padding:10px 16px}
-  .row{display:flex;gap:12px;align-items:center}
-  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .col{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:10px}
-  .dow{color:var(--muted);font-weight:700}
-  .dtitle{font-weight:800;font-size:16px;margin:6px 0 8px}
-  .slot{display:flex;justify-content:space-between;align-items:center;border:1px dashed var(--ring);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--card)}
-  .names{font-weight:700}
-  .nudge{padding:4px 8px;border-radius:8px;font-size:12px}
-  .need{background:var(--danger)} .ok{background:var(--ok)} .warn{background:var(--warn); color:#222}
-  .legend{margin-top:10px;color:var(--muted);font-size:12px}
+  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c6d2df;text-decoration:none}
+  .tab.active{background:var(--ring);color:var(--ink)}
+  .wrap{padding:16px;display:grid;gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:8px;border-bottom:1px solid var(--ring);text-align:left}
+  th{color:#b9c6d5}
+  .muted{color:var(--muted)}
 </style>
 </head>
 <body>
 <header>
-  <h1>ShiftCommander <span style="color:#96a7bb;font-weight:600;margin-left:6px;">Supervisor</span></h1>
+  <h1>ShiftCommander <span class="muted" style="margin-left:6px">Supervisor</span></h1>
   <nav class="tabs">
     <a class="tab" href="/member.html">Member</a>
     <a class="tab active" href="/supervisor.html">Supervisor</a>
@@ -38,100 +32,60 @@
   </nav>
 </header>
 
-<div class="controls">
-  <label><input type="checkbox" id="monthMode"> Month view</label>
-  <div style="margin-left:auto;display:flex;gap:8px">
-    <button id="prevBtn">◀</button>
-    <button id="nextBtn">▶</button>
-  </div>
-</div>
+<div class="wrap">
+  <!-- existing supervisor content goes above/below as needed -->
 
-<div class="stage">
-  <div id="grid" class="week"></div>
-  <div class="legend">Seats per shift: ALS &amp; EMT. Nudges: <span class="nudge need">Need ALS&amp;EMT</span> <span class="nudge warn">Need ALS</span> <span class="nudge ok">OK</span></div>
+  <div class="panel">
+    <div class="row">
+      <strong>Notes (member → supervisor)</strong>
+      <span class="muted" id="noteWindow"></span>
+      <div style="margin-left:auto">
+        <button id="prev" title="Prev week">◀</button>
+        <button id="next" title="Next week">▶</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
+      <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
 (() => {
   const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const grid = document.getElementById('grid');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const monthMode = document.getElementById('monthMode');
+  const tbody = document.getElementById('notesBody');
+  const winLbl = document.getElementById('noteWindow');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
 
-  const iso = d=>d.toISOString().slice(0,10);
-  const addDays=(d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
-  const startOfWeek=(d)=>{const c=new Date(d); const wd=(c.getDay()+6)%7; c.setDate(c.getDate()-wd); return c;};
-  const startOfMonth=(d)=>{const c=new Date(d); c.setDate(1); return c;};
-  const startOfCalMonth=(d)=>{const first=startOfMonth(d); const wd=(first.getDay()+6)%7; first.setDate(first.getDate()-wd); return first;};
+  let anchor = new Date(); // week anchor (Monday)
+  function monday(d){ const c=new Date(d); const k=(c.getDay()+6)%7; c.setDate(c.getDate()-k); return c; }
+  function iso(d){ return d.toISOString().slice(0,10); }
 
-  let anchor = startOfWeek(new Date());
+  async function jget(u){ const r=await fetch(u); if(!r.ok) throw 0; return r.json(); }
 
-  async function jget(u){ const r=await fetch(u); return r.json(); }
   async function load(){
-    let start,end,cols;
-    if(monthMode.checked){
-      const calStart = startOfCalMonth(anchor);
-      start = iso(calStart); end = iso(addDays(calStart,41)); cols=42;
-      grid.style.gridTemplateColumns='repeat(7,1fr)';
-    }else{
-      const wk = startOfWeek(anchor);
-      start = iso(wk); end = iso(addDays(wk,6)); cols=7;
-      grid.style.gridTemplateColumns='repeat(7,1fr)';
-    }
-    const data = await jget(`${API}/api/state?start=${start}&end=${end}`);
-    render(data, start, cols);
-  }
+    const start = monday(anchor);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    winLbl.textContent = `(${iso(start)} → ${iso(end)})`;
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
 
-  function nudgeFor(names){
-    const hasALS = names.some(n=>/ALS/i.test(n));
-    const hasEMT = names.some(n=>/EMT/i.test(n));
-    if(!hasALS && !hasEMT) return ['Need ALS&EMT','need'];
-    if(!hasALS) return ['Need ALS','warn'];
-    return ['OK','ok'];
-  }
-
-  function render(data, startISO, cols){
-    grid.innerHTML='';
-    let d = new Date(startISO);
-    for(let i=0;i<cols;i++){
-      const isoDay = iso(d);
-      const col = document.createElement('div');
-      col.className='col';
-      col.innerHTML = `
-        <div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
-        <div class="dtitle">${d.toLocaleString(undefined,{month:'short', day:'numeric'})}</div>
-        <div class="slot">
-          <div><strong>AM</strong> <span class="names" id="am-${isoDay}">—</span></div>
-          <span class="nudge" id="amN-${isoDay}">OK</span>
-        </div>
-        <div class="slot">
-          <div><strong>PM</strong> <span class="names" id="pm-${isoDay}">—</span></div>
-          <span class="nudge" id="pmN-${isoDay}">OK</span>
-        </div>
-      `;
-      grid.appendChild(col);
-
-      ['AM','PM'].forEach(half=>{
-        const ids = data.shifts?.[isoDay]?.[half]?.assignees || [];
-        const names = ids.map(id=>{
-          // FALLBACK: show member_no name if available in prefs map – otherwise just id
-          return id;
-        });
-        const label = names.length ? names.join(', ') : '—';
-        document.getElementById((half==='AM'?'am-':'pm-')+isoDay).textContent = label;
-        const [txt,cls] = nudgeFor(names);
-        const nEl = document.getElementById((half==='AM'?'amN-':'pmN-')+isoDay);
-        nEl.textContent = txt; nEl.className = 'nudge ' + cls;
-      });
-
-      d = addDays(d,1);
+    // try notes endpoint; if missing, show message
+    try{
+      const data = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
+      const rows = data?.rows || []; // expected: [{date:'YYYY-MM-DD', half:'AM', user_id:'u1', user_name:'Alex', note:'...'}]
+      if(!rows.length){ tbody.innerHTML = `<tr><td colspan="4" class="muted">No notes.</td></tr>`; return; }
+      tbody.innerHTML = rows.map(r=>(
+        `<tr><td>${r.date}</td><td>${r.half}</td><td>${r.user_name||r.user_id||''}</td><td>${(r.note||'').replace(/</g,'&lt;')}</td></tr>`
+      )).join('');
+    }catch{
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`;
     }
   }
 
-  prevBtn.addEventListener('click', ()=>{ anchor = monthMode.checked ? addDays(startOfMonth(anchor), -1) : addDays(anchor,-7); load(); });
-  nextBtn.addEventListener('click', ()=>{ anchor = monthMode.checked ? addDays(startOfMonth(anchor), 32) : addDays(anchor, 7); load(); });
-  monthMode.addEventListener('change', load);
+  prev.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()-7); load(); });
+  next.addEventListener('click', ()=>{ anchor.setDate(anchor.getDate()+7); load(); });
 
   load();
 })();
