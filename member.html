@@ -1,344 +1,171 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ADR-FR | Member Scheduler</title>
-<style>
-  :root{
-    --bg:#0b1220; --card:#111a2e; --ink:#e9eefc; --muted:#9fb0d3;
-    --ok:#16a34a; --prefer:#0ea5e9; --no:#ef4444; --unset:#334155;
-    --accent:#7c3aed; --warn:#f59e0b;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
-  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #22314f}
-  h1{font:600 16px/1.1 system-ui;margin:0}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  select, input, button{background:#0e172a;border:1px solid #24324d;color:var(--ink);padding:8px 10px;border-radius:8px}
-  button.primary{background:var(--accent);border-color:transparent}
-  button.ghost{background:transparent}
-  main{padding:16px;max-width:1100px;margin:0 auto}
+// src/index.js  (Cloudflare Worker API)
+// Hono-style tiny router, no deps.
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const send = (code, obj) =>
+      new Response(JSON.stringify(obj), {
+        status: code,
+        headers: {
+          "content-type": "application/json",
+          "access-control-allow-origin": "*",
+          "access-control-allow-headers": "content-type,x-import-token",
+          "access-control-allow-methods": "GET,POST,OPTIONS",
+        },
+      });
 
-  /* Calendar */
-  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .dow{color:var(--muted);text-align:center;font-weight:600;margin-bottom:8px}
-  .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 16px}
-  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #2a3a5f;padding:4px 8px;border-radius:999px;color:var(--muted)}
-  .dot{width:10px;height:10px;border-radius:999px;background:#334155}
-  .dot.prefer{background:var(--prefer)}
-  .dot.ok{background:var(--ok)}
-  .dot.no{background:var(--no)}
-  .dot.unset{background:var(--unset)}
-  .card{background:var(--card);border:1px solid #22314f;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:142px}
-  .datebar{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-weight:600}
-  .datebar .num{font:700 16px/1 system-ui;color:var(--ink)}
-  .shiftRow{display:grid;grid-template-columns:1fr auto;gap:8px}
-  .btns{display:flex;gap:6px}
-  .btns button{flex:1;padding:8px 6px;border-radius:8px;border:1px solid #2a3a5f;background:#0e172a;color:#cbd5e1;font-weight:600}
-  .btns button.active.prefer{background:var(--prefer)}
-  .btns button.active.available{background:var(--ok)}
-  .btns button.active.no{background:var(--no)}
-  .btns button.active.unset{background:var(--unset)}
-  .noteRow{display:flex;gap:6px}
-  .noteRow textarea{flex:1;resize:vertical;min-height:34px;max-height:80px;background:#0e172a;border:1px solid #2a3a5f;border-radius:8px;color:var(--ink);padding:8px}
-  .noteBtn{white-space:nowrap}
-  .noteBtn.hasNote{background:#fff;color:#000;border-color:#fff}
-  .nudge{font-size:12px;color:#eab308;font-weight:600}
+    if (request.method === "OPTIONS") return send(204, {});
 
-  /* Tools */
-  .tools{margin-top:18px;display:grid;gap:12px;background:#0a1327;border:1px solid #1b2947;border-radius:12px;padding:12px}
-  .tools h3{margin:0 0 6px 0;font-size:14px}
-  .tools .grid{display:grid;gap:10px}
-  .twocol{grid-template-columns:repeat(2, minmax(0,1fr))}
-  .inline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    const q = (s, n, d = "") => s.searchParams.get(n) ?? d;
 
-  /* Saved badge */
-  #saved-badge{position:fixed;right:12px;bottom:12px;padding:6px 10px;border-radius:6px;background:var(--ok);color:#fff;font:600 12px system-ui;opacity:.95;z-index:9999;box-shadow:0 2px 6px rgba(0,0,0,.2)}
-  @media (max-width:880px){
-    header{flex-wrap:wrap;gap:10px}
-    .calendar{grid-template-columns:repeat(2,1fr)}
-  }
-</style>
-</head>
-<body>
-<header>
-  <div class="row">
-    <h1>Member – Shift Intent</h1>
-    <span id="who" style="color:var(--muted)"></span>
-  </div>
-  <div class="row">
-    <label>Start <input type="date" id="startDate"></label>
-    <label>Weeks
-      <select id="weeks"><option>2</option><option selected>4</option><option>8</option></select>
-    </label>
-    <button class="primary" id="loadBtn">Load</button>
-  </div>
-</header>
-
-<main>
-  <div class="legend">
-    <span class="chip"><span class="dot prefer"></span> Prefer</span>
-    <span class="chip"><span class="dot ok"></span> Available</span>
-    <span class="chip"><span class="dot no"></span> Do Not</span>
-    <span class="chip"><span class="dot unset"></span> Unset</span>
-    <span class="chip"><strong style="color:#eab308">Note to supervisor</strong> turns button white</span>
-  </div>
-
-  <div id="dowRow" class="calendar" style="margin-bottom:-6px">
-    <div class="dow">Sun</div><div class="dow">Mon</div><div class="dow">Tue</div>
-    <div class="dow">Wed</div><div class="dow">Thu</div><div class="dow">Fri</div><div class="dow">Sat</div>
-  </div>
-
-  <section id="cal" class="calendar"></section>
-
-  <section class="tools">
-    <h3>Preferences & bulk tools</h3>
-    <div class="grid twocol">
-      <div class="inline">
-        <label><input type="checkbox" id="prefer24s"> Prefer 24s</label>
-        <label><input type="checkbox" id="type3"> Type III driver approved</label>
-        <label><input type="checkbox" id="inactive"> Inactive (block new scheduling)</label>
-        <button class="ghost" id="savePrefs">Save prefs</button>
-      </div>
-
-      <div class="inline">
-        <strong>Bulk set (date range):</strong>
-        From <input type="date" id="bulkFrom">
-        Until <input type="date" id="bulkUntil">
-        Set to
-        <select id="bulkState">
-          <option value="available">Available</option>
-          <option value="prefer">Prefer</option>
-          <option value="no">Do Not</option>
-          <option value="unset">Unset</option>
-        </select>
-        Half-days:
-        <label><input type="checkbox" id="halfAM" checked> AM</label>
-        <label><input type="checkbox" id="halfPM" checked> PM</label>
-        <button class="primary" id="applyBulk">Apply</button>
-      </div>
-
-      <div class="inline" style="grid-column:1/-1;flex-wrap:wrap">
-        <strong>Weekly pattern (repeat until date):</strong>
-        <label><input type="checkbox" class="wday" value="0"> Sun</label>
-        <label><input type="checkbox" class="wday" value="1"> Mon</label>
-        <label><input type="checkbox" class="wday" value="2"> Tue</label>
-        <label><input type="checkbox" class="wday" value="3"> Wed</label>
-        <label><input type="checkbox" class="wday" value="4"> Thu</label>
-        <label><input type="checkbox" class="wday" value="5"> Fri</label>
-        <label><input type="checkbox" class="wday" value="6"> Sat</label>
-        State
-        <select id="patternState">
-          <option value="available">Available</option>
-          <option value="prefer">Prefer</option>
-          <option value="no">Do Not</option>
-          <option value="unset">Unset</option>
-        </select>
-        Half-days:
-        <label><input type="checkbox" id="pAM" checked> AM</label>
-        <label><input type="checkbox" id="pPM" checked> PM</label>
-        Start <input type="date" id="patternStart">
-        Repeat until <input type="date" id="patternUntil">
-        <button class="primary" id="applyPattern">Apply pattern</button>
-      </div>
-    </div>
-  </section>
-</main>
-
-<script>
-/* ====== CONFIG ====== */
-const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-const currentUserId = 'uq2w4or'; // swap to logged-in user id
-
-/* ====== UTIL ====== */
-const fmt = (d)=> d.toISOString().slice(0,10);
-function firstOfWeek(dt){ const d=new Date(dt); const day=d.getDay(); d.setDate(d.getDate()-day); return d; }
-function addDays(dt,n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
-function el(tag, attrs={}, ...kids){
-  const e=document.createElement(tag);
-  for(const k in attrs){ if(k==='class') e.className=attrs[k]; else if(k==='html') e.innerHTML=attrs[k]; else e.setAttribute(k, attrs[k]); }
-  for(const k of kids){ if(k==null) continue; e.appendChild(typeof k==='string'? document.createTextNode(k): k) }
-  return e;
-}
-function showSaved(){ let b=document.getElementById('saved-badge'); if(b){b.remove()} b=el('div',{id:'saved-badge'},'Saved'); document.body.appendChild(b); setTimeout(()=>b.remove(),900); }
-
-/* debounce per key */
-const debMap=new Map();
-function debounce(key, fn, ms=650){ if(debMap.has(key)) clearTimeout(debMap.get(key)); const t=setTimeout(fn, ms); debMap.set(key,t); }
-
-/* ====== API ====== */
-async function getUsers(){ const r=await fetch(`${API_BASE}/api/users`); if(!r.ok) throw new Error('users'); return r.json(); }
-async function getState(start,end){ const r=await fetch(`${API_BASE}/api/state?start=${start}&end=${end}`); if(!r.ok) throw new Error('state'); return r.json(); }
-async function postJSON(url, data){
-  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-  if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json();
-}
-function saveAvailability(userId,date,half,state,note=''){
-  const key=`${userId}|${date}|${half}`;
-  debounce(key, async ()=>{
-    const payload={userId,date,half,state,note};
-    try{ await postJSON(`${API_BASE}/api/availability`, payload); console.log('saved',payload); showSaved(); }
-    catch(e){ console.error('save failed',e); alert('Save failed'); }
-  });
-}
-async function savePrefsToServer(){
-  // stub – if you later expose /api/prefs, wire here
-  showSaved();
-}
-
-/* ====== RENDER ====== */
-let users=[], state={}, avail={}, prefs={};
-
-function stateFor(date,half){
-  const me=avail[currentUserId]||{};
-  return (me[date] && me[date][half]) || 'unset';
-}
-function makeShiftButtons(ymd, half){
-  const cur = stateFor(ymd, half);
-  const wrap = el('div',{class:'btns'});
-  const opts=[['prefer','Prefer'],['available','Avail'],['no','Do Not'],['unset','Unset']];
-  for(const [val,label] of opts){
-    const b=el('button',{class: (val===cur? `active ${val}`:''), 'data-val':val}, label);
-    b.addEventListener('click',()=>{
-      wrap.querySelectorAll('button').forEach(btn=>btn.classList.remove('active','prefer','available','no','unset'));
-      b.classList.add('active',val);
-      saveAvailability(currentUserId, ymd, half, val, readNoteText(ymd,half));
-    });
-    wrap.appendChild(b);
-  }
-  return wrap;
-}
-function readNoteText(ymd,half){
-  const t=document.querySelector(`textarea[data-note="${ymd}|${half}"]`);
-  return t? t.value.trim(): '';
-}
-function makeNoteRow(ymd,half){
-  const noteText = (state.notes && state.notes[ymd] && state.notes[ymd][half]) || '';
-  const ta = el('textarea', {'data-note':`${ymd}|${half}`, placeholder:"ie: 'In at 10am'"});
-  if (noteText) ta.value = noteText;
-  const btn = el('button',{class:`noteBtn ${noteText ? 'hasNote':''}`}, 'Note to supervisor');
-  const row = el('div',{class:'noteRow'}, ta, btn);
-  btn.addEventListener('click', ()=>{
-    const val = ta.value.trim();
-    btn.classList.toggle('hasNote', !!val);
-    // keep current intent selection for this half
-    const cur = stateFor(ymd, half);
-    saveAvailability(currentUserId, ymd, half, cur, val);
-  });
-  return row;
-}
-function nudgeFor(ymd){
-  // very simple: if no assignees at all -> "Need ALS & EMT"
-  const s = state.shifts?.[ymd];
-  if(!s) return '';
-  const am = s.AM?.assignees?.length||0;
-  const pm = s.PM?.assignees?.length||0;
-  if(am+pm===0) return 'Need ALS & EMT';
-  // extend with smarter coverage logic when assignment data is richer
-  return '';
-}
-
-function renderCalendar(startDate, weeks){
-  const cal = document.getElementById('cal');
-  cal.innerHTML = '';
-  const start = firstOfWeek(new Date(startDate));
-  const totalDays = weeks*7;
-  for(let i=0;i<totalDays;i++){
-    const d = addDays(start,i);
-    const ymd = fmt(d);
-    const nudge = nudgeFor(ymd);
-    const card = el('div',{class:'card'});
-    const bar = el('div',{class:'datebar'},
-      el('span',{}, d.toLocaleDateString(undefined,{weekday:'short'})),
-      el('span',{class:'num'}, String(d.getDate()).padStart(2,'0'))
-    );
-    card.appendChild(bar);
-
-    // AM row
-    card.appendChild(el('div',{class:'shiftRow'},
-      makeShiftButtons(ymd,'AM'),
-      el('div',{},'AM')
-    ));
-    card.appendChild(makeNoteRow(ymd,'AM'));
-
-    // PM row
-    card.appendChild(el('div',{class:'shiftRow'},
-      makeShiftButtons(ymd,'PM'),
-      el('div',{},'PM')
-    ));
-    card.appendChild(makeNoteRow(ymd,'PM'));
-
-    if(nudge) card.appendChild(el('div',{class:'nudge'}, nudge));
-    cal.appendChild(card);
-  }
-}
-
-/* ====== LOAD ====== */
-async function loadRange(){
-  const start = document.getElementById('startDate').value || fmt(new Date());
-  const weeks = parseInt(document.getElementById('weeks').value||'4',10);
-  const end = fmt(addDays(new Date(start), weeks*7-1));
-  const data = await getState(start,end);
-  state = data;
-  avail = data.availability || {};
-  prefs = data.prefs || {};
-  renderCalendar(start,weeks);
-}
-
-async function boot(){
-  // who
-  users = await getUsers();
-  const me = users.find(u=>u.id===currentUserId);
-  document.getElementById('who').textContent = me? `Logged in: ${me.name} (#${me.member_no||''})` : currentUserId;
-
-  // default dates
-  const today = fmt(new Date());
-  document.getElementById('startDate').value = today;
-
-  await loadRange();
-
-  document.getElementById('loadBtn').addEventListener('click', loadRange);
-
-  document.getElementById('savePrefs').addEventListener('click', savePrefsToServer);
-
-  document.getElementById('applyBulk').addEventListener('click', async ()=>{
-    const from = document.getElementById('bulkFrom').value;
-    const until = document.getElementById('bulkUntil').value;
-    const st = document.getElementById('bulkState').value;
-    const doAM = document.getElementById('halfAM').checked;
-    const doPM = document.getElementById('halfPM').checked;
-    if(!from || !until){ alert('Select From/Until'); return; }
-    let d=new Date(from), stop=new Date(until);
-    for(; d<=stop; d=addDays(d,1)){
-      const y=fmt(d);
-      if(doAM) saveAvailability(currentUserId,y,'AM',st, readNoteText(y,'AM'));
-      if(doPM) saveAvailability(currentUserId,y,'PM',st, readNoteText(y,'PM'));
-    }
-    showSaved();
-  });
-
-  document.getElementById('applyPattern').addEventListener('click', ()=>{
-    const start = document.getElementById('patternStart').value || fmt(new Date());
-    const until = document.getElementById('patternUntil').value;
-    const st = document.getElementById('patternState').value;
-    const doAM = document.getElementById('pAM').checked;
-    const doPM = document.getElementById('pPM').checked;
-    const days = [...document.querySelectorAll('.wday:checked')].map(cb=>parseInt(cb.value,10));
-    if(!until){ alert('Select Repeat until'); return; }
-    let d=new Date(start), stop=new Date(until);
-    for(; d<=stop; d=addDays(d,1)){
-      if(days.includes(d.getDay())){
-        const y=fmt(d);
-        if(doAM) saveAvailability(currentUserId,y,'AM',st, readNoteText(y,'AM'));
-        if(doPM) saveAvailability(currentUserId,y,'PM',st, readNoteText(y,'PM'));
+    try {
+      // Health
+      if (url.pathname === "/api/health") {
+        // Simple sanity: can we read SQLite pragma?
+        let ok = true;
+        try {
+          await env.DB.prepare("select 1").first();
+        } catch (_) {
+          ok = false;
+        }
+        return send(200, { ok, version: "r3", db: ok });
       }
-    }
-    showSaved();
-  });
-}
 
-boot().catch(e=>{ console.error(e); alert('Load failed'); });
-</script>
-</body>
-</html>
+      // Echo
+      if (url.pathname === "/api/echo" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        return send(200, { method: request.method, url: url.toString(), body });
+      }
+
+      // Users
+      if (url.pathname === "/api/users") {
+        const { results } = await env.DB.prepare(
+          `SELECT id,name,role,member_no,
+                  can_drive,notes,inactive,reserve,type3_driver
+           FROM users ORDER BY name`
+        ).all();
+
+        const parsed = results.map(r => ({
+          ...r,
+          can_drive: JSON.parse(r.can_drive || "[]"),
+          inactive: !!r.inactive,
+          reserve: !!r.reserve,
+          type3_driver: !!r.type3_driver,
+        }));
+        return send(200, parsed);
+      }
+
+      // Seed shifts (protected)
+      if (url.pathname === "/api/seed" && request.method === "POST") {
+        const tok = request.headers.get("x-import-token");
+        if (tok !== env.IMPORT_TOKEN) return send(401, { error: "unauthorized" });
+
+        const days = Math.max(1, Math.min(365, Number(q(url, "days", "60"))));
+        const stmt = `
+WITH RECURSIVE dates(d) AS (
+  SELECT date('now')
+  UNION ALL
+  SELECT date(d, '+1 day') FROM dates WHERE d < date('now', '+${days - 1} day')
+)
+INSERT OR IGNORE INTO sc_shifts(date, half, assignees, status)
+SELECT d,'AM','[]','unassigned' FROM dates
+UNION ALL
+SELECT d,'PM','[]','unassigned' FROM dates;`;
+        await env.DB.exec(stmt);
+        return send(200, { ok: true, seeded: days * 2 });
+      }
+
+      // State window (shifts + availability + prefs)
+      if (url.pathname === "/api/state") {
+        const start = q(url, "start");
+        const end = q(url, "end");
+        if (!start || !end) return send(400, { error: "start,end required" });
+
+        const shifts = await env.DB.prepare(
+          `SELECT date,half,assignees,status
+           FROM sc_shifts
+           WHERE date BETWEEN ? AND ?
+           ORDER BY date,half`
+        ).bind(start, end).all();
+
+        const availability = await env.DB.prepare(
+          `SELECT user_id,date,half,state,note
+           FROM sc_availability
+           WHERE date BETWEEN ? AND ?`
+        ).bind(start, end).all();
+
+        const prefs = await env.DB.prepare(
+          `SELECT user_id, prefer24s, notes
+           FROM sc_prefs`
+        ).all().catch(() => ({ results: [] }));
+
+        // Shape data
+        const shiftMap = {};
+        for (const r of shifts.results) {
+          shiftMap[r.date] ??= {};
+          shiftMap[r.date][r.half] = {
+            assignees: JSON.parse(r.assignees || "[]"),
+            status: r.status,
+          };
+        }
+
+        const availMap = {};
+        for (const r of availability.results) {
+          availMap[r.user_id] ??= {};
+          availMap[r.user_id][r.date] ??= {};
+          availMap[r.user_id][r.date][r.half] = r.state;
+        }
+
+        const prefsMap = {};
+        for (const r of prefs.results) {
+          prefsMap[r.user_id] = { prefer24s: !!r.prefer24s, notes: r.notes || "" };
+        }
+
+        return send(200, { shifts: shiftMap, availability: availMap, prefs: prefsMap });
+      }
+
+      // Availability upsert (member intent + note)
+      if (url.pathname === "/api/availability" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const { userId, date, half, state } = body;
+        const note = body.note ?? "";
+        if (!userId || !date || !half || !state) {
+          return send(400, { error: "userId,date,half,state required" });
+        }
+        await env.DB.prepare(
+          `INSERT INTO sc_availability (user_id,date,half,state,note,updated_at)
+             VALUES(?,?,?,?,?,unixepoch())
+           ON CONFLICT(user_id,date,half) DO UPDATE SET
+             state=excluded.state,
+             note =excluded.note,
+             updated_at=unixepoch()`
+        ).bind(userId, date, half, state, note).run();
+
+        return send(200, { ok: true });
+      }
+
+      // NEW: Notes feed for Supervisor (member -> supervisor)
+      // GET /api/notes?start=YYYY-MM-DD&end=YYYY-MM-DD
+      if (url.pathname === "/api/notes") {
+        const start = q(url, "start");
+        const end = q(url, "end");
+        if (!start || !end) return send(400, { error: "start,end required" });
+
+        const { results } = await env.DB.prepare(
+          `SELECT a.date, a.half, a.note, a.updated_at,
+                  u.id as user_id, u.name as user_name
+           FROM sc_availability a
+           JOIN users u ON u.id = a.user_id
+           WHERE a.note <> '' AND a.date BETWEEN ? AND ?
+           ORDER BY a.date, CASE a.half WHEN 'AM' THEN 0 ELSE 1 END, a.updated_at DESC`
+        ).bind(start, end).all();
+
+        return send(200, { ok: true, count: results.length, notes: results });
+      }
+
+      return send(404, { error: "not found" });
+    } catch (err) {
+      return send(500, { error: String(err?.message || err) });
+    }
+  },
+};

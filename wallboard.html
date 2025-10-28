@@ -1,96 +1,71 @@
-<!DOCTYPE html>
+<!-- wallboard.html (public display) -->
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ADR-FR | Wallboard</title>
+<meta charset="utf-8">
+<title>ShiftCommander · Wallboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  :root{--bg:#020617;--ink:#e5e7eb;--muted:#94a3b8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--tile:#0b1220;--line:#1e293b}
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#040b1d,#0b1326);color:var(--ink);font:16px/1.35 Inter,system-ui,Segoe UI,Roboto,Arial}
-  header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}
-  h1{margin:0;font:700 18px/1.2 Inter,system-ui}
-  .row{display:flex;gap:10px;align-items:center}
-  select,input{background:#0b1220;border:1px solid #25324a;color:var(--ink);padding:8px 10px;border-radius:8px}
-  main{padding:18px;max-width:1500px;margin:0 auto}
-  .grid{display:grid;gap:14px;grid-template-columns:repeat(7,1fr)}
-  .tile{background:var(--tile);border:1px solid var(--line);border-radius:12px;padding:12px;min-height:110px;display:flex;flex-direction:column;gap:8px}
-  .date{display:flex;justify-content:space-between;align-items:center;color:var(--muted)}
-  .num{font:800 20px/1 Inter}
-  .rowmini{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;background:#0e172a;border:1px solid #2a3a5f}
-  .ok{background:rgba(34,197,94,.15);border-color:#2a5f3b}
-  .warn{background:rgba(245,158,11,.15);border-color:#5f4a2a}
-  .bad{background:rgba(239,68,68,.15);border-color:#5f2a2a}
-  .nudge{color:#fde68a;font-weight:700}
-  @media (max-width:1100px){ .grid{grid-template-columns:repeat(4,1fr)} }
-  @media (max-width:780px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  :root{--bg:#0b0f14;--ink:#e6edf3;--muted:#9aa4af;--panel:#0f141a;--line:#1f2730;--pill:#1b2430;--accent:#58a6ff}
+  html,body{background:var(--bg);color:var(--ink);margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1400px;margin:10px auto;padding:0 10px}
+  .board{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .col h3{margin:0;padding:10px 12px;background:#111823;border-bottom:1px solid var(--line);font-size:18px}
+  .day{padding:10px 12px;border-top:1px dashed var(--line)}
+  .date{font-weight:800;font-size:20px;margin-bottom:8px}
+  .slot{display:flex;gap:6px;align-items:center;margin:6px 0}
+  .slot b{display:inline-block;width:42px;text-align:center;background:var(--pill);border:1px solid var(--line);border-radius:999px;padding:4px 0}
+  .names{font-weight:700}
+  .empty{color:var(--muted);font-style:italic}
 </style>
 </head>
 <body>
-<header>
-  <h1>Tonight’s Coverage</h1>
-  <div class="row">
-    <label>Start <input type="date" id="start"></label>
-    <label>Days
-      <select id="days"><option>7</option><option selected>14</option><option>28</option></select>
-    </label>
-  </div>
-</header>
-
-<main>
-  <div class="grid" id="board"></div>
-</main>
-
+<div class="wrap">
+  <div id="board" class="board"></div>
+</div>
 <script>
-const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-const fmt=(d)=> d.toISOString().slice(0,10);
-function addDays(dt,n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
+const API=(p)=>`https://adr-fr-scheduler-api.brian-9ac.workers.dev${p}`;
+function fmtDate(d){return d.toISOString().slice(0,10)}
+function label(d){return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}
 
-async function getState(a,b){ const r=await fetch(`${API}/api/state?start=${a}&end=${b}`); return r.json(); }
+async function getUsers(){ const r=await fetch(API('/api/users')); return await r.json(); }
 
-function classFor(count){ if(count>=2) return 'ok'; if(count===1) return 'warn'; return 'bad'; }
+async function getWindow(){
+  const start=new Date(); const end=new Date(); end.setDate(start.getDate()+13);
+  const qs=`?start=${fmtDate(start)}&end=${fmtDate(end)}`;
+  const r=await fetch(API('/api/state'+qs)); return await r.json();
+}
 
-function render(data, start, days){
-  const root=document.getElementById('board'); root.innerHTML='';
-  for(let i=0;i<days;i++){
-    const d=addDays(new Date(start), i);
-    const ymd=fmt(d);
-    const shift = data.shifts?.[ymd] || {};
-    const am = shift.AM?.assignees?.length || 0;
-    const pm = shift.PM?.assignees?.length || 0;
-    const need = (am+pm===0) ? 'Need ALS & EMT' : '';
-    const tile=document.createElement('div'); tile.className='tile';
-    const head=document.createElement('div'); head.className='date';
-    head.innerHTML = `<span>${d.toLocaleDateString(undefined,{weekday:'short'})}</span><span class="num">${String(d.getDate()).padStart(2,'0')}</span>`;
-    const rows=document.createElement('div'); rows.className='rowmini';
-    rows.append(badge('AM', am), badge('PM', pm));
-    const n=document.createElement('div'); n.className='nudge'; n.textContent=need;
-    tile.append(head, rows, n);
-    root.appendChild(tile);
+(async function(){
+  const users = await getUsers();
+  const id2name = Object.fromEntries(users.map(u=>[u.id,u.name]));
+  const data = await getWindow();
+  const start=new Date(); const cols=[[],[],[],[],[],[],[]];
+
+  for(let i=0;i<14;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const ymd = fmtDate(d);
+    const day = data.shifts?.[ymd] || {};
+    const am = (day.AM?.assignees||[]).map(id=>id2name[id]).join(", ");
+    const pm = (day.PM?.assignees||[]).map(id=>id2name[id]).join(", ");
+    const html = `
+      <div class="day">
+        <div class="date">${label(d)}</div>
+        <div class="slot"><b>AM</b> <span class="names">${am || '<span class="empty">—</span>'}</span></div>
+        <div class="slot"><b>PM</b> <span class="names">${pm || '<span class="empty">—</span>'}</span></div>
+      </div>`;
+    cols[(d.getDay()+6)%7].push(html); // Mon-first
   }
-}
-function badge(label, count){
-  const span=document.createElement('span');
-  span.className=`pill ${classFor(count)}`;
-  span.textContent = `${label}: ${count} assigned`;
-  return span;
-}
 
-async function load(){
-  const start=document.getElementById('start').value || fmt(new Date());
-  const days=parseInt(document.getElementById('days').value||'14',10);
-  const end=fmt(addDays(new Date(start), days-1));
-  const data=await getState(start,end);
-  render(data, start, days);
-}
-
-(function init(){
-  const today=fmt(new Date());
-  document.getElementById('start').value=today;
-  document.getElementById('days').addEventListener('change', load);
-  document.getElementById('start').addEventListener('change', load);
-  load().catch(e=>{ console.error(e); alert('Failed to load'); });
+  const board = document.getElementById('board');
+  const dow=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  board.innerHTML = dow.map((w,i)=>`
+    <div class="col">
+      <h3>${w}</h3>
+      ${cols[i].join('')}
+    </div>
+  `).join('');
 })();
 </script>
 </body>
