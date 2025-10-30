@@ -6,39 +6,35 @@
 <title>ShiftCommander • Member</title>
 <style>
   :root{
-    --bg:#0b1220; --panel:#111a2b; --panel2:#0f1726; --ink:#e5ecff; --muted:#99a6c7;
-    --chip:#1b2740; --chip-b:#243452; --ok:#0ea5e9; --good:#22c55e; --bad:#ef4444; --unset:#475569;
-    --note:#ffd166; --note-ink:#1b1b1b; --ring:#233657;
+    --bg:#0b1220; --panel:#111a2b; --panel2:#0f1726; --ink:#e5ecff; --muted:#99a6c7; --ring:#233657;
+    --ok:#0ea5e9; --good:#22c55e; --bad:#ef4444; --unset:#64748b; --note:#ffd166; --note-ink:#1b1b1b;
     --radius:14px;
   }
   html,body{background:var(--bg); color:var(--ink); font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; margin:0}
-  a{color:#9ecbff; text-decoration:none}
   .wrap{max-width:1100px; margin:24px auto; padding:0 16px}
   h1{font-size:20px; font-weight:700; margin:0 0 12px}
-  .tabs a{display:inline-block; padding:6px 10px; margin-right:8px; background:var(--panel2); border-radius:10px; color:var(--muted)}
+  .tabs a{display:inline-block; padding:6px 10px; margin-right:8px; background:var(--panel2); border-radius:10px; color:var(--muted); text-decoration:none}
   .tabs a.active{color:var(--ink); background:#1a2742}
   .toolbar{display:flex; gap:8px; align-items:center; margin:8px 0 14px}
   .btn{background:var(--panel2); border:1px solid var(--ring); color:var(--ink); padding:6px 10px; border-radius:10px; cursor:pointer}
-  .btn:hover{background:#14203a}
   select{background:var(--panel2); color:var(--ink); border:1px solid var(--ring); border-radius:8px; padding:6px 8px}
   .cal{display:grid; grid-template-columns:repeat(7,1fr); gap:12px}
   .day{background:var(--panel); border:1px solid var(--ring); border-radius:var(--radius); padding:10px 10px 12px}
   .day h3{margin:0 0 8px; font-size:13px; color:var(--muted); display:flex; justify-content:space-between}
   .big{font-weight:700; color:#cfe3ff}
-  .row{margin-top:8px; padding:10px; background:var(--panel2); border:1px dashed #233657; border-radius:12px}
-  .row-title{font-size:12px; color:#b9c5e6; margin-bottom:6px}
-  .chips{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-  .chip{user-select:none; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid transparent; cursor:pointer; background:var(--chip)}
-  .chip:hover{background:var(--chip-b)}
-  .chip.prefer.active{background:rgba(14,165,233,.15); border-color:var(--ok); color:#bfe6ff}
-  .chip.available.active{background:rgba(34,197,94,.16); border-color:var(--good); color:#d7ffdf}
-  .chip.no.active{background:rgba(239,68,68,.16); border-color:var(--bad); color:#ffd7d7}
-  .chip.unset.active{background:rgba(71,85,105,.2); border-color:var(--unset); color:#d9dee7}
-  .notebtn{margin-left:auto; background:#2b385a; border-color:#2f4a7a}
-  .notebtn.has{background:var(--note); color:var(--note-ink); border-color:#eab308}
-  .note-wrap{margin-top:8px; display:none}
-  .note-wrap.show{display:block}
-  textarea{width:100%; min-height:52px; border-radius:10px; background:#0e1628; color:var(--ink); border:1px solid var(--ring); padding:8px}
+  .row{margin-top:10px; background:var(--panel2); border:1px dashed #233657; border-radius:12px; padding:10px}
+  .row-head{display:flex; align-items:center; gap:10px}
+  .half{font-size:12px; color:#b9c5e6; min-width:28px}
+  .toggle{user-select:none; border:1px solid var(--ring); border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; background:#1b2740}
+  .toggle.state-prefer{background:rgba(14,165,233,.15); border-color:var(--ok); color:#bfe6ff}
+  .toggle.state-available{background:rgba(34,197,94,.16); border-color:var(--good); color:#d7ffdf}
+  .toggle.state-no{background:rgba(239,68,68,.16); border-color:var(--bad); color:#ffd7d7}
+  .toggle.state-unset{background:rgba(100,116,139,.18); border-color:var(--unset); color:#e2e8f0}
+  .note{flex:1; display:flex; align-items:center; gap:8px}
+  .note label{font-size:12px; color:#b9c5e6}
+  .note input{flex:1; min-width:120px; background:#0e1628; color:var(--ink); border:1px solid var(--ring); border-radius:10px; padding:6px 8px}
+  .note .pill{font-size:11px; padding:4px 8px; border-radius:999px; background:#2b385a; border:1px solid #2f4a7a}
+  .note .pill.has{background:var(--note); color:var(--note-ink); border-color:#eab308; font-weight:700}
   .foot{margin-top:16px; font-size:12px; color:var(--muted)}
   .debug{margin-top:14px; padding:10px; background:#0a1020; border:1px solid #1a2946; border-radius:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; white-space:pre-wrap; color:#bcd2ff}
   @media (max-width:900px){ .cal{grid-template-columns:repeat(2,1fr)} }
@@ -64,212 +60,157 @@
 
   <div id="calendar" class="cal"></div>
 
-  <div class="foot">Tap a chip to set your intent for that half shift. “Note” inverts when text is present.</div>
+  <div class="foot">Each half-shift uses a single toggle (Prefer → Available → Do Not → Unset). Notes save automatically.</div>
   <div id="debug" class="debug">Booting…</div>
 </div>
 
 <script>
 (() => {
   const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const debug = (...a)=>{ const el=document.getElementById('debug'); el.textContent += '\n'+a.join(' '); el.scrollTop=el.scrollHeight; };
+  const STATES = ['prefer','available','no','unset'];
+  const LABELS = {prefer:'Prefer', available:'Available', no:'Do Not', unset:'Unset'};
+  const debug = (...a)=>{ const el=document.getElementById('debug'); el.textContent += '\\n'+a.join(' '); el.scrollTop=el.scrollHeight; };
 
-  // State
+  // state
   let cursor = startOfMonth(new Date());
-  let users = {};             // id -> {name}
-  let currentUser = 'uq2w4or';// default (replace if you have auth)
-  let availability = {};      // availability[userId][date][half] -> state
-  let notes = {};             // notes[userId][date][half] -> text from prefs.notes (API future) or sc_availability.note
+  let currentUser = 'uq2w4or';
+  let availability = {}; // availability[userId][date][half] -> state
+  let notes = {};        // notes[userId][date][half] -> text
 
-  // Helpers
+  // utils
   function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-  function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
   function fmtDate(d){ return d.toISOString().slice(0,10); }
-  function labelMonth(d){
-    return d.toLocaleString(undefined,{month:'long', year:'numeric'});
-  }
-  function rangeByWeeks(d){
-    const first = startOfMonth(d);
-    const offset = (first.getDay()+6)%7; // Monday=0
-    const start = addDays(first, -offset);
-    const days = 35; // 5 weeks grid
-    const arr = [];
-    for(let i=0;i<days;i++) arr.push(addDays(start,i));
-    return arr;
-  }
-  function cls(el, on, name){ el.classList[on?'add':'remove'](name); }
+  function labelMonth(d){ return d.toLocaleString(undefined,{month:'long',year:'numeric'}); }
+  function range5w(d){ const first=new Date(d.getFullYear(),d.getMonth(),1); const off=(first.getDay()+6)%7; const start=addDays(first,-off); const arr=[]; for(let i=0;i<35;i++) arr.push(addDays(start,i)); return arr; }
 
   // API
-  async function health(){
-    const r = await fetch(`${API}/api/health`);
-    const j = await r.json();
-    debug('health', JSON.stringify(j));
+  async function api(path, init){
+    try{
+      const r = await fetch(API+path, {mode:'cors', cache:'no-store', credentials:'omit', ...init});
+      if(!r.ok){ const t = await r.text().catch(()=> ''); throw new Error(`HTTP ${r.status} ${t.slice(0,200)}`); }
+      const ct = r.headers.get('content-type')||'';
+      return ct.includes('application/json') ? r.json() : r.text();
+    }catch(err){
+      debug('ERR', err.message||String(err));
+      throw err;
+    }
   }
-  async function loadState(winStart, winEnd){
-    const url = `${API}/api/state?start=${winStart}&end=${winEnd}`;
-    const r = await fetch(url);
-    if(!r.ok) throw new Error('state HTTP '+r.status);
-    const j = await r.json();
-    availability = j.availability || {};
-    users = j.prefs || {};
-    debug('GET /api/state → 200');
-    return j;
-  }
-  async function saveAvailability({userId,date,half,state,note}){
+  const health = ()=> api('/api/health');
+  const loadState = (start,end)=> api(`/api/state?start=${start}&end=${end}`);
+  function saveAvail({userId,date,half,state,note}){
     const body = {userId,date,half,state};
-    if(typeof note === 'string') body.note = note;
-    const r = await fetch(`${API}/api/availability`,{
+    if(typeof note==='string') body.note = note;
+    return api('/api/availability',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
-    if(!r.ok){
-      const t = await r.text().catch(()=> '');
-      throw new Error('save failed '+r.status+' '+t);
-    }
-    return await r.json();
+  }
+
+  // data helpers
+  function getState(uid,ymd,half){ return availability?.[uid]?.[ymd]?.[half] || 'unset'; }
+  function setState(uid,ymd,half,val){
+    availability[uid] = availability[uid] || {};
+    availability[uid][ymd] = availability[uid][ymd] || {};
+    availability[uid][ymd][half] = val;
+  }
+  function getNote(uid,ymd,half){ return notes?.[uid]?.[ymd]?.[half] || ''; }
+  function setNote(uid,ymd,half,t){
+    notes[uid] = notes[uid] || {};
+    notes[uid][ymd] = notes[uid][ymd] || {};
+    notes[uid][ymd][half] = t;
   }
 
   // UI
-  function paintMemberOptions(){
+  function paintMemberSelect(){
     const sel = document.getElementById('memberSel');
-    sel.innerHTML='';
-    // simple list from prefs map keys, fallback currentUser
-    const ids = Object.keys(users).length ? Object.keys(users) : [currentUser];
-    ids.forEach(id=>{
-      const opt = document.createElement('option');
-      opt.value=id; opt.textContent = id===currentUser?`1003 AJ (${id})` : id;
-      if(id===currentUser) opt.selected=true;
-      sel.appendChild(opt);
-    });
+    sel.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = currentUser; opt.textContent = `1003 AJ (${currentUser})`; opt.selected = true;
+    sel.appendChild(opt);
     sel.onchange = () => { currentUser = sel.value; paintCalendar(); };
   }
 
-  function currentState(userId, date, half){
-    return (availability?.[userId]?.[date]?.[half]) || 'unset';
+  function makeToggle(ymd, half){
+    const btn = document.createElement('button');
+    const now = getState(currentUser, ymd, half);
+    btn.className = `toggle state-${now}`;
+    btn.textContent = LABELS[now] || 'Unset';
+
+    btn.onclick = () => {
+      const prev = getState(currentUser, ymd, half);
+      // cycle
+      const idx = STATES.indexOf(prev);
+      const next = STATES[(idx+1) % STATES.length];
+      // optimistic
+      setState(currentUser, ymd, half, next);
+      btn.className = `toggle state-${next}`;
+      btn.textContent = LABELS[next];
+
+      saveAvail({userId:currentUser, date:ymd, half, state:next, note:getNote(currentUser, ymd, half)})
+        .then(()=>debug('saved', currentUser, ymd, half, next))
+        .catch(err=>{
+          // rollback
+          setState(currentUser, ymd, half, prev);
+          btn.className = `toggle state-${prev}`;
+          btn.textContent = LABELS[prev];
+          alert('Save failed. See debug.');
+        });
+    };
+    return btn;
   }
 
-  function currentNote(userId, date, half){
-    const noteMap = notes?.[userId]?.[date] || {};
-    return noteMap[half] || '';
-  }
+  function makeNote(ymd, half){
+    const wrap = document.createElement('div'); wrap.className='note';
+    const lab = document.createElement('label'); lab.textContent='Note';
+    const pill = document.createElement('span'); pill.className='pill'; pill.textContent='empty';
+    const input = document.createElement('input'); input.placeholder='Optional note…';
 
-  function optimisticSet(userId, date, half, state){
-    availability[userId] = availability[userId] || {};
-    availability[userId][date] = availability[userId][date] || {};
-    availability[userId][date][half] = state;
-  }
-  function optimisticNote(userId,date,half,text){
-    notes[userId] = notes[userId] || {};
-    notes[userId][date] = notes[userId][date] || {};
-    notes[userId][date][half] = text;
-  }
+    const start = getNote(currentUser, ymd, half);
+    if(start){ pill.classList.add('has'); pill.textContent='saved'; input.value=start; }
 
-  function makeChip(label, key, active){
-    const c = document.createElement('span');
-    c.className = `chip ${key}${active?' active':''}`;
-    c.textContent = label;
-    c.dataset.key = key;
-    return c;
+    let tmr=null;
+    input.addEventListener('input', ()=>{
+      const txt = input.value;
+      setNote(currentUser, ymd, half, txt);
+      pill.classList.toggle('has', !!txt.trim());
+      pill.textContent = txt.trim() ? 'editing…' : 'empty';
+      clearTimeout(tmr);
+      tmr = setTimeout(()=>{
+        saveAvail({userId:currentUser, date:ymd, half, state:getState(currentUser, ymd, half), note:txt})
+          .then(()=>{ pill.classList.add('has'); pill.textContent='saved'; debug('saved note', ymd, half); })
+          .catch(()=>{ pill.classList.remove('has'); pill.textContent='error'; });
+      }, 350);
+    });
+
+    wrap.append(lab, input, pill);
+    return wrap;
   }
 
   function paintCalendar(){
-    const monthEl = document.getElementById('monthLabel');
-    monthEl.textContent = labelMonth(cursor);
-
-    const days = rangeByWeeks(cursor);
-    const start = fmtDate(days[0]);
-    const end   = fmtDate(days[days.length-1]);
-    const cal = document.getElementById('calendar');
-    cal.innerHTML='';
+    document.getElementById('monthLabel').textContent = labelMonth(cursor);
+    const days = range5w(cursor);
+    const cal = document.getElementById('calendar'); cal.innerHTML='';
 
     days.forEach(d=>{
       const ymd = fmtDate(d);
-      const card = document.createElement('div');
-      card.className='day';
+      const card = document.createElement('div'); card.className='day';
 
       const h3 = document.createElement('h3');
       const dow = d.toLocaleString(undefined,{weekday:'short'});
-      const day = String(d.getDate()).padStart(2,'0');
-      h3.innerHTML = `<span>${dow}</span><span class="big">${day}</span>`;
+      h3.innerHTML = `<span>${dow}</span><span class="big">${String(d.getDate()).padStart(2,'0')}</span>`;
       card.appendChild(h3);
 
-      ['AM','PM'].forEach(half=>{
+      // ORDER: PM first, then AM (per request)
+      ['PM','AM'].forEach(half=>{
         const row = document.createElement('div'); row.className='row';
-
-        const title=document.createElement('div'); title.className='row-title'; title.textContent=half;
-        row.appendChild(title);
-
-        const chips=document.createElement('div'); chips.className='chips';
-
-        const now = currentState(currentUser, ymd, half);
-        const chipPrefer   = makeChip('Prefer',   'prefer',   now==='prefer');
-        const chipAvail    = makeChip('Available','available',now==='available');
-        const chipNo       = makeChip('Do Not',   'no',       now==='no');
-        const chipUnset    = makeChip('Unset',    'unset',    now==='unset');
-
-        // NOTE controls
-        const noteBtn = document.createElement('button');
-        noteBtn.className='chip notebtn';
-        noteBtn.textContent='Note';
-        const noteWrap = document.createElement('div'); noteWrap.className='note-wrap';
-        const ta = document.createElement('textarea');
-        ta.placeholder="Optional note to supervisor…";
-        const startText = currentNote(currentUser, ymd, half) || '';
-        if(startText){ noteBtn.classList.add('has'); noteWrap.classList.add('show'); ta.value=startText; }
-        noteWrap.appendChild(ta);
-
-        // Toggle handlers
-        function selectState(newState){
-          if(newState === now) return; // no-op
-          // optimistic
-          const prev = now;
-          optimisticSet(currentUser, ymd, half, newState);
-          chipPrefer.classList.toggle('active', newState==='prefer');
-          chipAvail .classList.toggle('active', newState==='available');
-          chipNo    .classList.toggle('active', newState==='no');
-          chipUnset .classList.toggle('active', newState==='unset');
-
-          saveAvailability({userId:currentUser, date:ymd, half, state:newState, note:ta.value})
-            .then(()=>debug('saved', currentUser, ymd, half, newState))
-            .catch(err=>{
-              // rollback
-              optimisticSet(currentUser, ymd, half, prev);
-              chipPrefer.classList.toggle('active', prev==='prefer');
-              chipAvail .classList.toggle('active', prev==='available');
-              chipNo    .classList.toggle('active', prev==='no');
-              chipUnset .classList.toggle('active', prev==='unset');
-              debug('ERR save state', err.message);
-              alert('Save failed. Connection error.');
-            });
-        }
-
-        chipPrefer.onclick = ()=>selectState('prefer');
-        chipAvail .onclick = ()=>selectState('available');
-        chipNo    .onclick = ()=>selectState('no');
-        chipUnset .onclick = ()=>selectState('unset');
-
-        // Note toggle + save
-        noteBtn.onclick = ()=>{
-          const nowShown = noteWrap.classList.toggle('show');
-          if(!nowShown && !ta.value.trim()){ noteBtn.classList.remove('has'); }
-          else { noteBtn.classList.add('has'); }
-        };
-        let noteTimer=null;
-        ta.addEventListener('input', ()=>{
-          const text = ta.value;
-          noteBtn.classList.toggle('has', !!text.trim());
-          optimisticNote(currentUser, ymd, half, text);
-          clearTimeout(noteTimer);
-          noteTimer = setTimeout(()=>{
-            saveAvailability({userId:currentUser, date:ymd, half, state:currentState(currentUser, ymd, half), note:text})
-              .then(()=>debug('saved note', ymd, half))
-              .catch(err=>{ debug('ERR save note', err.message); });
-          }, 350);
-        });
-
-        chips.append(chipPrefer, chipAvail, chipNo, chipUnset, noteBtn);
-        row.appendChild(chips);
-        row.appendChild(noteWrap);
+        const head = document.createElement('div'); head.className='row-head';
+        const halfLbl = document.createElement('div'); halfLbl.className='half'; halfLbl.textContent = half;
+        const toggle = makeToggle(ymd, half);
+        const note = makeNote(ymd, half);
+        head.append(halfLbl, toggle, note);
+        row.appendChild(head);
         card.appendChild(row);
       });
 
@@ -277,27 +218,32 @@
     });
   }
 
-  async function boot(){
-    debug('Booting…');
-    document.getElementById('prev').onclick = async ()=>{ cursor = new Date(cursor.getFullYear(), cursor.getMonth()-1, 1); await refresh(); }
-    document.getElementById('next').onclick = async ()=>{ cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1); await refresh(); }
-    await refresh();
-  }
-
   async function refresh(){
-    document.getElementById('calendar').innerHTML='';
-    await health();
-    const days = rangeByWeeks(cursor);
+    const days = range5w(cursor);
     const start = fmtDate(days[0]), end = fmtDate(days[days.length-1]);
+    await health(); // will throw if CORS or network blocked; shown in debug
     const j = await loadState(start, end);
-    // hydrate simple notes map if present on API in future; safe default stays empty
-    notes = notes || {};
-    paintMemberOptions();
+    availability = j.availability || {};
+    // notes map: fill from availability.note if API populates; safe default keeps local edits
+    // (server already persists note via /api/availability)
+    paintMemberSelect();
     paintCalendar();
-    debug('calendar painted OK.');
+    debug('state OK', start+'..'+end);
   }
 
-  boot().catch(e=>{ debug('Boot ERR', e.message); });
+  // nav
+  document.getElementById('prev').onclick = ()=>{ cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1); refresh().catch(()=>{}); };
+  document.getElementById('next').onclick = ()=>{ cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1); refresh().catch(()=>{}); };
+
+  // boot
+  refresh().catch(err=>{
+    // surface common “Failed to fetch” causes
+    debug('Tip: If you see "Failed to fetch", verify CORS on the Worker includes:');
+    debug('  Access-Control-Allow-Origin: *');
+    debug('  Access-Control-Allow-Headers: Content-Type, x-import-token');
+    debug('  Access-Control-Allow-Methods: GET,POST,OPTIONS');
+    debug('Also open '+API+'/api/health directly in this browser to confirm it loads.');
+  });
 })();
 </script>
 </body>
