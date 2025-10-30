@@ -1,24 +1,21 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShiftCommander · Wallboard</title>
 <style>
-  :root{--bg:#0f1720;--panel:#111a23;--muted:#2a3847;--ring:#213042;--text:#e6f0ff;--sub:#a9b8c7;--needs:#f5a524}
-  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  :root{--bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#2a3b4e;--text:#e6f0ff;--sub:#a9b8c7;--needs:#f5a524}
+  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,Segoe UI,Roboto,Helvetica,Arial}
   .wrap{max-width:1200px;margin:26px auto;padding:0 16px}
   .bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-  .navbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--muted);background:#0d141b;color:var(--text);cursor:pointer}
+  .nav{width:34px;height:34px;border-radius:10px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
   .label{flex:1;text-align:center;color:var(--sub)}
   .row{display:grid;grid-template-columns:repeat(7,1fr);gap:16px}
   .card{background:var(--panel);border:1px dashed var(--muted);border-radius:16px;padding:12px}
-  .h{font-size:13px;color:var(--sub)}
-  .d{font-size:22px;font-weight:800}
-  .slot{margin-top:10px;background:#0d141b;border:1px solid var(--muted);border-radius:14px;padding:12px}
+  .h{font-size:13px;color:var(--sub)}.d{font-size:22px;font-weight:800}
+  .slot{margin-top:10px;background:var(--panel2);border:1px solid var(--muted);border-radius:14px;padding:12px}
   .slot h4{margin:0 0 8px;font-size:12px;letter-spacing:.08em;color:var(--sub)}
   .names{display:flex;flex-wrap:wrap;gap:6px}
-  .name{background:#1f2b38;border:1px solid var(--ring);padding:6px 10px;border-radius:999px;font-size:14px}
+  .name{background:#1f2b38;border:1px solid var(--ring);padding:6px 10px;border-radius:999px}
   .need{display:inline-block;background:var(--needs);color:#000;font-weight:800;border-radius:12px;padding:6px 12px}
   .dbg{margin-top:12px;color:#8aa1b7;font:12px ui-monospace,Consolas,Menlo}
   @media (max-width:900px){.row{grid-template-columns:repeat(2,1fr)}}
@@ -28,74 +25,62 @@
 <body>
 <div class="wrap">
   <div class="bar">
-    <button id="prev" class="navbtn">&#9664;</button>
+    <button id="prev" class="nav">◀</button>
     <div id="label" class="label"></div>
-    <button id="next" class="navbtn">&#9654;</button>
+    <button id="next" class="nav">▶</button>
   </div>
-
   <div id="row" class="row"></div>
-
   <div id="dbg" class="dbg"></div>
 </div>
 
 <script>
-(() => {
-  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-  let anchor = new Date(); // week view
-  const $row = document.getElementById('row');
-  const $label = document.getElementById('label');
-  const $dbg = document.getElementById('dbg');
-
-  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
-  function startWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x }
-  function fdate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}` }
+(()=> {
+  const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  let anchor=new Date();
+  const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const add=(d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x};
+  const sow=d=>{const x=new Date(d), wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x};
+  const $=s=>document.querySelector(s);
 
   async function paint(){
-    const s = startWeek(anchor); const e = addDays(s,6);
-    $label.textContent = `${s.toLocaleString(undefined,{month:'long',day:'numeric'})} – ${e.toLocaleString(undefined,{month:'long',day:'numeric'})}`;
-    $row.innerHTML = "";
-    let st; try{
-      const r = await fetch(`${API}/api/state?start=${fdate(s)}&end=${fdate(e)}`);
-      if(!r.ok) throw new Error(r.status);
-      st = await r.json(); $dbg.textContent = "OK";
-    }catch(err){ $dbg.textContent = "ERR "+err.message; return; }
+    const s=sow(anchor), e=add(s,6);
+    $('#label').textContent=`${s.toLocaleString(undefined,{month:'long',day:'numeric'})} – ${e.toLocaleString(undefined,{month:'long',day:'numeric'})}`;
+    let j; try{
+      const r=await fetch(`${API}/api/state?start=${ymd(s)}&end=${ymd(e)}`); if(!r.ok) throw new Error(r.status);
+      j=await r.json(); $('#dbg').textContent='OK';
+    }catch(err){ $('#dbg').textContent='ERR '+err.message; return; }
 
+    const row=$('#row'); row.innerHTML='';
     for(let i=0;i<7;i++){
-      const d = addDays(s,i); const key=fdate(d);
-      const card = document.createElement('div'); card.className='card';
-      card.innerHTML = `<div class="h">${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="d">${d.getDate()}</div>`;
+      const d=add(s,i), key=ymd(d);
+      const card=document.createElement('div'); card.className='card';
+      card.innerHTML=`<div class="h">${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="d">${d.getDate()}</div>`;
 
       ["AM","PM"].forEach(half=>{
-        const slot = document.createElement('div'); slot.className='slot';
-        slot.innerHTML = `<h4>${half}</h4>`;
-        const names = document.createElement('div'); names.className='names';
+        const slot=document.createElement('div'); slot.className='slot';
+        slot.innerHTML=`<h4>${half}</h4>`;
+        const names=document.createElement('div'); names.className='names';
 
-        const byUser = st.availability || {};
-        Object.entries(byUser).forEach(([uid,daysMap])=>{
-          const s = daysMap?.[key]?.[half];
+        let shown=0;
+        for(const uid of Object.keys(j.availability||{})){
+          const s=j.availability[uid]?.[key]?.[half];
           if(s==="prefer"||s==="available"){
-            const chip = document.createElement('span'); chip.className='name'; chip.textContent = uid + (s==="prefer"?" · ★":"");
-            names.appendChild(chip);
+            const chip=document.createElement('span'); chip.className='name';
+            chip.textContent=uid+(s==="prefer"?" · ★":"");
+            names.appendChild(chip); shown++;
           }
-        });
-
-        if(!names.children.length){
-          const need = document.createElement('span'); need.className='need'; need.textContent = 'Needs ALS & EMT';
-          names.appendChild(need);
         }
+        if(!shown){ const need=document.createElement('span'); need.className='need'; need.textContent='Needs ALS & EMT'; names.appendChild(need); }
 
-        slot.appendChild(names);
-        card.appendChild(slot);
+        slot.appendChild(names); card.appendChild(slot);
       });
 
-      $row.appendChild(card);
+      row.appendChild(card);
     }
   }
-
-  document.getElementById('prev').onclick=()=>{ anchor = addDays(anchor,-7); paint(); }
-  document.getElementById('next').onclick=()=>{ anchor = addDays(anchor, 7); paint(); }
+  $('#prev').onclick=()=>{ anchor=add(anchor,-7); paint(); };
+  $('#next').onclick=()=>{ anchor=add(anchor,+7); paint(); };
   paint();
 })();
 </script>
-</body>
-</html>
+</body></html>

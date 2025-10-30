@@ -1,47 +1,41 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>ShiftCommander · Member</title>
-  <style>
-    :root{
-      --bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#213042;
-      --text:#e6f0ff;--sub:#a9b8c7;
-      --chip:#1a2633;--chip-ring:#2a3b4e;
-      --prefer:#0ea5e9;--avail:#22c55e;--no:#ef4444;--unset:#334155;--note:#fbbf24;
-    }
-    *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{max-width:1150px;margin:28px auto;padding:0 16px}
-    h1{font-size:18px;margin:0 0 16px}
-    .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:var(--sub);text-decoration:none;border:1px solid var(--chip-ring)}
-    .tabs a.active{color:var(--text);background:#1f2b38}
-    .bar{display:flex;align-items:center;gap:10px;margin:8px 0 16px}
-    .picker{display:flex;gap:8px;align-items:center}
-    .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
-    .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:14px}
-    .cell{background:var(--panel);border:1px dashed var(--muted);border-radius:14px;padding:10px;min-height:130px;display:flex;flex-direction:column;justify-content:space-between}
-    .dow{font-size:12px;color:var(--sub)}
-    .date{font-size:16px;font-weight:700;margin-top:2px}
-    .halves{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
-    .half{background:var(--panel2);border:1px solid var(--muted);border-radius:12px;padding:10px}
-    .half h4{margin:0 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub)}
-    .state{display:flex;gap:6px;flex-wrap:wrap}
-    .pill{border:1px solid var(--chip-ring);background:var(--chip);color:#c7d6e6;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
-    .pill[data-s="prefer"]{background:color-mix(in oklab,var(--prefer) 22%, #000);border-color:color-mix(in oklab,var(--prefer) 40%, #000);color:#e9f6ff}
-    .pill[data-s="available"]{background:color-mix(in oklab,var(--avail) 22%, #000);border-color:color-mix(in oklab,var(--avail) 40%, #000);color:#ecfff1}
-    .pill[data-s="no"]{background:color-mix(in oklab,var(--no) 22%, #000);border-color:color-mix(in oklab,var(--no) 40%, #000);color:#fff1f1}
-    .pill[data-s="unset"]{opacity:.8}
-    .noteRow{margin-top:10px;display:flex;gap:8px;align-items:center}
-    .noteBtn{border:1px solid var(--chip-ring);background:var(--chip);color:#c7d6e6;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
-    .noteBtn.has{background:var(--text);color:#000;font-weight:700;border-color:var(--note)}
-    .noteInput{flex:1;min-width:0;border:1px solid var(--muted);background:var(--panel2);color:var(--text);border-radius:10px;padding:6px 8px;font-size:12px}
-    .legend{margin-top:14px;color:var(--sub);font-size:12px}
-    .console{margin-top:16px;background:#0b1117;border:1px solid #17202a;border-radius:12px;padding:8px 10px;color:#93a6b8;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
-    .select{border:1px solid var(--muted);background:var(--panel2);color:var(--text);border-radius:8px;padding:6px 8px}
-    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-    @media (min-width:901px) and (max-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
-  </style>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ShiftCommander · Member</title>
+<style>
+  :root{
+    --bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#2a3b4e;
+    --text:#e6f0ff;--sub:#a9b8c7;--chip:#1a2633;
+    --c-prefer:#0ea5e9;--c-available:#22c55e;--c-no:#ef4444;--c-unset:#334155;--c-note:#fbbf24;
+  }
+  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:1150px;margin:26px auto;padding:0 16px}
+  h1{margin:0 0 10px;font-size:18px}
+  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:999px;background:#1a2633;color:var(--sub);text-decoration:none;border:1px solid var(--ring)}
+  .tabs a.active{color:var(--text)}
+  .bar{display:flex;align-items:center;gap:10px;margin:10px 0 16px}
+  .nav{width:30px;height:30px;border-radius:8px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
+  .select{border:1px solid var(--muted);background:var(--panel2);color:var(--text);border-radius:8px;padding:6px 8px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(7,1fr)}
+  .cell{background:var(--panel);border:1px dashed var(--muted);border-radius:14px;padding:10px;min-height:130px;display:flex;flex-direction:column}
+  .dow{color:var(--sub);font-size:12px}.date{font-weight:800;margin-top:2px}
+  .halves{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .half{background:var(--panel2);border:1px solid var(--muted);border-radius:12px;padding:10px}
+  .half h4{margin:0 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub)}
+  .row{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{cursor:pointer;border:1px solid var(--ring);background:var(--chip);color:#cfe0f2;border-radius:999px;padding:6px 10px;font-size:12px;user-select:none}
+  .pill.on[data-s="prefer"]{background:color-mix(in oklab,var(--c-prefer) 75%, #000);color:#001014}
+  .pill.on[data-s="available"]{background:color-mix(in oklab,var(--c-available) 75%, #000);color:#00140a}
+  .pill.on[data-s="no"]{background:color-mix(in oklab,var(--c-no) 75%, #000);color:#140001}
+  .pill.on[data-s="unset"]{background:var(--c-unset);color:#cfe0f2}
+  .noteRow{margin-top:8px;display:flex;gap:8px}
+  .noteBtn{border:1px solid var(--ring);background:var(--chip);color:#cfe0f2;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .noteBtn.has{background:#fff;color:#000;border-color:var(--c-note);font-weight:700}
+  .noteInput{flex:1;border:1px solid var(--muted);background:var(--panel2);color:var(--text);border-radius:10px;padding:6px 8px;font-size:12px}
+  .console{margin-top:16px;background:#0b1117;border:1px solid #17202a;border-radius:12px;padding:8px 10px;color:#93a6b8;font:12px ui-monospace,Consolas,Menlo;white-space:pre-wrap}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (min-width:901px) and (max-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -53,176 +47,139 @@
   </div>
 
   <div class="bar">
-    <div class="picker">
-      <label>Member</label>
-      <select id="memberSel" class="select"></select>
-    </div>
-    <button id="prev" class="navbtn" title="Prev">&#9664;</button>
-    <div id="monthLabel" style="min-width:180px;text-align:center;color:var(--sub)"></div>
-    <button id="next" class="navbtn" title="Next">&#9654;</button>
+    <label>Member</label>
+    <select id="memberSel" class="select"></select>
+    <button id="prev" class="nav">◀</button>
+    <div id="month" style="min-width:180px;text-align:center;color:#a9b8c7"></div>
+    <button id="next" class="nav">▶</button>
   </div>
 
   <div id="grid" class="grid"></div>
-
-  <div class="legend">
-    Tap a chip to set your intent for that half shift. “Note” inverts when text is present.
-  </div>
-
   <div id="dbg" class="console"></div>
 </div>
 
 <script>
 (() => {
   const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-  const userIdFromQuery = new URLSearchParams(location.search).get("user") || "uq2w4or"; // default demo
-  let current = firstOfMonth(new Date());
-  let members = []; // [{id,name}...]
+  const urlU = new URLSearchParams(location.search).get("user") || "uq2w4or";
+  let current = new Date(); current.setDate(1);
+  let stateCache = null, userList = [urlU];
 
-  // UTIL
-  function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-  function fmt(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}` }
-  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
-  function startOfWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x }
-  function endOfWeek(d){ return addDays(startOfWeek(d),6) }
+  // util
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const add = (d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x};
+  const startOfWeek = d => {const x=new Date(d), wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x};
+  const q = sel => document.querySelector(sel);
+  const dbg = s => (q('#dbg').textContent += s+'\n');
 
-  // DOM
-  const $grid = document.getElementById('grid');
-  const $dbg = document.getElementById('dbg');
-  const $label = document.getElementById('monthLabel');
-  const $memberSel = document.getElementById('memberSel');
+  async function fetchState(start,end){
+    const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
+    if(!r.ok) throw new Error('state '+r.status);
+    const j = await r.json();
+    stateCache = j;
+    userList = Object.keys(j.prefs||{[urlU]:{}}); if(!userList.length) userList=[urlU];
+    return j;
+  }
 
-  // DEBUG
-  function log(s){ $dbg.textContent += s + "\n"; }
+  function activeOn(row, val){
+    [...row.children].forEach(b=>b.classList.toggle('on', b.dataset.s===val));
+  }
 
-  // Fetch helpers
-  async function api(path,opts={}){
-    const r = await fetch(API+path, opts);
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  async function saveIntent(userId, date, half, state, note){
+    // optimistic UI: no await before paint of pills
+    const r = await fetch(`${API}/api/availability`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ userId, date, half, state, note: note ?? "" })
+    });
+    if(!r.ok) throw new Error('save '+r.status);
     return r.json();
   }
 
-  // Load roster (demo list derived from /api/state prefs keys)
-  async function loadRoster(){
-    const winStart = startOfWeek(current);
-    const winEnd = endOfWeek(addDays(winStart,34));
-    const st = await api(`/api/state?start=${fmt(winStart)}&end=${fmt(winEnd)}`);
-    members = Object.keys(st.prefs || {}).map(id => ({ id, name: id }));
-    if(!members.length) members = [{id:userIdFromQuery, name:`Member ${userIdFromQuery}`}];
-    $memberSel.innerHTML = members.map(m=>`<option value="${m.id}" ${m.id===userIdFromQuery?'selected':''}>${m.name}</option>`).join('');
-    return st;
-  }
-
-  // Paint calendar
   async function paint(){
-    $label.textContent = current.toLocaleString(undefined,{month:'long',year:'numeric'});
-    $grid.innerHTML = "";
-    const st = await loadRoster();
+    q('#month').textContent = current.toLocaleString(undefined,{month:'long',year:'numeric'});
+    const start = ymd(startOfWeek(new Date(current.getFullYear(), current.getMonth(), 1)));
+    const end   = ymd(add(startOfWeek(new Date(current.getFullYear(), current.getMonth(), 1)), 41));
+    const userId = q('#memberSel').value || urlU;
 
-    const selectedUser = $memberSel.value;
-    const winStart = startOfWeek(new Date(current.getFullYear(), current.getMonth(), 1));
-    const days = 42; // 6 weeks grid
+    if(!stateCache || !(stateCache._coverStart===start && stateCache._coverEnd===end)){
+      const j = await fetchState(start,end);
+      j._coverStart=start; j._coverEnd=end;
+      dbg('state OK '+start+'..'+end);
+    }
 
-    for(let i=0;i<days;i++){
-      const d = addDays(winStart,i);
-      const key = fmt(d);
-      const av = (st.availability?.[selectedUser]?.[key]) || {};
+    // roster select
+    q('#memberSel').innerHTML = userList.map(id=>`<option ${id===userId?'selected':''} value="${id}">${id}</option>`).join('');
+
+    const grid = q('#grid'); grid.innerHTML='';
+    const firstCell = startOfWeek(new Date(current.getFullYear(), current.getMonth(), 1));
+
+    for(let i=0;i<42;i++){
+      const d = add(firstCell,i), key=ymd(d);
+      const av = (stateCache.availability?.[userId]?.[key]) || {};
       const cell = document.createElement('div'); cell.className='cell';
-
-      // header
-      const head = document.createElement('div');
-      head.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
+      cell.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
                         <div class="date">${d.toLocaleString(undefined,{day:'2-digit'})}</div>`;
-      cell.appendChild(head);
-
       const halves = document.createElement('div'); halves.className='halves';
 
       ["AM","PM"].forEach(half=>{
-        const halfBox = document.createElement('div'); halfBox.className='half';
-
-        // state row
-        const h = document.createElement('h4'); h.textContent = half;
-        halfBox.appendChild(h);
-
-        const states = ["prefer","available","no","unset"];
-        const row = document.createElement('div'); row.className='state';
-        states.forEach(s=>{
-          const pill = document.createElement('button');
-          pill.className='pill';
-          pill.dataset.s = s;
-          pill.textContent = ({prefer:"Prefer",available:"Available",no:"Do Not",unset:"Unset"})[s];
-          if((av[half]||"unset")===s) pill.style.outline = "2px solid var(--ring)";
-          pill.addEventListener('click', async ()=>{
-            // save state
-            try{
-              await api('/api/availability',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({ userId:selectedUser, date:key, half, state:s, note: av[half+"_note"]||"" })
-              });
-              // update outline locally (no full refetch needed)
-              [...row.children].forEach(b=>b.style.outline="none");
-              pill.style.outline="2px solid var(--ring)";
-              log(`saved ${key} ${half} -> ${s}`);
-            }catch(e){ log("ERR save state "+e.message); }
-          });
-          row.appendChild(pill);
+        const box = document.createElement('div'); box.className='half';
+        box.innerHTML = `<h4>${half}</h4>`;
+        const row = document.createElement('div'); row.className='row';
+        ["prefer","available","no","unset"].forEach(s=>{
+          const b = document.createElement('button');
+          b.type='button'; b.className='pill'; b.dataset.s=s; b.textContent=({prefer:"Prefer",available:"Available",no:"Do Not",unset:"Unset"})[s];
+          row.appendChild(b);
         });
-        halfBox.appendChild(row);
+        activeOn(row, av[half]||"unset");
 
-        // note row
+        row.addEventListener('click', async (e)=>{
+          if(!(e.target instanceof HTMLButtonElement)) return;
+          const s = e.target.dataset.s;
+          // optimistic toggle
+          activeOn(row, s);
+          try{
+            await saveIntent(userId, key, half, s, (box.querySelector('.noteInput').value||""));
+            dbg(`saved ${key} ${half} → ${s}`);
+          }catch(err){
+            dbg('ERR '+err.message);
+            // roll back to server state
+            activeOn(row, av[half]||"unset");
+          }
+        });
+
         const noteRow = document.createElement('div'); noteRow.className='noteRow';
         const noteBtn = document.createElement('button'); noteBtn.className='noteBtn'; noteBtn.textContent='Note';
-        const input = document.createElement('input'); input.className='noteInput'; input.placeholder="Optional note to supervisor…";
-        input.value = av[half+"_note"] || "";
-        if(input.value.trim()) noteBtn.classList.add('has');
+        const noteInput = document.createElement('input'); noteInput.className='noteInput'; noteInput.placeholder='Optional note to supervisor…';
+        noteInput.value = av[half+"_note"] || "";
+        if(noteInput.value.trim()) noteBtn.classList.add('has');
 
         noteBtn.addEventListener('click', async ()=>{
-          // toggle focus / save
           try{
-            const newVal = input.value.trim();
-            await api('/api/availability',{
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({ userId:selectedUser, date:key, half, state: (av[half]||"unset"), note:newVal })
-            });
-            if(newVal) noteBtn.classList.add('has'); else noteBtn.classList.remove('has');
-            log(`saved note ${key} ${half}`);
-          }catch(e){ log("ERR save note "+e.message); }
+            await saveIntent(userId, key, half, (row.querySelector('.pill.on')?.dataset.s || av[half] || "unset"), noteInput.value.trim());
+            noteBtn.classList.toggle('has', !!noteInput.value.trim());
+            dbg(`note saved ${key} ${half}`);
+          }catch(err){ dbg('ERR '+err.message); }
         });
+        noteInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); noteBtn.click(); } });
 
-        input.addEventListener('keydown', e=>{
-          if(e.key==='Enter'){ e.preventDefault(); noteBtn.click(); }
-        });
+        noteRow.appendChild(noteBtn); noteRow.appendChild(noteInput);
 
-        noteRow.appendChild(noteBtn);
-        noteRow.appendChild(input);
-        halfBox.appendChild(noteRow);
-
-        halves.appendChild(halfBox);
+        box.appendChild(row); box.appendChild(noteRow);
+        halves.appendChild(box);
       });
 
       cell.appendChild(halves);
-      $grid.appendChild(cell);
+      grid.appendChild(cell);
     }
-
-    log("calendar painted OK.");
   }
 
-  // nav
-  document.getElementById('prev').onclick = ()=>{ current = new Date(current.getFullYear(), current.getMonth()-1, 1); paint(); }
-  document.getElementById('next').onclick = ()=>{ current = new Date(current.getFullYear(), current.getMonth()+1, 1); paint(); }
-  $memberSel.onchange = paint;
+  // nav + boot
+  q('#prev').onclick=()=>{ current = new Date(current.getFullYear(), current.getMonth()-1, 1); paint(); }
+  q('#next').onclick=()=>{ current = new Date(current.getFullYear(), current.getMonth()+1, 1); paint(); }
+  const sel = document.createElement('select'); sel.id='memberSel';
+  document.getElementById('memberSel').onchange = paint;
 
-  // boot
-  (async()=>{
-    log(`Booting…`);
-    try{
-      const health = await api('/api/health');
-      log(`health ${JSON.stringify(health)}`);
-    }catch(e){ log("health ERR "+e.message); }
-    await paint();
-  })();
+  (async()=>{ document.getElementById('memberSel').innerHTML=`<option>${urlU}</option>`; await paint(); })();
 })();
 </script>
-</body>
-</html>
+</body></html>

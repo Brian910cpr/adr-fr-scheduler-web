@@ -1,31 +1,26 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShiftCommander · Supervisor</title>
 <style>
-  :root{--bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#213042;--text:#e6f0ff;--sub:#a9b8c7;--card:#0f1922;--chip:#1a2633;--needs:#f5a524;}
-  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:1150px;margin:28px auto;padding:0 16px}
-  h1{font-size:18px;margin:0 0 16px}
-  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:999px;background:#1a2633;color:var(--sub);text-decoration:none;border:1px solid #2a3b4e}
+  :root{--bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#2a3b4e;--text:#e6f0ff;--sub:#a9b8c7;--needs:#f5a524}
+  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:1150px;margin:26px auto;padding:0 16px}
+  h1{margin:0 0 10px;font-size:18px}
+  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:999px;background:#1a2633;color:var(--sub);text-decoration:none;border:1px solid var(--ring)}
   .tabs a.active{color:var(--text)}
-  .bar{display:flex;align-items:center;gap:12px;margin:8px 0 16px}
-  .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
-  .toggle{display:flex;align-items:center;gap:8px;margin-left:auto}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:14px}
-  .cell{background:var(--panel);border:1px dashed var(--muted);border-radius:14px;padding:10px;min-height:140px}
-  .dow{font-size:12px;color:var(--sub)}
-  .date{font-size:16px;font-weight:700;margin-top:2px}
-  .slot{background:var(--panel2);border:1px solid var(--muted);border-radius:12px;padding:10px;margin-top:8px}
+  .bar{display:flex;align-items:center;gap:12px;margin:10px 0 16px}
+  .nav{width:30px;height:30px;border-radius:8px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(7,1fr)}
+  .cell{background:var(--panel);border:1px dashed var(--muted);border-radius:14px;padding:10px}
+  .dow{color:var(--sub);font-size:12px}.date{font-weight:800;margin-top:2px}
+  .slot{margin-top:8px;background:var(--panel2);border:1px solid var(--muted);border-radius:12px;padding:10px}
   .slot h4{margin:0 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub)}
   .names{display:flex;flex-wrap:wrap;gap:6px}
-  .name{background:#1f2b38;border:1px solid var(--ring);padding:5px 8px;border-radius:999px;font-size:12px}
-  .need{display:inline-block;background:var(--needs);color:#000;font-weight:700;border-radius:10px;padding:6px 10px}
-  .console{margin-top:16px;background:#0b1117;border:1px solid #17202a;border-radius:12px;padding:8px 10px;color:#93a6b8;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas}
-  .note{margin-top:6px;color:#e9d7a7;font-size:12px}
-  .note small{color:#9fb3c7}
+  .name{background:#1f2b38;border:1px solid var(--ring);padding:6px 10px;border-radius:999px;font-size:12px}
+  .need{display:inline-block;background:var(--needs);color:#000;font-weight:800;border-radius:10px;padding:6px 10px}
+  .note{margin-top:6px;color:#ffe1a3;font-size:12px}
+  .console{margin-top:16px;background:#0b1117;border:1px solid #17202a;border-radius:12px;padding:8px 10px;color:#93a6b8;font:12px ui-monospace,Consolas,Menlo;white-space:pre-wrap}
   @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
   @media (min-width:901px) and (max-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
 </style>
@@ -40,96 +35,90 @@
   </div>
 
   <div class="bar">
-    <button id="prev" class="navbtn">&#9664;</button>
+    <button id="prev" class="nav">◀</button>
     <div id="label" style="min-width:200px;text-align:center;color:#a9b8c7"></div>
-    <button id="next" class="navbtn">&#9654;</button>
-    <label class="toggle"><input type="checkbox" id="monthToggle" checked> Month at a glance</label>
+    <button id="next" class="nav">▶</button>
+    <label style="margin-left:auto;color:#a9b8c7"><input id="month" type="checkbox" checked> Month at a glance</label>
   </div>
 
   <div id="grid" class="grid"></div>
-
   <div id="dbg" class="console"></div>
 </div>
 
 <script>
-(() => {
-  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-  let anchor = new Date(); anchor.setDate(1); // month view by default
-  const $grid = document.getElementById('grid');
-  const $label = document.getElementById('label');
-  const $dbg = document.getElementById('dbg');
-  const $toggle = document.getElementById('monthToggle');
+(()=> {
+  const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  let anchor=new Date(); anchor.setDate(1);
+  const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const add=(d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x};
+  const sow=d=>{const x=new Date(d), wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x};
+  const $=s=>document.querySelector(s);
 
-  function fmt(d){ return d.toLocaleString(undefined,{month:'long',year:'numeric'}) }
-  function fdate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}` }
-  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
-  function startWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x }
-
-  async function stateWindow(start,end){
-    const r = await fetch(`${API}/api/state?start=${start}&end=${end}`); if(!r.ok) throw new Error(r.status);
+  async function getState(a,b){
+    const r=await fetch(`${API}/api/state?start=${a}&end=${b}`); if(!r.ok) throw new Error(r.status);
     return r.json();
   }
 
   async function paint(){
-    $grid.innerHTML = "";
-    $label.textContent = fmt(anchor);
+    const monthMode = $('#month').checked;
+    const start = monthMode ? sow(new Date(anchor.getFullYear(),anchor.getMonth(),1))
+                            : sow(new Date());
+    const days = monthMode?42:7;
+    $('#label').textContent = monthMode
+      ? anchor.toLocaleString(undefined,{month:'long',year:'numeric'})
+      : `${start.toLocaleString(undefined,{month:'long',day:'numeric'})} – ${add(start,6).toLocaleString(undefined,{month:'long',day:'numeric'})}`;
 
-    const days = $toggle.checked ? 42 : 7;
-    const s = startWeek(new Date(anchor.getFullYear(), anchor.getMonth(), $toggle.checked?1:anchor.getDate()));
-    const start = fdate(s), end = fdate(addDays(s,days-1));
-    let st; try{ st = await stateWindow(start,end); $dbg.textContent = `GET /api/state ok\n`; }catch(e){ $dbg.textContent = 'state error '+e.message; return; }
+    let j; try{
+      j = await getState(ymd(start), ymd(add(start,days-1)));
+      $('#dbg').textContent = 'OK';
+    }catch(e){ $('#dbg').textContent = 'ERR '+e.message; return; }
 
+    const grid = $('#grid'); grid.innerHTML='';
     for(let i=0;i<days;i++){
-      const d = addDays(s,i); const key = fdate(d);
-      const cell = document.createElement('div'); cell.className='cell';
-      cell.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
-                        <div class="date">${d.toLocaleString(undefined,{day:'2-digit'})}</div>`;
+      const d=add(start,i), key=ymd(d);
+      const cell=document.createElement('div'); cell.className='cell';
+      cell.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="date">${d.getDate()}</div>`;
 
       ["AM","PM"].forEach(half=>{
-        const slot = document.createElement('div'); slot.className='slot';
-        slot.innerHTML = `<h4>${half}</h4>`;
-        const namesWrap = document.createElement('div'); namesWrap.className='names';
+        const slot=document.createElement('div'); slot.className='slot';
+        slot.innerHTML=`<h4>${half}</h4>`;
+        const names=document.createElement('div'); names.className='names';
 
-        const assignees = st.shifts?.[key]?.[half]?.assignees || [];
-        const notesForHalf = [];
-        // show availability “prefer/available/no” into badges (up to 4 seats emphasis)
-        const byUser = st.availability || {};
-        Object.entries(byUser).forEach(([uid, daysMap])=>{
-          const s = daysMap?.[key]?.[half];
-          const note = daysMap?.[key]?.[half+"_note"];
-          if(s==="prefer" || s==="available"){
-            const chip = document.createElement('span'); chip.className='name'; chip.textContent = uid + (s==="prefer"?" · ★":"");
-            namesWrap.appendChild(chip);
-            if(note) notesForHalf.push({uid,note});
+        // show all prefer/available
+        const byUser=j.availability||{};
+        let shown=0;
+        for(const uid of Object.keys(byUser)){
+          const s=byUser[uid]?.[key]?.[half];
+          if(s==="prefer"||s==="available"){
+            const chip=document.createElement('span'); chip.className='name';
+            chip.textContent = uid + (s==="prefer"?" · ★":"");
+            names.appendChild(chip); shown++;
           }
-        });
+        }
+        if(!shown){ const need=document.createElement('span'); need.className='need'; need.textContent='Needs ALS & EMT'; names.appendChild(need); }
 
-        if(!namesWrap.children.length){
-          const need = document.createElement('span'); need.className='need'; need.textContent='Needs ALS & EMT';
-          namesWrap.appendChild(need);
+        // notes
+        for(const uid of Object.keys(byUser)){
+          const note = byUser[uid]?.[key]?.[half+"_note"];
+          if(note){
+            const n=document.createElement('div'); n.className='note';
+            n.textContent = `📝 ${uid}: ${note}`;
+            slot.appendChild(n);
+          }
         }
 
-        slot.appendChild(namesWrap);
-
-        notesForHalf.forEach(n=>{
-          const p = document.createElement('div'); p.className='note';
-          p.innerHTML = `📝 ${n.note} <small>(${key} ${half} · ${n.uid})</small>`;
-          slot.appendChild(p);
-        });
-
+        slot.appendChild(names);
         cell.appendChild(slot);
       });
 
-      $grid.appendChild(cell);
+      grid.appendChild(cell);
     }
   }
 
-  document.getElementById('prev').onclick=()=>{ anchor = new Date(anchor.getFullYear(), anchor.getMonth()-1, 1); paint(); }
-  document.getElementById('next').onclick=()=>{ anchor = new Date(anchor.getFullYear(), anchor.getMonth()+1, 1); paint(); }
-  $toggle.onchange = paint;
-
-  (async()=>{ await paint(); })();
+  $('#prev').onclick=()=>{ anchor=new Date(anchor.getFullYear(),anchor.getMonth()-1,1); paint(); };
+  $('#next').onclick=()=>{ anchor=new Date(anchor.getFullYear(),anchor.getMonth()+1,1); paint(); };
+  $('#month').onchange=paint;
+  paint();
 })();
 </script>
-</body>
-</html>
+</body></html>
