@@ -1,19 +1,12 @@
-<!-- member.html  | ShiftCommander · Member -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ShiftCommander · Member</title>
+<title>ShiftCommander · Member (Safe Render)</title>
 <style>
-  :root{
-    --bg:#0f141b; --panel:#121a23; --muted:#6b7a8c; --text:#e7edf5;
-    --bd:#243041; --pill:#1b2431; --prefer:#1e8fff; --avail:#36b24d;
-    --no:#dd4b39; --unset:#2b3647; --note:#ffffff; --noteText:#0c1320;
-    --accent:#7aa2ff; --warn:#ffbb33;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
+  :root{--bg:#0f141b;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;--pill:#1b2431;--prefer:#1e8fff;--avail:#36b24d;--no:#dd4b39;--unset:#2b3647;--note:#fff;--noteText:#0c1320}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
   .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
   header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
   h1{font-size:18px;margin:0}
@@ -23,38 +16,23 @@
   .select{background:var(--panel);border:1px solid var(--bd);color:var(--text);padding:6px 10px;border-radius:8px}
   .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
   .day{background:var(--panel);border:1px dashed var(--bd);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:110px}
-  .dow{font-size:12px;color:var(--muted)}
-  .date{font-weight:700}
+  .dow{font-size:12px;color:var(--muted)} .date{font-weight:700}
   .pills{display:flex;gap:8px;flex-wrap:wrap}
-  .pill{display:inline-flex;align-items:center;justify-content:center;height:34px;min-width:56px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);background:var(--pill);cursor:pointer;user-select:none}
-  .pill small{opacity:.9}
-  .pill[data-state="prefer"]{background:var(--prefer);border-color:transparent;color:#fff;font-weight:700}
-  .pill[data-state="available"]{background:var(--avail);border-color:transparent;color:#fff;font-weight:700}
-  .pill[data-state="no"]{background:var(--no);border-color:transparent;color:#fff;font-weight:700}
+  .pill{display:inline-flex;align-items:center;justify-content:center;height:34px;min-width:56px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);background:var(--pill);cursor:pointer}
+  .pill[data-state="prefer"]{background:var(--prefer);color:#fff;font-weight:700;border-color:transparent}
+  .pill[data-state="available"]{background:var(--avail);color:#fff;font-weight:700;border-color:transparent}
+  .pill[data-state="no"]{background:var(--no);color:#fff;font-weight:700;border-color:transparent}
   .pill[data-state="unset"]{background:var(--unset);color:#c7d0dc}
   .noteBtn{margin-top:4px;display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--pill);color:var(--text);cursor:pointer}
   .noteBtn.hasNote{background:var(--note);color:var(--noteText);font-weight:600}
-  .legend{display:flex;gap:10px;align-items:center;margin-top:14px;color:var(--muted)}
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--bd);background:var(--panel)}
-  .chip i{display:inline-block;width:14px;height:14px;border-radius:999px}
-  .chip .prefer{background:var(--prefer)}
-  .chip .avail{background:var(--avail)}
-  .chip .no{background:var(--no)}
-  .chip .unset{background:var(--unset)}
-  .panel{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-top:16px}
-  .panel h3{margin:0 0 10px;font-size:14px}
-  .controls .row{gap:8px}
-  input[type="date"]{background:var(--panel);border:1px solid var(--bd);color:var(--text);padding:6px 10px;border-radius:8px}
-  button.btn{background:#1b5cff;border:0;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-  button.btn.secondary{background:#2c394f}
-  .foot{margin:22px 0 4px;color:var(--muted);font-size:12px}
-  .hidden{display:none}
+  .panel{background:#0b121a;border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:16px}
+  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:220px;overflow:auto;white-space:pre-wrap}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>ShiftCommander <span style="color:var(--muted)">Member</span></h1>
+    <h1>ShiftCommander <span style="color:#8ea1b8">Member</span></h1>
     <nav class="tabs">
       <a class="active" href="./member.html">Member</a>
       <a href="./supervisor.html">Supervisor</a>
@@ -63,7 +41,7 @@
   </header>
 
   <div class="row">
-    <label>Member #&nbsp;
+    <label>Member&nbsp;
       <select id="memberSelect" class="select">
         <option value="uq2w4or">1003 AJ (uq2w4or)</option>
         <option value="u1">u1</option>
@@ -71,309 +49,92 @@
       </select>
     </label>
     <div style="flex:1"></div>
-    <button id="prevBtn" class="btn secondary">◀</button>
+    <button id="prevBtn" class="select">◀</button>
     <div id="monthTitle" style="min-width:160px;text-align:center;font-weight:700"></div>
-    <button id="nextBtn" class="btn secondary">▶</button>
+    <button id="nextBtn" class="select">▶</button>
   </div>
 
-  <div id="calendar" class="calendar" aria-live="polite"></div>
-
-  <div class="legend">
-    <span class="chip"><i class="prefer"></i> Prefer</span>
-    <span class="chip"><i class="avail"></i> Available</span>
-    <span class="chip"><i class="no"></i> Do Not</span>
-    <span class="chip"><i class="unset"></i> Unset</span>
-    <span class="chip"><i style="background:var(--note)"></i> Note set</span>
+  <div id="calendar" class="calendar" aria-live="polite">
+    <!-- skeleton so page never looks empty -->
+    <div class="day"><div class="dow">Mon</div><div class="date">—</div><div class="pills"><div class="pill" data-state="unset"><small>AM</small></div><div class="pill" data-state="unset"><small>PM</small></div></div></div>
   </div>
 
-  <div class="panel controls">
-    <h3>Preferences & bulk tools</h3>
-    <div class="row" style="margin-bottom:8px">
-      <label><input type="checkbox" id="pref24"> Prefer 24s</label>
-      <label><input type="checkbox" id="type3"> Type III driver approved</label>
-      <label><input type="checkbox" id="inactive"> Inactive (block new scheduling)</label>
-    </div>
-
-    <div class="row">
-      <strong>Bulk set (date range):</strong>
-      <label>From <input type="date" id="bulkFrom"></label>
-      <label>Until <input type="date" id="bulkUntil"></label>
-      <label>Set to
-        <select id="bulkState" class="select">
-          <option value="available">Available</option>
-          <option value="prefer">Prefer</option>
-          <option value="no">Do Not</option>
-          <option value="unset">Unset</option>
-        </select>
-      </label>
-      <label>Half-days:
-        <label style="margin-left:8px"><input type="checkbox" id="bulkAM" checked> AM</label>
-        <label style="margin-left:8px"><input type="checkbox" id="bulkPM" checked> PM</label>
-      </label>
-      <button id="applyRange" class="btn">Apply</button>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <strong>Weekly pattern (repeat until date):</strong>
-      <label><input type="checkbox" class="wDay" value="1"> Mon</label>
-      <label><input type="checkbox" class="wDay" value="2"> Tue</label>
-      <label><input type="checkbox" class="wDay" value="3"> Wed</label>
-      <label><input type="checkbox" class="wDay" value="4"> Thu</label>
-      <label><input type="checkbox" class="wDay" value="5"> Fri</label>
-      <label><input type="checkbox" class="wDay" value="6"> Sat</label>
-      <label><input type="checkbox" class="wDay" value="0"> Sun</label>
-      <label>Repeat until <input type="date" id="patUntil"></label>
-      <label><input type="checkbox" id="patAM" checked> AM</label>
-      <label><input type="checkbox" id="patPM" checked> PM</label>
-      <label>Set to
-        <select id="patState" class="select">
-          <option value="available">Available</option>
-          <option value="prefer">Prefer</option>
-          <option value="no">Do Not</option>
-          <option value="unset">Unset</option>
-        </select>
-      </label>
-      <button id="applyPattern" class="btn">Apply pattern</button>
-    </div>
+  <div class="panel">
+    <strong>Debug Console</strong>
+    <div id="debug" class="debug">Booting…</div>
   </div>
-
-  <div class="foot">Changes save immediately. If you see a yellow “Saving…” toast that doesn’t clear, your connection may have dropped.</div>
 </div>
 
 <script>
-/* ======== CONFIG ======== */
-const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-const STATE_COLORS = ['prefer','available','no','unset'];
-const CURRENT_TZ = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+(function(){
+  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const debug = (m)=>{ const el=document.getElementById('debug'); el.textContent += '\\n' + m }
+  window.onerror = (msg,src,line,col,err)=>{ debug('JS ERROR: '+msg+' @'+(src||'inline')+':'+line+':'+col+'\\n'+(err&&err.stack?err.stack:'')) }
 
-/* ======== STATE ======== */
-let currentUser = 'uq2w4or';
-let view = getMonthAnchor(new Date());
-let monthMatrix = []; // [{date: 'YYYY-MM-DD', dow, inMonth}]
-let availability = {}; // availability[userId][date][half]="state"
-let notesIndex = {};   // notes[date][half]="text"
+  // Always paint something first
+  document.getElementById('monthTitle').textContent = new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  debug('UI skeleton painted.');
 
-/* ======== UTIL ======== */
-function ymd(d){ return d.toISOString().slice(0,10) }
-function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
-function fmtMonth(d){
-  return d.toLocaleDateString(undefined,{month:'long',year:'numeric',timeZone:CURRENT_TZ});
-}
-function getMonthAnchor(d){ return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1)) }
-function rangeDays(a,b){
-  const out=[]; let d=new Date(a);
-  while(d<=b){ out.push(ymd(d)); d=addDays(d,1) }
-  return out;
-}
-
-/* ======== API ======== */
-async function apiGet(path){
-  const r = await fetch(`${API_BASE}${path}`, {headers:{'Accept':'application/json'}});
-  if(!r.ok) throw new Error('GET '+path+' '+r.status);
-  return r.json();
-}
-async function apiPost(path, body){
-  const r = await fetch(`${API_BASE}${path}`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  if(!r.ok) throw new Error('POST '+path+' '+r.status);
-  return r.json();
-}
-
-/* ======== RENDER ======== */
-const calEl = document.getElementById('calendar');
-const titleEl = document.getElementById('monthTitle');
-const memberSel = document.getElementById('memberSelect');
-
-memberSel.addEventListener('change', ()=>{ currentUser = memberSel.value; loadMonth() });
-document.getElementById('prevBtn').onclick = ()=>{ view.setUTCMonth(view.getUTCMonth()-1); loadMonth(); }
-document.getElementById('nextBtn').onclick = ()=>{ view.setUTCMonth(view.getUTCMonth()+1); loadMonth(); }
-
-/* LEGEND & PREFS */
-document.getElementById('applyRange').onclick = applyRangeBulk;
-document.getElementById('applyPattern').onclick = applyWeeklyPattern;
-
-function composeMonthMatrix(){
-  const first = new Date(view);
-  const start = addDays(first, -((first.getUTCDay()+6)%7)); // Monday grid start
-  const last = new Date(Date.UTC(view.getUTCFullYear(), view.getUTCMonth()+1, 0));
-  const end = addDays(last, 6 - ((last.getUTCDay()+6)%7));
-  const days=[];
-  let d = new Date(start);
-  while(d<=end){
-    days.push({
-      date: ymd(d),
-      dow: d.getUTCDay(),
-      inMonth: d.getUTCMonth()===view.getUTCMonth()
-    });
-    d = addDays(d,1);
-  }
-  monthMatrix = days;
-}
-
-function stateOf(userId, date, half){
-  return availability?.[userId]?.[date]?.[half] || 'unset';
-}
-
-function noteOf(date, half){
-  return notesIndex?.[date]?.[half] || '';
-}
-
-function pillMarkup(date, half, state){
-  return `<button class="pill" data-date="${date}" data-half="${half}" data-state="${state}">
-            <small>${half}</small>
-          </button>`;
-}
-
-function noteMarkup(date, half){
-  const has = !!noteOf(date, half);
-  const cls = 'noteBtn'+(has?' hasNote':'');
-  const label = has ? 'Note set' : 'Add note';
-  return `<button class="${cls}" data-note-date="${date}" data-note-half="${half}">📝 ${label}</button>`;
-}
-
-function render(){
-  titleEl.textContent = fmtMonth(view);
-  composeMonthMatrix();
-  calEl.innerHTML = '';
-  monthMatrix.forEach(slot=>{
-    const d = new Date(slot.date+'T00:00:00Z');
-    const dow = d.toLocaleDateString(undefined,{weekday:'short'});
-    const dateNum = d.getUTCDate();
-
-    const stAM = stateOf(currentUser, slot.date,'AM');
-    const stPM = stateOf(currentUser, slot.date,'PM');
-
-    const day = document.createElement('div');
-    day.className = 'day';
-    day.innerHTML = `
-      <div class="dow">${dow}</div>
-      <div class="date" aria-label="${slot.date}">${dateNum}</div>
-      <div class="pills">${pillMarkup(slot.date,'AM',stAM)}${pillMarkup(slot.date,'PM',stPM)}</div>
-      <div>${noteMarkup(slot.date,'AM')} ${noteMarkup(slot.date,'PM')}</div>
-    `;
-    if(!slot.inMonth){ day.style.opacity=.45 }
-    calEl.appendChild(day);
+  // Health check
+  fetch(API+'/api/health').then(r=>{
+    debug('GET /api/health → '+r.status); return r.json()
+  }).then(j=>{
+    debug('health payload: '+JSON.stringify(j));
+    loadMonth();
+  }).catch(e=>{
+    debug('health failed: '+e);
   });
 
-  // bind pill clicks
-  calEl.querySelectorAll('.pill').forEach(btn=>{
-    btn.onclick = async (e)=>{
-      const date = btn.dataset.date;
-      const half = btn.dataset.half;
-      const cur = btn.dataset.state;
-      const idx = STATE_COLORS.indexOf(cur);
-      const next = STATE_COLORS[(idx+1)%STATE_COLORS.length];
-      await saveIntent(currentUser, date, half, next);
-      btn.dataset.state = next;
-    };
-  });
+  // Minimal loader with try/catch so rendering never breaks
+  async function loadMonth(){
+    try{
+      const today = new Date(); today.setHours(0,0,0,0);
+      const start = iso(addDays(firstOfMonth(today),-((firstOfMonth(today).getDay()+6)%7)));
+      const end   = iso(addDays(lastOfMonth(today), 6-((lastOfMonth(today).getDay()+6)%7)));
+      debug(`fetching state window ${start} → ${end}`);
 
-  // bind note buttons
-  calEl.querySelectorAll('.noteBtn').forEach(nb=>{
-    nb.onclick = async ()=>{
-      const date = nb.dataset.noteDate;
-      const half = nb.dataset.noteHalf;
-      const cur = noteOf(date, half);
-      const txt = prompt(`Note to supervisor for ${date} ${half}\n(ie: 'In at 10am')`, cur||'');
-      if(txt===null) return;
-      await saveIntent(currentUser, date, half, stateOf(currentUser,date,half), txt);
-      // update local and invert style
-      if(!notesIndex[date]) notesIndex[date]={};
-      notesIndex[date][half]=txt;
-      nb.classList.toggle('hasNote', !!txt);
-      nb.textContent = (txt?'📝 Note set':'📝 Add note');
-    };
-  });
-}
+      const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
+      debug('GET /api/state → '+r.status);
+      const data = await r.json();
+      debug('state keys: '+Object.keys(data||{}).join(', '));
 
-/* ======== SAVE ======== */
-async function saveIntent(userId, date, half, state, note){
-  const body = { userId, date, half, state };
-  if(typeof note==='string'){ body.note = note }
-  try{
-    await apiPost('/api/availability', body);
-    // local cache
-    availability[userId] ??= {};
-    availability[userId][date] ??= {};
-    availability[userId][date][half] = state;
-  }catch(e){
-    console.error(e);
-    alert('Save failed. Please check connection.');
-  }
-}
-
-/* ======== BULK ======== */
-async function applyRangeBulk(){
-  const from = document.getElementById('bulkFrom').value;
-  const until = document.getElementById('bulkUntil').value;
-  const st = document.getElementById('bulkState').value;
-  const doAM = document.getElementById('bulkAM').checked;
-  const doPM = document.getElementById('bulkPM').checked;
-  if(!from||!until){ alert('Choose a start and end date'); return; }
-  const days = rangeDays(new Date(from+'T00:00:00Z'), new Date(until+'T00:00:00Z'));
-  for(const d of days){
-    if(doAM) await saveIntent(currentUser,d,'AM',st);
-    if(doPM) await saveIntent(currentUser,d,'PM',st);
-  }
-  loadMonth();
-}
-
-async function applyWeeklyPattern(){
-  const until = document.getElementById('patUntil').value;
-  if(!until){ alert('Choose repeat-until date'); return }
-  const st = document.getElementById('patState').value;
-  const doAM = document.getElementById('patAM').checked;
-  const doPM = document.getElementById('patPM').checked;
-  const daysSel = Array.from(document.querySelectorAll('.wDay:checked')).map(x=>parseInt(x.value,10));
-  if(daysSel.length===0){ alert('Select at least one weekday'); return }
-  // from current month first-of-month
-  let d = new Date(view);
-  const end = new Date(until+'T00:00:00Z');
-  while(d<=end){
-    if(daysSel.includes(d.getUTCDay())){
-      const dt = ymd(d);
-      if(doAM) await saveIntent(currentUser,dt,'AM',st);
-      if(doPM) await saveIntent(currentUser,dt,'PM',st);
+      paintCalendar(data);
+    }catch(e){
+      debug('loadMonth failed: '+e.message);
     }
-    d = addDays(d,1);
   }
-  loadMonth();
-}
 
-/* ======== LOAD ======== */
-async function loadMonth(){
-  titleEl.textContent = fmtMonth(view);
-  const start = ymd(addDays(view, -((view.getUTCDay()+6)%7)));
-  const last  = new Date(Date.UTC(view.getUTCFullYear(), view.getUTCMonth()+1, 0));
-  const end   = ymd(addDays(last, 6 - ((last.getUTCDay()+6)%7)));
+  function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1) }
+  function lastOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0) }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+  function iso(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
 
-  try{
-    const data = await apiGet(`/api/state?start=${start}&end=${end}`);
-    availability = data.availability || {};
-    // the API you have doesn’t expose a separate notes feed; we store notes within availability rows.
-    // To honor the “invert when note present”, synthesize note index from current user’s rows:
-    notesIndex = {};
-    const userMap = availability[currentUser]||{};
-    Object.keys(userMap).forEach(dt=>{
-      const halves = userMap[dt];
-      ['AM','PM'].forEach(h=>{
-        if(halves?.[h+'_note'] || halves?.note){ // future-proof if you add *_note
-          notesIndex[dt] ??= {};
-          notesIndex[dt][h] = halves[h+'_note'] || halves.note;
-        }
-      });
-    });
-  }catch(e){
-    console.warn('state fetch failed', e);
+  function stateOf(av,user,date,half){
+    return av?.[user]?.[date]?.[half] || 'unset';
   }
-  render();
-}
 
-/* ======== BOOT ======== */
-loadMonth();
+  function paintCalendar(data){
+    const av = data.availability||{};
+    const user = document.getElementById('memberSelect').value;
+    const grid = document.getElementById('calendar'); grid.innerHTML='';
+    const base = firstOfMonth(new Date());
+    const start = addDays(base,-((base.getDay()+6)%7));
+    for(let i=0;i<42;i++){
+      const d = addDays(start,i);
+      const dt = iso(d);
+      const el = document.createElement('div'); el.className='day';
+      el.innerHTML = `
+        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
+        <div class="date">${d.getDate()}</div>
+        <div class="pills">
+          <div class="pill" data-state="${stateOf(av,user,dt,'AM')}"><small>AM</small></div>
+          <div class="pill" data-state="${stateOf(av,user,dt,'PM')}"><small>PM</small></div>
+        </div>`;
+      grid.appendChild(el);
+    }
+    debug('calendar painted OK.');
+  }
+})();
 </script>
 </body>
 </html>
