@@ -1,101 +1,100 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShiftCommander · Wallboard</title>
 <style>
-  :root{
-    --bg:#0b1117;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;
-    --slot:#172233;--pill:#1b2431;--nudge:#ffbe3d
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1400px;margin:24px auto;padding:0 16px}
-  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-  .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer}
-  .title{min-width:280px;text-align:center;font-weight:900;font-size:18px}
-  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
-  .day{background:var(--panel);border:1px solid var(--bd);border-radius:16px;padding:14px;min-height:260px;display:flex;flex-direction:column}
-  .dow{color:var(--muted);font-weight:700}
-  .date{font-size:26px;font-weight:900;margin:2px 0 10px}
-  .slot{background:var(--slot);border:1px dashed var(--bd);border-radius:12px;padding:12px;margin-top:12px;flex:1;display:flex;flex-direction:column}
-  .slot h3{margin:0 0 10px 0;font-size:15px;letter-spacing:.2px;color:#cfe3ff}
-  .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .name{background:var(--pill);border:1px solid var(--bd);border-radius:999px;padding:8px 12px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .nudge{margin-top:10px;background:var(--nudge);color:#000;display:inline-block;padding:6px 10px;border-radius:8px;font-weight:900}
-  .panel{background:#0b121a;border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:16px}
-  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:200px;overflow:auto;white-space:pre-wrap}
-  @media (max-width:1100px){ .calendar{grid-template-columns:repeat(2,1fr)} }
+  :root{--bg:#0f1720;--panel:#111a23;--muted:#2a3847;--ring:#213042;--text:#e6f0ff;--sub:#a9b8c7;--needs:#f5a524}
+  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:1200px;margin:26px auto;padding:0 16px}
+  .bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .navbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--muted);background:#0d141b;color:var(--text);cursor:pointer}
+  .label{flex:1;text-align:center;color:var(--sub)}
+  .row{display:grid;grid-template-columns:repeat(7,1fr);gap:16px}
+  .card{background:var(--panel);border:1px dashed var(--muted);border-radius:16px;padding:12px}
+  .h{font-size:13px;color:var(--sub)}
+  .d{font-size:22px;font-weight:800}
+  .slot{margin-top:10px;background:#0d141b;border:1px solid var(--muted);border-radius:14px;padding:12px}
+  .slot h4{margin:0 0 8px;font-size:12px;letter-spacing:.08em;color:var(--sub)}
+  .names{display:flex;flex-wrap:wrap;gap:6px}
+  .name{background:#1f2b38;border:1px solid var(--ring);padding:6px 10px;border-radius:999px;font-size:14px}
+  .need{display:inline-block;background:var(--needs);color:#000;font-weight:800;border-radius:12px;padding:6px 12px}
+  .dbg{margin-top:12px;color:#8aa1b7;font:12px ui-monospace,Consolas,Menlo}
+  @media (max-width:900px){.row{grid-template-columns:repeat(2,1fr)}}
+  @media (min-width:901px) and (max-width:1200px){.row{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="toolbar">
-    <button id="prev" class="btn">◀</button>
-    <div id="title" class="title"></div>
-    <button id="next" class="btn">▶</button>
+  <div class="bar">
+    <button id="prev" class="navbtn">&#9664;</button>
+    <div id="label" class="label"></div>
+    <button id="next" class="navbtn">&#9654;</button>
   </div>
-  <div id="grid" class="calendar" aria-live="polite"></div>
-  <div class="panel"><strong>Debug Console</strong><div id="debug" class="debug">Booting…</div></div>
+
+  <div id="row" class="row"></div>
+
+  <div id="dbg" class="dbg"></div>
 </div>
 
 <script>
-(function(){
-  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const dbg=(m)=>{document.getElementById('debug').textContent+='\\n'+m}
-  window.onerror=(m,s,l,c,e)=>{dbg('JS ERROR: '+m+' @'+(s||'inline')+':'+l+':'+c+'\\n'+(e&&e.stack?e.stack:''))}
+(() => {
+  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  let anchor = new Date(); // week view
+  const $row = document.getElementById('row');
+  const $label = document.getElementById('label');
+  const $dbg = document.getElementById('dbg');
 
-  const grid=document.getElementById('grid'), title=document.getElementById('title');
-  let anchor=new Date(); anchor.setHours(0,0,0,0);
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+  function startWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x }
+  function fdate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}` }
 
-  document.getElementById('prev').onclick=()=>{anchor = shift(anchor,-7); load();}
-  document.getElementById('next').onclick=()=>{anchor = shift(anchor, 7); load();}
+  async function paint(){
+    const s = startWeek(anchor); const e = addDays(s,6);
+    $label.textContent = `${s.toLocaleString(undefined,{month:'long',day:'numeric'})} – ${e.toLocaleString(undefined,{month:'long',day:'numeric'})}`;
+    $row.innerHTML = "";
+    let st; try{
+      const r = await fetch(`${API}/api/state?start=${fdate(s)}&end=${fdate(e)}`);
+      if(!r.ok) throw new Error(r.status);
+      st = await r.json(); $dbg.textContent = "OK";
+    }catch(err){ $dbg.textContent = "ERR "+err.message; return; }
 
-  function shift(d,days){ const x=new Date(d); x.setDate(x.getDate()+days); return x }
-  function iso(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
+    for(let i=0;i<7;i++){
+      const d = addDays(s,i); const key=fdate(d);
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML = `<div class="h">${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="d">${d.getDate()}</div>`;
 
-  function weekRange(a){
-    const dow=(a.getDay()+6)%7, mon=shift(a,-dow);
-    return {start: iso(mon), end: iso(shift(mon,6)), label: `${mon.toLocaleDateString(undefined,{month:'long',day:'numeric'})} – ${shift(mon,6).toLocaleDateString(undefined,{month:'long',day:'numeric'})}`, list: [...Array(7)].map((_,i)=>shift(mon,i))};
-  }
+      ["AM","PM"].forEach(half=>{
+        const slot = document.createElement('div'); slot.className='slot';
+        slot.innerHTML = `<h4>${half}</h4>`;
+        const names = document.createElement('div'); names.className='names';
 
-  async function load(){
-    try{
-      const r=weekRange(anchor);
-      title.textContent=r.label;
-      dbg(`fetch ${r.start} → ${r.end}`);
-      const resp=await fetch(`${API}/api/state?start=${r.start}&end=${r.end}`); dbg('GET /api/state → '+resp.status);
-      const data=await resp.json(); paint(r.list, data);
-    }catch(e){ dbg('load failed: '+e.message) }
-  }
+        const byUser = st.availability || {};
+        Object.entries(byUser).forEach(([uid,daysMap])=>{
+          const s = daysMap?.[key]?.[half];
+          if(s==="prefer"||s==="available"){
+            const chip = document.createElement('span'); chip.className='name'; chip.textContent = uid + (s==="prefer"?" · ★":"");
+            names.appendChild(chip);
+          }
+        });
 
-  function paint(days,data){
-    grid.innerHTML='';
-    for(const d of days){
-      const k=iso(d);
-      const AM=data.shifts?.[k]?.AM||{assignees:[]}, PM=data.shifts?.[k]?.PM||{assignees:[]};
-      const el=document.createElement('div'); el.className='day';
-      el.innerHTML=`
-        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
-        <div class="date">${d.getDate()}</div>
-        <div class="slot"><h3>AM</h3><div class="names" id="am-${k}"></div></div>
-        <div class="slot"><h3>PM</h3><div class="names" id="pm-${k}"></div></div>`;
-      grid.appendChild(el);
-      fill('am-'+k, AM.assignees);
-      fill('pm-'+k, PM.assignees);
+        if(!names.children.length){
+          const need = document.createElement('span'); need.className='need'; need.textContent = 'Needs ALS & EMT';
+          names.appendChild(need);
+        }
+
+        slot.appendChild(names);
+        card.appendChild(slot);
+      });
+
+      $row.appendChild(card);
     }
-    dbg('paint OK.');
   }
 
-  function fill(id,list){
-    const host=document.getElementById(id);
-    (list||[]).slice(0,4).forEach(n=>{const s=document.createElement('div');s.className='name';s.textContent=n;host.appendChild(s)});
-    if(!list || list.length===0){const n=document.createElement('div');n.className='nudge';n.textContent='Needs ALS & EMT';host.parentElement.appendChild(n)}
-  }
-
-  fetch(API+'/api/health').then(r=>{dbg('health '+r.status);return r.json()}).then(j=>dbg(JSON.stringify(j))).catch(e=>dbg('health fail '+e));
-  load();
+  document.getElementById('prev').onclick=()=>{ anchor = addDays(anchor,-7); paint(); }
+  document.getElementById('next').onclick=()=>{ anchor = addDays(anchor, 7); paint(); }
+  paint();
 })();
 </script>
 </body>

@@ -1,129 +1,134 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShiftCommander · Supervisor</title>
 <style>
-  :root{
-    --bg:#0f141b;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;
-    --slot:#172233;--pill:#1b2431;--nudge:#ffbe3d
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1280px;margin:24px auto;padding:0 16px}
-  header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-  h1{font-size:18px;margin:0}
-  .tabs a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:14px;border:1px solid var(--bd);background:var(--panel)}
-  .tabs a.active{color:var(--text);border-color:#2b3a51}
-  .toolbar{display:flex;gap:10px;align-items:center}
-  .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-  .title{min-width:240px;text-align:center;font-weight:800}
-  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
-  .day{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px;min-height:210px;display:flex;flex-direction:column}
-  .dow{color:var(--muted);font-weight:600}
-  .date{font-size:22px;font-weight:900;margin:2px 0 8px}
-  .slot{background:var(--slot);border:1px dashed var(--bd);border-radius:10px;padding:10px;margin-top:10px;flex:1;display:flex;flex-direction:column}
-  .slot h4{margin:0 0 8px 0;font-size:13px;letter-spacing:.2px;color:#cfe3ff}
-  .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-  .name{background:var(--pill);border:1px solid var(--bd);border-radius:999px;padding:6px 10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .nudge{margin-top:8px;background:var(--nudge);color:#000;display:inline-block;padding:4px 8px;border-radius:6px;font-weight:800}
-  .panel{background:#0b121a;border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:16px}
-  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:200px;overflow:auto;white-space:pre-wrap}
-  @media (max-width:1024px){ .calendar{grid-template-columns:repeat(2,1fr)} }
+  :root{--bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#213042;--text:#e6f0ff;--sub:#a9b8c7;--card:#0f1922;--chip:#1a2633;--needs:#f5a524;}
+  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:1150px;margin:28px auto;padding:0 16px}
+  h1{font-size:18px;margin:0 0 16px}
+  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:999px;background:#1a2633;color:var(--sub);text-decoration:none;border:1px solid #2a3b4e}
+  .tabs a.active{color:var(--text)}
+  .bar{display:flex;align-items:center;gap:12px;margin:8px 0 16px}
+  .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
+  .toggle{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:14px}
+  .cell{background:var(--panel);border:1px dashed var(--muted);border-radius:14px;padding:10px;min-height:140px}
+  .dow{font-size:12px;color:var(--sub)}
+  .date{font-size:16px;font-weight:700;margin-top:2px}
+  .slot{background:var(--panel2);border:1px solid var(--muted);border-radius:12px;padding:10px;margin-top:8px}
+  .slot h4{margin:0 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub)}
+  .names{display:flex;flex-wrap:wrap;gap:6px}
+  .name{background:#1f2b38;border:1px solid var(--ring);padding:5px 8px;border-radius:999px;font-size:12px}
+  .need{display:inline-block;background:var(--needs);color:#000;font-weight:700;border-radius:10px;padding:6px 10px}
+  .console{margin-top:16px;background:#0b1117;border:1px solid #17202a;border-radius:12px;padding:8px 10px;color:#93a6b8;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas}
+  .note{margin-top:6px;color:#e9d7a7;font-size:12px}
+  .note small{color:#9fb3c7}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (min-width:901px) and (max-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>ShiftCommander <span style="color:#8ea1b8">Supervisor</span></h1>
-    <nav class="tabs">
-      <a href="./member.html">Member</a>
-      <a class="active" href="./supervisor.html">Supervisor</a>
-      <a href="./wallboard.html">Wallboard</a>
-    </nav>
-  </header>
-
-  <div class="toolbar">
-    <button id="prev" class="btn">◀</button>
-    <div id="title" class="title"></div>
-    <button id="next" class="btn">▶</button>
-    <label style="margin-left:auto"><input type="checkbox" id="monthToggle"> Month at a glance</label>
+  <h1>ShiftCommander <span style="color:#8fb3ff">Supervisor</span></h1>
+  <div class="tabs">
+    <a href="/member.html">Member</a>
+    <a class="active" href="#">Supervisor</a>
+    <a href="/wallboard.html">Wallboard</a>
   </div>
 
-  <div id="grid" class="calendar" aria-live="polite"></div>
+  <div class="bar">
+    <button id="prev" class="navbtn">&#9664;</button>
+    <div id="label" style="min-width:200px;text-align:center;color:#a9b8c7"></div>
+    <button id="next" class="navbtn">&#9654;</button>
+    <label class="toggle"><input type="checkbox" id="monthToggle" checked> Month at a glance</label>
+  </div>
 
-  <div class="panel"><strong>Debug Console</strong><div id="debug" class="debug">Booting…</div></div>
+  <div id="grid" class="grid"></div>
+
+  <div id="dbg" class="console"></div>
 </div>
 
 <script>
-(function(){
-  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const dbg=(m)=>{document.getElementById('debug').textContent+='\\n'+m}
-  window.onerror=(m,s,l,c,e)=>{dbg('JS ERROR: '+m+' @'+(s||'inline')+':'+l+':'+c+'\\n'+(e&&e.stack?e.stack:''))}
+(() => {
+  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  let anchor = new Date(); anchor.setDate(1); // month view by default
+  const $grid = document.getElementById('grid');
+  const $label = document.getElementById('label');
+  const $dbg = document.getElementById('dbg');
+  const $toggle = document.getElementById('monthToggle');
 
-  const grid=document.getElementById('grid'), title=document.getElementById('title');
-  let anchor=new Date(); anchor.setHours(0,0,0,0);
+  function fmt(d){ return d.toLocaleString(undefined,{month:'long',year:'numeric'}) }
+  function fdate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}` }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+  function startWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x }
 
-  document.getElementById('prev').onclick=()=>{anchor = shift(anchor, document.getElementById('monthToggle').checked ? -30 : -7); load();}
-  document.getElementById('next').onclick=()=>{anchor = shift(anchor, document.getElementById('monthToggle').checked ? 30 : 7); load();}
-  document.getElementById('monthToggle').onchange=load;
-
-  function shift(d,days){ const x=new Date(d); x.setDate(x.getDate()+days); return x }
-  function iso(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
-
-  function rangeWeek(a){
-    const dow=(a.getDay()+6)%7, mon=shift(a,-dow);
-    return {start: iso(mon), end: iso(shift(mon,6)), label: `${mon.toLocaleDateString(undefined,{month:'long',day:'numeric'})} – ${shift(mon,6).toLocaleDateString(undefined,{month:'long',day:'numeric'})}`, list: [...Array(7)].map((_,i)=>shift(mon,i))};
-  }
-  function rangeMonth(a){
-    const f=new Date(a.getFullYear(),a.getMonth(),1);
-    const l=new Date(a.getFullYear(),a.getMonth()+1,0);
-    // pad to full weeks
-    const start = shift(f,-((f.getDay()+6)%7));
-    const total = Math.ceil(((((l - start)/86400000) +1))/7)*7; // 28/35/42
-    const days=[...Array(total)].map((_,i)=>shift(start,i));
-    return {start: iso(days[0]), end: iso(days[days.length-1]), label: f.toLocaleDateString(undefined,{month:'long',year:'numeric'}), list: days};
+  async function stateWindow(start,end){
+    const r = await fetch(`${API}/api/state?start=${start}&end=${end}`); if(!r.ok) throw new Error(r.status);
+    return r.json();
   }
 
-  async function load(){
-    try{
-      const monthMode=document.getElementById('monthToggle').checked;
-      const r = monthMode ? rangeMonth(anchor) : rangeWeek(anchor);
-      title.textContent=r.label;
-      dbg(`fetch ${r.start} → ${r.end}`);
-      const resp=await fetch(`${API}/api/state?start=${r.start}&end=${r.end}`); dbg('GET /api/state → '+resp.status);
-      const data=await resp.json(); paint(r.list, data);
-    }catch(e){ dbg('load failed: '+e.message) }
-  }
+  async function paint(){
+    $grid.innerHTML = "";
+    $label.textContent = fmt(anchor);
 
-  function paint(days,data){
-    grid.innerHTML='';
-    for(const d of days){
-      const k=iso(d);
-      const AM=data.shifts?.[k]?.AM||{assignees:[]}, PM=data.shifts?.[k]?.PM||{assignees:[]};
-      const el=document.createElement('div'); el.className='day';
-      el.innerHTML = `
-        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
-        <div class="date">${d.getDate()}</div>
-        <div class="slot"><h4>AM</h4><div class="names" id="am-${k}"></div></div>
-        <div class="slot"><h4>PM</h4><div class="names" id="pm-${k}"></div></div>
-      `;
-      grid.appendChild(el);
-      fillNames('am-'+k, AM.assignees);
-      fillNames('pm-'+k, PM.assignees);
+    const days = $toggle.checked ? 42 : 7;
+    const s = startWeek(new Date(anchor.getFullYear(), anchor.getMonth(), $toggle.checked?1:anchor.getDate()));
+    const start = fdate(s), end = fdate(addDays(s,days-1));
+    let st; try{ st = await stateWindow(start,end); $dbg.textContent = `GET /api/state ok\n`; }catch(e){ $dbg.textContent = 'state error '+e.message; return; }
+
+    for(let i=0;i<days;i++){
+      const d = addDays(s,i); const key = fdate(d);
+      const cell = document.createElement('div'); cell.className='cell';
+      cell.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
+                        <div class="date">${d.toLocaleString(undefined,{day:'2-digit'})}</div>`;
+
+      ["AM","PM"].forEach(half=>{
+        const slot = document.createElement('div'); slot.className='slot';
+        slot.innerHTML = `<h4>${half}</h4>`;
+        const namesWrap = document.createElement('div'); namesWrap.className='names';
+
+        const assignees = st.shifts?.[key]?.[half]?.assignees || [];
+        const notesForHalf = [];
+        // show availability “prefer/available/no” into badges (up to 4 seats emphasis)
+        const byUser = st.availability || {};
+        Object.entries(byUser).forEach(([uid, daysMap])=>{
+          const s = daysMap?.[key]?.[half];
+          const note = daysMap?.[key]?.[half+"_note"];
+          if(s==="prefer" || s==="available"){
+            const chip = document.createElement('span'); chip.className='name'; chip.textContent = uid + (s==="prefer"?" · ★":"");
+            namesWrap.appendChild(chip);
+            if(note) notesForHalf.push({uid,note});
+          }
+        });
+
+        if(!namesWrap.children.length){
+          const need = document.createElement('span'); need.className='need'; need.textContent='Needs ALS & EMT';
+          namesWrap.appendChild(need);
+        }
+
+        slot.appendChild(namesWrap);
+
+        notesForHalf.forEach(n=>{
+          const p = document.createElement('div'); p.className='note';
+          p.innerHTML = `📝 ${n.note} <small>(${key} ${half} · ${n.uid})</small>`;
+          slot.appendChild(p);
+        });
+
+        cell.appendChild(slot);
+      });
+
+      $grid.appendChild(cell);
     }
-    dbg('paint OK.');
   }
 
-  function fillNames(id, list){
-    const host=document.getElementById(id);
-    (list||[]).slice(0,4).forEach(n=>{ const s=document.createElement('div'); s.className='name'; s.textContent=n; host.appendChild(s) });
-    if(!list || list.length===0){ const n=document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; host.parentElement.appendChild(n) }
-  }
+  document.getElementById('prev').onclick=()=>{ anchor = new Date(anchor.getFullYear(), anchor.getMonth()-1, 1); paint(); }
+  document.getElementById('next').onclick=()=>{ anchor = new Date(anchor.getFullYear(), anchor.getMonth()+1, 1); paint(); }
+  $toggle.onchange = paint;
 
-  fetch(API+'/api/health').then(r=>{dbg('health '+r.status);return r.json()}).then(j=>dbg(JSON.stringify(j))).catch(e=>dbg('health fail '+e));
-  load();
+  (async()=>{ await paint(); })();
 })();
 </script>
 </body>

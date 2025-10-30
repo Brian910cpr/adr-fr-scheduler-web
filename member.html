@@ -1,139 +1,227 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ShiftCommander · Member (Safe Render)</title>
-<style>
-  :root{--bg:#0f141b;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;--pill:#1b2431;--prefer:#1e8fff;--avail:#36b24d;--no:#dd4b39;--unset:#2b3647;--note:#fff;--noteText:#0c1320}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-  header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-  h1{font-size:18px;margin:0}
-  .tabs a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:14px;border:1px solid var(--bd);background:var(--panel)}
-  .tabs a.active{color:var(--text);border-color:#2b3a51}
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .select{background:var(--panel);border:1px solid var(--bd);color:var(--text);padding:6px 10px;border-radius:8px}
-  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
-  .day{background:var(--panel);border:1px dashed var(--bd);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:110px}
-  .dow{font-size:12px;color:var(--muted)} .date{font-weight:700}
-  .pills{display:flex;gap:8px;flex-wrap:wrap}
-  .pill{display:inline-flex;align-items:center;justify-content:center;height:34px;min-width:56px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);background:var(--pill);cursor:pointer}
-  .pill[data-state="prefer"]{background:var(--prefer);color:#fff;font-weight:700;border-color:transparent}
-  .pill[data-state="available"]{background:var(--avail);color:#fff;font-weight:700;border-color:transparent}
-  .pill[data-state="no"]{background:var(--no);color:#fff;font-weight:700;border-color:transparent}
-  .pill[data-state="unset"]{background:var(--unset);color:#c7d0dc}
-  .noteBtn{margin-top:4px;display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--pill);color:var(--text);cursor:pointer}
-  .noteBtn.hasNote{background:var(--note);color:var(--noteText);font-weight:600}
-  .panel{background:#0b121a;border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:16px}
-  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:220px;overflow:auto;white-space:pre-wrap}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>ShiftCommander · Member</title>
+  <style>
+    :root{
+      --bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#213042;
+      --text:#e6f0ff;--sub:#a9b8c7;
+      --chip:#1a2633;--chip-ring:#2a3b4e;
+      --prefer:#0ea5e9;--avail:#22c55e;--no:#ef4444;--unset:#334155;--note:#fbbf24;
+    }
+    *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:1150px;margin:28px auto;padding:0 16px}
+    h1{font-size:18px;margin:0 0 16px}
+    .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:var(--sub);text-decoration:none;border:1px solid var(--chip-ring)}
+    .tabs a.active{color:var(--text);background:#1f2b38}
+    .bar{display:flex;align-items:center;gap:10px;margin:8px 0 16px}
+    .picker{display:flex;gap:8px;align-items:center}
+    .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:14px}
+    .cell{background:var(--panel);border:1px dashed var(--muted);border-radius:14px;padding:10px;min-height:130px;display:flex;flex-direction:column;justify-content:space-between}
+    .dow{font-size:12px;color:var(--sub)}
+    .date{font-size:16px;font-weight:700;margin-top:2px}
+    .halves{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    .half{background:var(--panel2);border:1px solid var(--muted);border-radius:12px;padding:10px}
+    .half h4{margin:0 0 8px;font-size:11px;letter-spacing:.08em;color:var(--sub)}
+    .state{display:flex;gap:6px;flex-wrap:wrap}
+    .pill{border:1px solid var(--chip-ring);background:var(--chip);color:#c7d6e6;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
+    .pill[data-s="prefer"]{background:color-mix(in oklab,var(--prefer) 22%, #000);border-color:color-mix(in oklab,var(--prefer) 40%, #000);color:#e9f6ff}
+    .pill[data-s="available"]{background:color-mix(in oklab,var(--avail) 22%, #000);border-color:color-mix(in oklab,var(--avail) 40%, #000);color:#ecfff1}
+    .pill[data-s="no"]{background:color-mix(in oklab,var(--no) 22%, #000);border-color:color-mix(in oklab,var(--no) 40%, #000);color:#fff1f1}
+    .pill[data-s="unset"]{opacity:.8}
+    .noteRow{margin-top:10px;display:flex;gap:8px;align-items:center}
+    .noteBtn{border:1px solid var(--chip-ring);background:var(--chip);color:#c7d6e6;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+    .noteBtn.has{background:var(--text);color:#000;font-weight:700;border-color:var(--note)}
+    .noteInput{flex:1;min-width:0;border:1px solid var(--muted);background:var(--panel2);color:var(--text);border-radius:10px;padding:6px 8px;font-size:12px}
+    .legend{margin-top:14px;color:var(--sub);font-size:12px}
+    .console{margin-top:16px;background:#0b1117;border:1px solid #17202a;border-radius:12px;padding:8px 10px;color:#93a6b8;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+    .select{border:1px solid var(--muted);background:var(--panel2);color:var(--text);border-radius:8px;padding:6px 8px}
+    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (min-width:901px) and (max-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+  </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>ShiftCommander <span style="color:#8ea1b8">Member</span></h1>
-    <nav class="tabs">
-      <a class="active" href="./member.html">Member</a>
-      <a href="./supervisor.html">Supervisor</a>
-      <a href="./wallboard.html">Wallboard</a>
-    </nav>
-  </header>
-
-  <div class="row">
-    <label>Member&nbsp;
-      <select id="memberSelect" class="select">
-        <option value="uq2w4or">1003 AJ (uq2w4or)</option>
-        <option value="u1">u1</option>
-        <option value="u76uhkd">u76uhkd</option>
-      </select>
-    </label>
-    <div style="flex:1"></div>
-    <button id="prevBtn" class="select">◀</button>
-    <div id="monthTitle" style="min-width:160px;text-align:center;font-weight:700"></div>
-    <button id="nextBtn" class="select">▶</button>
+  <h1>ShiftCommander <span style="color:#8fb3ff">Member</span></h1>
+  <div class="tabs">
+    <a class="active" href="#">Member</a>
+    <a href="/supervisor.html">Supervisor</a>
+    <a href="/wallboard.html">Wallboard</a>
   </div>
 
-  <div id="calendar" class="calendar" aria-live="polite">
-    <!-- skeleton so page never looks empty -->
-    <div class="day"><div class="dow">Mon</div><div class="date">—</div><div class="pills"><div class="pill" data-state="unset"><small>AM</small></div><div class="pill" data-state="unset"><small>PM</small></div></div></div>
+  <div class="bar">
+    <div class="picker">
+      <label>Member</label>
+      <select id="memberSel" class="select"></select>
+    </div>
+    <button id="prev" class="navbtn" title="Prev">&#9664;</button>
+    <div id="monthLabel" style="min-width:180px;text-align:center;color:var(--sub)"></div>
+    <button id="next" class="navbtn" title="Next">&#9654;</button>
   </div>
 
-  <div class="panel">
-    <strong>Debug Console</strong>
-    <div id="debug" class="debug">Booting…</div>
+  <div id="grid" class="grid"></div>
+
+  <div class="legend">
+    Tap a chip to set your intent for that half shift. “Note” inverts when text is present.
   </div>
+
+  <div id="dbg" class="console"></div>
 </div>
 
 <script>
-(function(){
-  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const debug = (m)=>{ const el=document.getElementById('debug'); el.textContent += '\\n' + m }
-  window.onerror = (msg,src,line,col,err)=>{ debug('JS ERROR: '+msg+' @'+(src||'inline')+':'+line+':'+col+'\\n'+(err&&err.stack?err.stack:'')) }
+(() => {
+  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  const userIdFromQuery = new URLSearchParams(location.search).get("user") || "uq2w4or"; // default demo
+  let current = firstOfMonth(new Date());
+  let members = []; // [{id,name}...]
 
-  // Always paint something first
-  document.getElementById('monthTitle').textContent = new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'});
-  debug('UI skeleton painted.');
-
-  // Health check
-  fetch(API+'/api/health').then(r=>{
-    debug('GET /api/health → '+r.status); return r.json()
-  }).then(j=>{
-    debug('health payload: '+JSON.stringify(j));
-    loadMonth();
-  }).catch(e=>{
-    debug('health failed: '+e);
-  });
-
-  // Minimal loader with try/catch so rendering never breaks
-  async function loadMonth(){
-    try{
-      const today = new Date(); today.setHours(0,0,0,0);
-      const start = iso(addDays(firstOfMonth(today),-((firstOfMonth(today).getDay()+6)%7)));
-      const end   = iso(addDays(lastOfMonth(today), 6-((lastOfMonth(today).getDay()+6)%7)));
-      debug(`fetching state window ${start} → ${end}`);
-
-      const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
-      debug('GET /api/state → '+r.status);
-      const data = await r.json();
-      debug('state keys: '+Object.keys(data||{}).join(', '));
-
-      paintCalendar(data);
-    }catch(e){
-      debug('loadMonth failed: '+e.message);
-    }
-  }
-
-  function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1) }
-  function lastOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0) }
+  // UTIL
+  function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function fmt(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}` }
   function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
-  function iso(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
+  function startOfWeek(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x }
+  function endOfWeek(d){ return addDays(startOfWeek(d),6) }
 
-  function stateOf(av,user,date,half){
-    return av?.[user]?.[date]?.[half] || 'unset';
+  // DOM
+  const $grid = document.getElementById('grid');
+  const $dbg = document.getElementById('dbg');
+  const $label = document.getElementById('monthLabel');
+  const $memberSel = document.getElementById('memberSel');
+
+  // DEBUG
+  function log(s){ $dbg.textContent += s + "\n"; }
+
+  // Fetch helpers
+  async function api(path,opts={}){
+    const r = await fetch(API+path, opts);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
   }
 
-  function paintCalendar(data){
-    const av = data.availability||{};
-    const user = document.getElementById('memberSelect').value;
-    const grid = document.getElementById('calendar'); grid.innerHTML='';
-    const base = firstOfMonth(new Date());
-    const start = addDays(base,-((base.getDay()+6)%7));
-    for(let i=0;i<42;i++){
-      const d = addDays(start,i);
-      const dt = iso(d);
-      const el = document.createElement('div'); el.className='day';
-      el.innerHTML = `
-        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
-        <div class="date">${d.getDate()}</div>
-        <div class="pills">
-          <div class="pill" data-state="${stateOf(av,user,dt,'AM')}"><small>AM</small></div>
-          <div class="pill" data-state="${stateOf(av,user,dt,'PM')}"><small>PM</small></div>
-        </div>`;
-      grid.appendChild(el);
+  // Load roster (demo list derived from /api/state prefs keys)
+  async function loadRoster(){
+    const winStart = startOfWeek(current);
+    const winEnd = endOfWeek(addDays(winStart,34));
+    const st = await api(`/api/state?start=${fmt(winStart)}&end=${fmt(winEnd)}`);
+    members = Object.keys(st.prefs || {}).map(id => ({ id, name: id }));
+    if(!members.length) members = [{id:userIdFromQuery, name:`Member ${userIdFromQuery}`}];
+    $memberSel.innerHTML = members.map(m=>`<option value="${m.id}" ${m.id===userIdFromQuery?'selected':''}>${m.name}</option>`).join('');
+    return st;
+  }
+
+  // Paint calendar
+  async function paint(){
+    $label.textContent = current.toLocaleString(undefined,{month:'long',year:'numeric'});
+    $grid.innerHTML = "";
+    const st = await loadRoster();
+
+    const selectedUser = $memberSel.value;
+    const winStart = startOfWeek(new Date(current.getFullYear(), current.getMonth(), 1));
+    const days = 42; // 6 weeks grid
+
+    for(let i=0;i<days;i++){
+      const d = addDays(winStart,i);
+      const key = fmt(d);
+      const av = (st.availability?.[selectedUser]?.[key]) || {};
+      const cell = document.createElement('div'); cell.className='cell';
+
+      // header
+      const head = document.createElement('div');
+      head.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
+                        <div class="date">${d.toLocaleString(undefined,{day:'2-digit'})}</div>`;
+      cell.appendChild(head);
+
+      const halves = document.createElement('div'); halves.className='halves';
+
+      ["AM","PM"].forEach(half=>{
+        const halfBox = document.createElement('div'); halfBox.className='half';
+
+        // state row
+        const h = document.createElement('h4'); h.textContent = half;
+        halfBox.appendChild(h);
+
+        const states = ["prefer","available","no","unset"];
+        const row = document.createElement('div'); row.className='state';
+        states.forEach(s=>{
+          const pill = document.createElement('button');
+          pill.className='pill';
+          pill.dataset.s = s;
+          pill.textContent = ({prefer:"Prefer",available:"Available",no:"Do Not",unset:"Unset"})[s];
+          if((av[half]||"unset")===s) pill.style.outline = "2px solid var(--ring)";
+          pill.addEventListener('click', async ()=>{
+            // save state
+            try{
+              await api('/api/availability',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ userId:selectedUser, date:key, half, state:s, note: av[half+"_note"]||"" })
+              });
+              // update outline locally (no full refetch needed)
+              [...row.children].forEach(b=>b.style.outline="none");
+              pill.style.outline="2px solid var(--ring)";
+              log(`saved ${key} ${half} -> ${s}`);
+            }catch(e){ log("ERR save state "+e.message); }
+          });
+          row.appendChild(pill);
+        });
+        halfBox.appendChild(row);
+
+        // note row
+        const noteRow = document.createElement('div'); noteRow.className='noteRow';
+        const noteBtn = document.createElement('button'); noteBtn.className='noteBtn'; noteBtn.textContent='Note';
+        const input = document.createElement('input'); input.className='noteInput'; input.placeholder="Optional note to supervisor…";
+        input.value = av[half+"_note"] || "";
+        if(input.value.trim()) noteBtn.classList.add('has');
+
+        noteBtn.addEventListener('click', async ()=>{
+          // toggle focus / save
+          try{
+            const newVal = input.value.trim();
+            await api('/api/availability',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({ userId:selectedUser, date:key, half, state: (av[half]||"unset"), note:newVal })
+            });
+            if(newVal) noteBtn.classList.add('has'); else noteBtn.classList.remove('has');
+            log(`saved note ${key} ${half}`);
+          }catch(e){ log("ERR save note "+e.message); }
+        });
+
+        input.addEventListener('keydown', e=>{
+          if(e.key==='Enter'){ e.preventDefault(); noteBtn.click(); }
+        });
+
+        noteRow.appendChild(noteBtn);
+        noteRow.appendChild(input);
+        halfBox.appendChild(noteRow);
+
+        halves.appendChild(halfBox);
+      });
+
+      cell.appendChild(halves);
+      $grid.appendChild(cell);
     }
-    debug('calendar painted OK.');
+
+    log("calendar painted OK.");
   }
+
+  // nav
+  document.getElementById('prev').onclick = ()=>{ current = new Date(current.getFullYear(), current.getMonth()-1, 1); paint(); }
+  document.getElementById('next').onclick = ()=>{ current = new Date(current.getFullYear(), current.getMonth()+1, 1); paint(); }
+  $memberSel.onchange = paint;
+
+  // boot
+  (async()=>{
+    log(`Booting…`);
+    try{
+      const health = await api('/api/health');
+      log(`health ${JSON.stringify(health)}`);
+    }catch(e){ log("health ERR "+e.message); }
+    await paint();
+  })();
 })();
 </script>
 </body>
