@@ -3,23 +3,30 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ShiftCommander · Wallboard (Safe Render)</title>
+<title>ShiftCommander · Wallboard</title>
 <style>
-  :root{--bg:#0b1117;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;--slot:#172233;--nudge:#ffbe3d;--pill:#1b2431}
+  :root{
+    --bg:#0b1117;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;
+    --slot:#172233;--pill:#1b2431;--nudge:#ffbe3d
+  }
+  *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 system-ui,Segoe UI,Roboto,Arial}
   .wrap{max-width:1400px;margin:24px auto;padding:0 16px}
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-  .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-  .title{min-width:220px;text-align:center;font-weight:800}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
-  .col{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px;min-height:220px}
-  .dow{color:var(--muted)} .date{font-size:20px;font-weight:800;margin:4px 0 8px}
-  .slot{background:var(--slot);border:1px dashed var(--bd);border-radius:10px;padding:10px;margin-top:10px}
-  .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-  .name{background:var(--pill);border:1px solid var(--bd);border-radius:999px;padding:6px 10px;text-align:center}
-  .nudge{margin-top:8px;background:var(--nudge);color:#000;display:inline-block;padding:4px 8px;border-radius:6px;font-weight:700}
+  .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer}
+  .title{min-width:280px;text-align:center;font-weight:900;font-size:18px}
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+  .day{background:var(--panel);border:1px solid var(--bd);border-radius:16px;padding:14px;min-height:260px;display:flex;flex-direction:column}
+  .dow{color:var(--muted);font-weight:700}
+  .date{font-size:26px;font-weight:900;margin:2px 0 10px}
+  .slot{background:var(--slot);border:1px dashed var(--bd);border-radius:12px;padding:12px;margin-top:12px;flex:1;display:flex;flex-direction:column}
+  .slot h3{margin:0 0 10px 0;font-size:15px;letter-spacing:.2px;color:#cfe3ff}
+  .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .name{background:var(--pill);border:1px solid var(--bd);border-radius:999px;padding:8px 12px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nudge{margin-top:10px;background:var(--nudge);color:#000;display:inline-block;padding:6px 10px;border-radius:8px;font-weight:900}
   .panel{background:#0b121a;border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:16px}
-  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:220px;overflow:auto;white-space:pre-wrap}
+  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:200px;overflow:auto;white-space:pre-wrap}
+  @media (max-width:1100px){ .calendar{grid-template-columns:repeat(2,1fr)} }
 </style>
 </head>
 <body>
@@ -29,7 +36,7 @@
     <div id="title" class="title"></div>
     <button id="next" class="btn">▶</button>
   </div>
-  <div id="grid" class="grid"></div>
+  <div id="grid" class="calendar" aria-live="polite"></div>
   <div class="panel"><strong>Debug Console</strong><div id="debug" class="debug">Booting…</div></div>
 </div>
 
@@ -38,40 +45,55 @@
   const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
   const dbg=(m)=>{document.getElementById('debug').textContent+='\\n'+m}
   window.onerror=(m,s,l,c,e)=>{dbg('JS ERROR: '+m+' @'+(s||'inline')+':'+l+':'+c+'\\n'+(e&&e.stack?e.stack:''))}
-  const title=document.getElementById('title'), grid=document.getElementById('grid');
+
+  const grid=document.getElementById('grid'), title=document.getElementById('title');
   let anchor=new Date(); anchor.setHours(0,0,0,0);
-  document.getElementById('prev').onclick=()=>{anchor=setDays(anchor,-7);load()}
-  document.getElementById('next').onclick=()=>{anchor=setDays(anchor, 7);load()}
-  function setDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
-  function iso(d){const x=new Date(d);x.setHours(0,0,0,0);return x.toISOString().slice(0,10)}
-  function fmt(d){return d.toLocaleDateString(undefined,{weekday:'short'})}
-  function loadTitle(mon){title.textContent=`${mon.toLocaleDateString(undefined,{month:'long',day:'numeric'})} – ${setDays(mon,6).toLocaleDateString(undefined,{month:'long',day:'numeric'})}`}
+
+  document.getElementById('prev').onclick=()=>{anchor = shift(anchor,-7); load();}
+  document.getElementById('next').onclick=()=>{anchor = shift(anchor, 7); load();}
+
+  function shift(d,days){ const x=new Date(d); x.setDate(x.getDate()+days); return x }
+  function iso(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
+
+  function weekRange(a){
+    const dow=(a.getDay()+6)%7, mon=shift(a,-dow);
+    return {start: iso(mon), end: iso(shift(mon,6)), label: `${mon.toLocaleDateString(undefined,{month:'long',day:'numeric'})} – ${shift(mon,6).toLocaleDateString(undefined,{month:'long',day:'numeric'})}`, list: [...Array(7)].map((_,i)=>shift(mon,i))};
+  }
+
   async function load(){
     try{
-      const dow=(anchor.getDay()+6)%7, mon=setDays(anchor,-dow), start=iso(mon), end=iso(setDays(mon,6)); loadTitle(mon);
-      dbg(`fetch ${start} → ${end}`);
-      const r=await fetch(`${API}/api/state?start=${start}&end=${end}`); dbg('GET /api/state → '+r.status);
-      const data=await r.json(); dbg('keys: '+Object.keys(data||{}).join(', '));
-      grid.innerHTML=''; let d=new Date(mon);
-      for(let i=0;i<7;i++){
-        const id=iso(d), col=document.createElement('div'); col.className='col';
-        col.innerHTML=`<div class="dow">${fmt(d)}</div><div class="date">${d.getDate()}</div>
-          <div class="slot"><h4>AM</h4><div class="names" id="am-${id}"></div></div>
-          <div class="slot"><h4>PM</h4><div class="names" id="pm-${id}"></div></div>`;
-        grid.appendChild(col);
-        const AM=data.shifts?.[id]?.AM||{assignees:[]}, PM=data.shifts?.[id]?.PM||{assignees:[]};
-        const am=document.getElementById(`am-${id}`), pm=document.getElementById(`pm-${id}`);
-        (AM.assignees||[]).slice(0,2).forEach(n=>am.appendChild(chip(n)));
-        (PM.assignees||[]).slice(0,2).forEach(n=>pm.appendChild(chip(n)));
-        if((AM.assignees||[]).length===0){const n=document.createElement('div');n.className='nudge';n.textContent='Needs ALS & EMT';am.parentElement.appendChild(n)}
-        if((PM.assignees||[]).length===0){const n=document.createElement('div');n.className='nudge';n.textContent='Needs ALS & EMT';pm.parentElement.appendChild(n)}
-        d=setDays(d,1);
-      }
-      dbg('paint OK.');
-    }catch(e){dbg('load failed: '+e.message)}
+      const r=weekRange(anchor);
+      title.textContent=r.label;
+      dbg(`fetch ${r.start} → ${r.end}`);
+      const resp=await fetch(`${API}/api/state?start=${r.start}&end=${r.end}`); dbg('GET /api/state → '+resp.status);
+      const data=await resp.json(); paint(r.list, data);
+    }catch(e){ dbg('load failed: '+e.message) }
   }
-  function chip(t){const s=document.createElement('div'); s.className='name'; s.textContent=t; return s}
-  // ping health so we see CORS or DNS immediately
+
+  function paint(days,data){
+    grid.innerHTML='';
+    for(const d of days){
+      const k=iso(d);
+      const AM=data.shifts?.[k]?.AM||{assignees:[]}, PM=data.shifts?.[k]?.PM||{assignees:[]};
+      const el=document.createElement('div'); el.className='day';
+      el.innerHTML=`
+        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
+        <div class="date">${d.getDate()}</div>
+        <div class="slot"><h3>AM</h3><div class="names" id="am-${k}"></div></div>
+        <div class="slot"><h3>PM</h3><div class="names" id="pm-${k}"></div></div>`;
+      grid.appendChild(el);
+      fill('am-'+k, AM.assignees);
+      fill('pm-'+k, PM.assignees);
+    }
+    dbg('paint OK.');
+  }
+
+  function fill(id,list){
+    const host=document.getElementById(id);
+    (list||[]).slice(0,4).forEach(n=>{const s=document.createElement('div');s.className='name';s.textContent=n;host.appendChild(s)});
+    if(!list || list.length===0){const n=document.createElement('div');n.className='nudge';n.textContent='Needs ALS & EMT';host.parentElement.appendChild(n)}
+  }
+
   fetch(API+'/api/health').then(r=>{dbg('health '+r.status);return r.json()}).then(j=>dbg(JSON.stringify(j))).catch(e=>dbg('health fail '+e));
   load();
 })();

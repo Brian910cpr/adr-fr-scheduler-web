@@ -3,25 +3,34 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ShiftCommander · Supervisor (Safe Render)</title>
+<title>ShiftCommander · Supervisor</title>
 <style>
-  :root{--bg:#0f141b;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;--slot:#151f22;--nudge:#ffbe3d}
+  :root{
+    --bg:#0f141b;--panel:#121a23;--bd:#233142;--text:#e7edf5;--muted:#8ea1b8;
+    --slot:#172233;--pill:#1b2431;--nudge:#ffbe3d
+  }
+  *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+  .wrap{max-width:1280px;margin:24px auto;padding:0 16px}
   header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
   h1{font-size:18px;margin:0}
   .tabs a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:14px;border:1px solid var(--bd);background:var(--panel)}
   .tabs a.active{color:var(--text);border-color:#2b3a51}
+  .toolbar{display:flex;gap:10px;align-items:center}
   .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-  .title{min-width:200px;text-align:center;font-weight:800}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
-  .card{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:12px;min-height:150px}
-  .slot{margin-top:8px;padding:8px;border:1px dashed var(--bd);border-radius:8px;background:var(--slot)}
-  .names{display:flex;gap:6px;flex-wrap:wrap}
-  .name{background:#1b2431;border:1px solid var(--bd);border-radius:999px;padding:4px 8px}
-  .nudge{margin-top:8px;background:var(--nudge);color:#000;display:inline-block;padding:4px 8px;border-radius:6px;font-weight:700}
+  .title{min-width:240px;text-align:center;font-weight:800}
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
+  .day{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px;min-height:210px;display:flex;flex-direction:column}
+  .dow{color:var(--muted);font-weight:600}
+  .date{font-size:22px;font-weight:900;margin:2px 0 8px}
+  .slot{background:var(--slot);border:1px dashed var(--bd);border-radius:10px;padding:10px;margin-top:10px;flex:1;display:flex;flex-direction:column}
+  .slot h4{margin:0 0 8px 0;font-size:13px;letter-spacing:.2px;color:#cfe3ff}
+  .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .name{background:var(--pill);border:1px solid var(--bd);border-radius:999px;padding:6px 10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nudge{margin-top:8px;background:var(--nudge);color:#000;display:inline-block;padding:4px 8px;border-radius:6px;font-weight:800}
   .panel{background:#0b121a;border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:16px}
-  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:220px;overflow:auto;white-space:pre-wrap}
+  .debug{font:12px/1.4 ui-monospace,Consolas,monospace;color:#cfe3ff;max-height:200px;overflow:auto;white-space:pre-wrap}
+  @media (max-width:1024px){ .calendar{grid-template-columns:repeat(2,1fr)} }
 </style>
 </head>
 <body>
@@ -35,81 +44,85 @@
     </nav>
   </header>
 
-  <div style="display:flex;gap:10px;align-items:center">
+  <div class="toolbar">
     <button id="prev" class="btn">◀</button>
     <div id="title" class="title"></div>
     <button id="next" class="btn">▶</button>
     <label style="margin-left:auto"><input type="checkbox" id="monthToggle"> Month at a glance</label>
   </div>
 
-  <div id="grid" class="grid"></div>
+  <div id="grid" class="calendar" aria-live="polite"></div>
 
-  <div class="panel">
-    <strong>Debug Console</strong>
-    <div id="debug" class="debug">Booting…</div>
-  </div>
+  <div class="panel"><strong>Debug Console</strong><div id="debug" class="debug">Booting…</div></div>
 </div>
 
 <script>
 (function(){
   const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const dbg = (m)=>{ document.getElementById('debug').textContent += '\\n'+m }
-  window.onerror=(m,s,l,c,e)=>{ dbg('JS ERROR: '+m+' @'+(s||'inline')+':'+l+':'+c+'\\n'+(e&&e.stack?e.stack:'')) }
+  const dbg=(m)=>{document.getElementById('debug').textContent+='\\n'+m}
+  window.onerror=(m,s,l,c,e)=>{dbg('JS ERROR: '+m+' @'+(s||'inline')+':'+l+':'+c+'\\n'+(e&&e.stack?e.stack:''))}
 
-  const title=document.getElementById('title'), grid=document.getElementById('grid');
+  const grid=document.getElementById('grid'), title=document.getElementById('title');
   let anchor=new Date(); anchor.setHours(0,0,0,0);
-  document.getElementById('prev').onclick=()=>{anchor=setDays(anchor,-7);load()}
-  document.getElementById('next').onclick=()=>{anchor=setDays(anchor, 7);load()}
+
+  document.getElementById('prev').onclick=()=>{anchor = shift(anchor, document.getElementById('monthToggle').checked ? -30 : -7); load();}
+  document.getElementById('next').onclick=()=>{anchor = shift(anchor, document.getElementById('monthToggle').checked ? 30 : 7); load();}
   document.getElementById('monthToggle').onchange=load;
 
-  function setDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+  function shift(d,days){ const x=new Date(d); x.setDate(x.getDate()+days); return x }
   function iso(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
+
+  function rangeWeek(a){
+    const dow=(a.getDay()+6)%7, mon=shift(a,-dow);
+    return {start: iso(mon), end: iso(shift(mon,6)), label: `${mon.toLocaleDateString(undefined,{month:'long',day:'numeric'})} – ${shift(mon,6).toLocaleDateString(undefined,{month:'long',day:'numeric'})}`, list: [...Array(7)].map((_,i)=>shift(mon,i))};
+  }
+  function rangeMonth(a){
+    const f=new Date(a.getFullYear(),a.getMonth(),1);
+    const l=new Date(a.getFullYear(),a.getMonth()+1,0);
+    // pad to full weeks
+    const start = shift(f,-((f.getDay()+6)%7));
+    const total = Math.ceil(((((l - start)/86400000) +1))/7)*7; // 28/35/42
+    const days=[...Array(total)].map((_,i)=>shift(start,i));
+    return {start: iso(days[0]), end: iso(days[days.length-1]), label: f.toLocaleDateString(undefined,{month:'long',year:'numeric'}), list: days};
+  }
 
   async function load(){
     try{
       const monthMode=document.getElementById('monthToggle').checked;
-      let start,end;
-      if(monthMode){
-        const f=new Date(anchor.getFullYear(),anchor.getMonth(),1);
-        const l=new Date(anchor.getFullYear(),anchor.getMonth()+1,0);
-        start=iso(f); end=iso(l);
-        title.textContent=f.toLocaleDateString(undefined,{month:'long',year:'numeric'});
-      }else{
-        const dow=(anchor.getDay()+6)%7, mon=setDays(anchor,-dow);
-        start=iso(mon); end=iso(setDays(mon,6));
-        title.textContent=`${mon.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${setDays(mon,6).toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
-      }
-      dbg(`fetch ${start} → ${end}`);
-      const r=await fetch(`${API}/api/state?start=${start}&end=${end}`); dbg('GET /api/state → '+r.status);
-      const data=await r.json(); dbg('state keys: '+Object.keys(data||{}).join(', '));
-
-      // paint
-      grid.innerHTML='';
-      let d=new Date(start+'T00:00:00'); const e=new Date(end+'T00:00:00');
-      while(d<=e){
-        const day=iso(d);
-        const card=document.createElement('div'); card.className='card';
-        card.innerHTML=`
-          <div style="font-weight:800">${d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</div>
-          <div class="slot"><b>AM</b><div class="names" id="am-${day}"></div></div>
-          <div class="slot"><b>PM</b><div class="names" id="pm-${day}"></div></div>`;
-        grid.appendChild(card);
-
-        const AM=data.shifts?.[day]?.AM||{assignees:[]};
-        const PM=data.shifts?.[day]?.PM||{assignees:[]};
-        const am=document.getElementById('am-'+day), pm=document.getElementById('pm-'+day);
-        (AM.assignees||[]).slice(0,2).forEach(n=>{ const s=document.createElement('span'); s.className='name'; s.textContent=n; am.appendChild(s) });
-        (PM.assignees||[]).slice(0,2).forEach(n=>{ const s=document.createElement('span'); s.className='name'; s.textContent=n; pm.appendChild(s) });
-        if((AM.assignees||[]).length===0){ const n=document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; am.parentElement.appendChild(n) }
-        if((PM.assignees||[]).length===0){ const n=document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; pm.parentElement.appendChild(n) }
-        d=setDays(d,1);
-      }
-      dbg('paint OK.');
+      const r = monthMode ? rangeMonth(anchor) : rangeWeek(anchor);
+      title.textContent=r.label;
+      dbg(`fetch ${r.start} → ${r.end}`);
+      const resp=await fetch(`${API}/api/state?start=${r.start}&end=${r.end}`); dbg('GET /api/state → '+resp.status);
+      const data=await resp.json(); paint(r.list, data);
     }catch(e){ dbg('load failed: '+e.message) }
   }
 
-  // quick health ping
-  fetch(API+'/api/health').then(r=>{dbg('health '+r.status); return r.json()}).then(j=>dbg(JSON.stringify(j))).catch(e=>dbg('health fail '+e));
+  function paint(days,data){
+    grid.innerHTML='';
+    for(const d of days){
+      const k=iso(d);
+      const AM=data.shifts?.[k]?.AM||{assignees:[]}, PM=data.shifts?.[k]?.PM||{assignees:[]};
+      const el=document.createElement('div'); el.className='day';
+      el.innerHTML = `
+        <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
+        <div class="date">${d.getDate()}</div>
+        <div class="slot"><h4>AM</h4><div class="names" id="am-${k}"></div></div>
+        <div class="slot"><h4>PM</h4><div class="names" id="pm-${k}"></div></div>
+      `;
+      grid.appendChild(el);
+      fillNames('am-'+k, AM.assignees);
+      fillNames('pm-'+k, PM.assignees);
+    }
+    dbg('paint OK.');
+  }
+
+  function fillNames(id, list){
+    const host=document.getElementById(id);
+    (list||[]).slice(0,4).forEach(n=>{ const s=document.createElement('div'); s.className='name'; s.textContent=n; host.appendChild(s) });
+    if(!list || list.length===0){ const n=document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; host.parentElement.appendChild(n) }
+  }
+
+  fetch(API+'/api/health').then(r=>{dbg('health '+r.status);return r.json()}).then(j=>dbg(JSON.stringify(j))).catch(e=>dbg('health fail '+e));
   load();
 })();
 </script>
