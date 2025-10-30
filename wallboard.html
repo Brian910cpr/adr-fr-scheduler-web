@@ -19,32 +19,28 @@
   .half{background:var(--card);border:1px dashed var(--ring);border-radius:12px;padding:8px}
   .half h4{margin:0 0 8px 0;font-size:12px;letter-spacing:.4px;color:#9bb0c7}
   .slot{display:grid;gap:6px}
-  .name{padding:6px 8px;border-radius:8px;background:#1a2431;font-weight:700}
+  .name{padding:6px 8px;border-radius:8px;background:#1a2431;font-weight:800}
   .nudge{margin-top:8px;padding:8px;border-radius:10px;background:#2a3950;border:1px solid var(--ring);font-weight:900;text-align:center}
   @media (max-width:1100px){ .wrap{grid-template-columns:repeat(3,1fr)} }
   @media (max-width:720px){ .wrap{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-<header>
-  <h1>ShiftCommander • Wallboard</h1>
-</header>
+<header><h1>ShiftCommander • Wallboard</h1></header>
 <main class="wrap" id="wrap">Loading…</main>
 
 <script>
 (async () => {
   const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
   const wrap=document.getElementById('wrap');
-  const today=new Date(); const start=new Date(today); start.setDate(start.getDate()-today.getDay()+1); // Monday start
-  const end=new Date(start); end.setDate(start.getDate()+13); // 2 weeks
-
+  const today=new Date(); const start=new Date(today); start.setDate(start.getDate()-today.getDay()+1);
+  const end=new Date(start); end.setDate(start.getDate()+13);
   const iso=d=>d.toISOString().slice(0,10);
   const addDays=(d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
   const [state, users] = await Promise.all([
     fetch(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`).then(r=>r.json()),
     fetch(`${API}/api/users`).then(r=>r.json())
   ]);
-
   const id2name=id => (users.find(u=>u.id===id)||{}).name||id;
 
   wrap.innerHTML='';
@@ -58,25 +54,15 @@
         <div class="date">${d.toLocaleString(undefined,{month:'short'})} ${d.getDate()}</div>
       </div>
       <div class="row">
-        <div class="half">
-          <h4>AM</h4>
-          <div class="slot" id="am-${key}"></div>
-        </div>
-        <div class="half">
-          <h4>PM</h4>
-          <div class="slot" id="pm-${key}"></div>
-        </div>
-      </div>
-    `;
+        <div class="half"><h4>AM</h4><div class="slot" id="am-${key}"></div></div>
+        <div class="half"><h4>PM</h4><div class="slot" id="pm-${key}"></div></div>
+      </div>`;
     wrap.appendChild(card);
 
     const paint = (half) => {
       const assignees=(sh[half]?.assignees||[]).map(id2name);
-      const target = card.querySelector(`#${half.toLowerCase()}-${key}`);
-      if(assignees.length===0){
-        target.innerHTML = `<div class="nudge">NUDGE: Need ALS &amp; EMT</div>`;
-        return;
-      }
+      const target=card.querySelector(`#${half.toLowerCase()}-${key}`);
+      if(assignees.length===0){ target.innerHTML = `<div class="nudge">NUDGE: Need ALS &amp; EMT</div>`; return; }
       const names=assignees.slice(0,4).map(n=>`<div class="name">${n}</div>`).join('');
       target.innerHTML = names + (assignees.length>4? `<div class="name">+${assignees.length-4} more</div>`:'');
     };

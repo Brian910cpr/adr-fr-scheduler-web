@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShiftCommander • Supervisor</title>
 <style>
-  :root{--bg:#0c0f14;--panel:#141a22;--ring:#2b394b;--ink:#e8eef7;--muted:#8ea0b5;--card:#10161d;--ok:#18a957;--warn:#f0b23e}
+  :root{--bg:#0c0f14;--panel:#141a22;--ring:#2b394b;--ink:#e8eef7;--muted:#8ea0b5;--card:#10161d;--ok:#18a957}
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
   header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
   h1{margin:0;font-size:18px;font-weight:700}
@@ -19,15 +19,14 @@
   .cal{padding:12px 16px}
   .grid{display:grid;gap:10px}
   .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .day{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:130px}
+  .day{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:140px}
   .dhead{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
-  .big{font-size:22px;color:var(--ink);font-weight:900}
+  .big{font-size:24px;color:var(--ink);font-weight:900}
   .row{display:flex;gap:8px;margin-top:10px}
-  .slot{flex:1;background:var(--card);border:1px dashed var(--ring);border-radius:10px;padding:6px 8px}
+  .slot{flex:1;background:var(--card);border:1px dashed var(--ring);border-radius:10px;padding:8px}
   .slot h4{margin:0 0 6px 0;font-size:12px;color:var(--muted);letter-spacing:.5px}
-  .name{display:block;font-weight:700}
-  .nudge{margin-top:6px;padding:6px 8px;border-radius:8px;background:#1e2a38;border:1px solid var(--ring);color:#fff;font-weight:800}
-  .nudge strong{color:#fff}
+  .name{display:block;font-weight:800}
+  .nudge{margin-top:6px;padding:8px;border-radius:10px;background:#2a3950;border:1px solid var(--ring);color:#fff;font-weight:900;text-align:center}
   .notes{margin:14px 16px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
   .notes h3{margin:10px 12px}
   table{width:100%;border-collapse:collapse}
@@ -52,9 +51,7 @@
   <label class="toggle"><input type="checkbox" id="monthView"> Month</label>
 </div>
 
-<div class="cal">
-  <div id="weeks" class="grid"></div>
-</div>
+<div class="cal"><div id="weeks" class="grid"></div></div>
 
 <section class="notes" id="notesBox" hidden>
   <h3>Notes (member → supervisor) <span id="range" class="muted"></span></h3>
@@ -76,10 +73,10 @@
   const notesBody=document.getElementById('notesBody');
   const rangeEl=document.getElementById('range');
 
-  let anchor=new Date(); // start of week/month
-  function monday(d){ const c=new Date(d); const wd=(c.getDay()+6)%7; c.setDate(c.getDate()-wd); c.setHours(0,0,0,0); return c; }
-  function iso(d){ return d.toISOString().slice(0,10); }
-  function addDays(d,n){ const c=new Date(d); c.setDate(c.getDate()+n); return c; }
+  let anchor=new Date();
+  const iso=d=>d.toISOString().slice(0,10);
+  const addDays=(d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
+  const monday=d=>{const c=new Date(d);const wd=(c.getDay()+6)%7;c.setDate(c.getDate()-wd);c.setHours(0,0,0,0);return c;};
 
   async function jget(u){ const r=await fetch(u); const t=await r.text(); if(!r.ok) throw new Error(t); return JSON.parse(t); }
 
@@ -92,21 +89,22 @@
       ? start.toLocaleString(undefined,{month:'long',year:'numeric'})
       : `${start.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${end.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
 
-    const state = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
-    const users = await jget(`${API}/api/users`);
+    const [state, users] = await Promise.all([
+      jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`),
+      jget(`${API}/api/users`)
+    ]);
+    const id2name=id => (users.find(u=>u.id===id)||{}).name||id;
 
-    // notes (optional)
+    // notes
     try{
       rangeEl.textContent = `(${iso(start)} → ${iso(end)})`;
       const notes = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
       const rows=[];
       for (const uid of Object.keys(notes.notes||{})){
-        const byDate=notes.notes[uid];
-        const name=(users.find(u=>u.id===uid)||{}).name||uid;
+        const byDate=notes.notes[uid]; const name=id2name(uid);
         for(const d of Object.keys(byDate)){
           for(const half of Object.keys(byDate[d])){
-            const txt=(byDate[d][half]||'').trim();
-            if(!txt) continue;
+            const txt=(byDate[d][half]||'').trim(); if(!txt) continue;
             rows.push(`<tr><td>${d}</td><td>${half}</td><td>${name}</td><td>${txt}</td></tr>`);
           }
         }
@@ -115,39 +113,31 @@
       notesBox.hidden=false;
     }catch(_){ notesBox.hidden=false; notesBody.innerHTML=`<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`; }
 
-    // draw weeks
+    // grid
     weeksEl.innerHTML='';
-    const cols=7, rows=Math.ceil(days/7);
+    const rows=Math.ceil(days/7), cols=7;
     for(let r=0;r<rows;r++){
       const row=document.createElement('div'); row.className='week';
       for(let c=0;c<cols;c++){
-        const i=r*7+c; const day=addDays(start,i);
-        const dateISO=iso(day);
+        const i=r*7+c; const d=addDays(start,i); const key=iso(d); const sh=state.shifts[key]||{};
         const card=document.createElement('div'); card.className='day';
         card.innerHTML=`
-          <div class="dhead"><div>${day.toLocaleString(undefined,{weekday:'short'})}</div>
-          <div class="big">${day.toLocaleString(undefined,{month:'short'})} ${day.getDate()}</div></div>
+          <div class="dhead"><div>${d.toLocaleString(undefined,{weekday:'short'})}</div>
+          <div class="big">${d.toLocaleString(undefined,{month:'short'})} ${d.getDate()}</div></div>
           <div class="row">
-            <div class="slot"><h4>AM</h4><div class="names" id="am-${dateISO}"></div></div>
-            <div class="slot"><h4>PM</h4><div class="names" id="pm-${dateISO}"></div></div>
-          </div>
-        `;
+            <div class="slot"><h4>AM</h4><div id="am-${key}"></div></div>
+            <div class="slot"><h4>PM</h4><div id="pm-${key}"></div></div>
+          </div>`;
         row.appendChild(card);
 
-        const amNames = (state.shifts[dateISO]?.AM?.assignees||[]).map(id => (users.find(u=>u.id===id)||{}).name||id);
-        const pmNames = (state.shifts[dateISO]?.PM?.assignees||[]).map(id => (users.find(u=>u.id===id)||{}).name||id);
-        const put = (elId,names,half) => {
-          const el=card.querySelector(`#${half.toLowerCase()}-${dateISO}`);
-          if(!names.length){
-            // zero signed → show bold nudge
-            el.innerHTML = `<div class="nudge"><strong>NUDGE:</strong> Need ALS &amp; EMT</div>`;
-          } else {
-            const show = names.slice(0,4).map(n=>`<span class="name">${n}</span>`).join('');
-            el.innerHTML = show + (names.length>4? `<span class="muted">+${names.length-4} more</span>`:'');
-          }
+        const paint=(half)=> {
+          const arr=(sh[half]?.assignees||[]).map(id2name);
+          const target=card.querySelector(`#${half.toLowerCase()}-${key}`);
+          if(arr.length===0){ target.innerHTML=`<div class="nudge">NUDGE: Need ALS &amp; EMT</div>`; return; }
+          const names=arr.slice(0,4).map(n=>`<span class="name">${n}</span>`).join('');
+          target.innerHTML = names + (arr.length>4? `<span class="name">+${arr.length-4} more</span>`:'');
         };
-        put(`am-${dateISO}`, amNames, 'AM');
-        put(`pm-${dateISO}`, pmNames, 'PM');
+        paint('AM'); paint('PM');
       }
       weeksEl.appendChild(row);
     }
