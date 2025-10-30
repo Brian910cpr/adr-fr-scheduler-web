@@ -1,201 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ShiftCommander Member</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0f1419; --panel:#111a22; --muted:#1a2631; --ink:#e9eef2;
+    --pill:#20303d; --ok:#155c2f; --okText:#d4f8da;
+    --warn:#693; --no:#5a1216; --noText:#ffd7db;
+    --ring:#23313e; --accent:#8fb8ff; --chip:#1f2a36;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+  .wrap{max-width:1100px;margin:18px auto;padding:0 14px}
+  h1{font-size:18px;margin:0 0 12px;}
+  .tabs a{display:inline-block;background:#0d1720;border:1px solid var(--ring);border-radius:8px;padding:6px 10px;margin-right:8px;color:var(--ink);text-decoration:none}
+  .rowbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--ring);border-radius:10px;padding:10px}
+  .navbtn{border:1px solid var(--ring);background:var(--chip);color:var(--ink);border-radius:8px;padding:6px 9px;cursor:pointer}
+  select,input,button{background:var(--chip);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 9px}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--ring);padding:6px 10px;border-radius:999px;cursor:pointer}
+  .hint{opacity:.65;font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
+  .dow{opacity:.75;font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px}
+  .card h3{margin:0 0 8px;font-size:14px;opacity:.9}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
+  .lbl{opacity:.9;width:28px}
+  .pill{display:inline-block;background:var(--pill);padding:6px 12px;border-radius:999px;border:1px solid var(--ring);cursor:pointer;user-select:none}
+  .state-prefer{background:var(--ok);color:var(--okText)}
+  .state-available{background:#153b5c;color:#d7ecff}
+  .state-unset{background:var(--pill)}
+  .state-no{background:var(--no);color:var(--noText)}
+  .note{min-width:48%;flex:1}
+  #debug{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;background:#0b0f14;border:1px dashed #264255;border-radius:8px;padding:8px;margin-top:12px;max-height:180px;overflow:auto}
+  @media (max-width:950px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr} .note{min-width:40%} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ShiftCommander <b>Member</b></h1>
+  <div class="tabs">
+    <a href="/member.html">Member</a>
+    <a href="/supervisor.html">Supervisor</a>
+    <a href="/wallboard.html">Wallboard</a>
+  </div>
+
+  <div class="rowbar" style="justify-content:space-between">
+    <div style="display:flex;gap:10px;align-items:center">
+      <label>Member</label>
+      <select id="memberSel"></select>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button id="prevBtn" class="navbtn">◀</button>
+      <div id="monthLabel" style="min-width:140px;text-align:center">Month YYYY</div>
+      <button id="nextBtn" class="navbtn">▶</button>
+    </div>
+  </div>
+
+  <div class="rowbar" id="bulkTools">
+    <span class="hint">Options · Quick fill, Weekday mask, Clear tools</span>
+    <span class="chip" data-q="prefer">All → Prefer</span>
+    <span class="chip" data-q="available">All → Available</span>
+    <span class="chip" data-q="unset">All → Unset</span>
+    <span class="chip" data-q="no">All → Do Not</span>
+    <button id="clearNotes">Clear all notes</button>
+    <span style="margin-left:8px">Weekday mask (Mon=1…Sun=7):</span>
+    <input id="weekdayMask" placeholder="e.g. 1,2,3,4,5" style="width:140px">
+    <span class="hint">State order cycles on click: Prefer → Available → Unset → Do Not → …</span>
+    <span style="margin-left:auto">AM state:</span>
+    <select id="amMask"><option value="">(leave)</option><option value="prefer">Prefer</option><option value="available">Available</option><option value="unset">Unset</option><option value="no">Do Not</option></select>
+    <span>PM state:</span>
+    <select id="pmMask"><option value="">(leave)</option><option value="prefer">Prefer</option><option value="available">Available</option><option value="unset">Unset</option><option value="no">Do Not</option></select>
+    <button id="applyMask">Apply weekday mask</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div id="debug">booting…</div>
+</div>
+
 <script>
 (function(){
-  // ====== CONFIG ======
   const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
 
-  // ====== UTIL ======
-  const dbg = (...a)=>{ const el=document.getElementById('debug'); if(el) el.textContent += a.join(' ')+'\n'; };
-  const iso = d => d.toISOString().slice(0,10);
+  // ---------- helpers ----------
+  const dbg=(...a)=>{const el=document.getElementById('debug'); if(el){el.textContent += '\n'+a.join(' ')}};
+  const iso = d=>d.toISOString().slice(0,10);
+  function getParam(name){ const u=new URL(location.href); return u.searchParams.get(name); }
+
   async function getJSON(url){
-    const r = await fetch(url, {credentials:'omit'});
-    if(!r.ok) { const e = new Error('HTTP '+r.status); e.status=r.status; throw e; }
+    const r = await fetch(url);
+    if(!r.ok){ const e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
     return r.json();
   }
   async function postJSON(url, body){
-    const r = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){ const e=new Error('POST '+url+' -> '+r.status); e.status=r.status; throw e; }
-    return r.json().catch(()=>({ok:true}));
+    const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){ const e=new Error('POST '+url+' → '+r.status); e.status=r.status; throw e; }
+    try { return await r.json(); } catch { return {ok:true}; }
   }
-  function stateClass(s){ return 'pill state-'+(s||'unset'); }
-  const stateLabel = {prefer:'Prefer', available:'Available', unset:'Unset', no:'Do Not'};
-  const nextStateOrder = ['prefer','available','unset','no'];
 
-  // ====== DOM refs ======
-  const memberSel = document.getElementById('memberSel');
-  const grid = document.getElementById('grid');
-  const monthLabel = document.getElementById('monthLabel');
-
-  // ====== MONTH WINDOW ======
-  let anchor = new Date(); anchor.setDate(1);
-  function monthWindow(d){
-    const first = new Date(d); first.setDate(1);
-    const last  = new Date(d.getFullYear(), d.getMonth()+1, 0);
-    const start = new Date(first); const sOff=(first.getDay()+6)%7; start.setDate(first.getDate()-sOff);
-    const end   = new Date(last);  const eOff=(end.getDay()+6)%7;   end.setDate(end.getDate()+(6-eOff));
+  function monthWindow(anchor){
+    const first=new Date(anchor.getFullYear(),anchor.getMonth(),1);
+    const last=new Date(anchor.getFullYear(),anchor.getMonth()+1,0);
+    const start=new Date(first); start.setDate(first.getDate()-((first.getDay()+6)%7));
+    const end=new Date(last); end.setDate(end.getDate()+(6-((end.getDay()+6)%7)));
     return {start,end,first,last};
   }
   function setMonthLabel(d){
-    monthLabel.textContent = d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+    document.getElementById('monthLabel').textContent =
+      d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
   }
 
-  // ====== STATE ======
-  let currentUser = null;
-  let windowStart, windowEnd;
-  let usersById = {}; // id -> {id,callsign,name}
+  const stateLabel={prefer:'Prefer',available:'Available',unset:'Unset',no:'Do Not'};
+  const cycle=['prefer','available','unset','no'];
+  function stateClass(s){ return 'pill state-'+(s||'unset'); }
 
-  // ====== USERS LOADING with FALLBACK ======
-  async function loadUsersWithFallback(){
-    // 1) Try /api/users
-    try{
-      const list = await getJSON(API+'/api/users');
-      usersById = {};
-      memberSel.innerHTML='';
-      list.forEach(u=>{
-        usersById[u.id]=u;
-        const opt=document.createElement('option');
-        opt.value=u.id;
-        opt.textContent = `${u.callsign||u.name||u.id} (${u.id})`;
-        memberSel.appendChild(opt);
-      });
-      currentUser = list.find(u=>u.id==='uq2w4or')?.id || list[0]?.id || 'uq2w4or';
-      memberSel.value=currentUser;
-      return;
-    }catch(e){
-      if(e.status!==404) throw e; // real failure, not “missing route”
-      dbg('users 404 -> deriving from /api/state');
-    }
-    // 2) Derive from /api/state
+  // ---------- state ----------
+  let anchor=new Date(); anchor.setDate(1);
+  let currentUser = getParam('u') || 'uq2w4or';
+  let availabilityByUser = {}; // loaded from /api/state
+
+  // ---------- build users from /api/state (NO /api/users dependency) ----------
+  async function loadUsersFromStateWindow(){
     const {start,end} = monthWindow(anchor);
     const st = await getJSON(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
-    const ids = Object.keys(st.availability||{});
+    availabilityByUser = st.availability || {};
+    const ids = Object.keys(availabilityByUser);
+    const sel = document.getElementById('memberSel');
+    sel.innerHTML='';
     if(ids.length===0){
-      // 3) last resort: single user
-      usersById = {'uq2w4or':{id:'uq2w4or',callsign:'1003 AJ'}};
-      memberSel.innerHTML = '<option value="uq2w4or">1003 AJ (uq2w4or)</option>';
-      currentUser = 'uq2w4or';
+      // still allow page to work
+      if(!availabilityByUser[currentUser]) availabilityByUser[currentUser]={};
+      const opt=document.createElement('option'); opt.value=currentUser; opt.textContent=currentUser; sel.appendChild(opt);
+      sel.value=currentUser;
       return;
     }
-    usersById={};
-    memberSel.innerHTML='';
     ids.forEach(id=>{
-      usersById[id]={id, callsign:id};
       const opt=document.createElement('option');
-      opt.value=id; opt.textContent=id; memberSel.appendChild(opt);
+      opt.value=id; opt.textContent=id;
+      sel.appendChild(opt);
     });
-    currentUser = ids.includes('uq2w4or') ? 'uq2w4or' : ids[0];
-    memberSel.value=currentUser;
+    if(!ids.includes(currentUser)) currentUser = ids[0];
+    sel.value=currentUser;
   }
 
-  // ====== PAINT ======
+  // ---------- paint ----------
   function makeRow(label, dateISO, half, current){
-    const row = document.createElement('div'); row.className='row';
-    const l = document.createElement('div'); l.className='lbl'; l.textContent=label;
-    const right = document.createElement('div');
+    const row=document.createElement('div'); row.className='row';
+    const l=document.createElement('div'); l.className='lbl'; l.textContent=label;
 
-    const btn = document.createElement('span');
-    btn.className = stateClass(current);
-    btn.textContent = stateLabel[current||'unset'];
-    btn.style.minWidth='100px';
-    btn.style.display='inline-block';
-    btn.style.cursor='pointer';
-    btn.addEventListener('click', async ()=>{
-      const next = nextStateOrder[(nextStateOrder.indexOf(current||'unset')+1)%nextStateOrder.length];
+    const pill=document.createElement('span');
+    pill.className=stateClass(current); pill.textContent=stateLabel[current||'unset'];
+    pill.style.minWidth='104px';
+    pill.addEventListener('click', async ()=>{
+      const next=cycle[(cycle.indexOf(current||'unset')+1)%cycle.length];
       try{
         await postJSON(API+'/api/availability',{userId:currentUser,date:dateISO,half,state:next});
-        current = next;
-        btn.className = stateClass(current);
-        btn.textContent = stateLabel[current];
-      }catch(e){ dbg('ERR save state', e.message||e); }
+        current=next; pill.className=stateClass(current); pill.textContent=stateLabel[current];
+      }catch(e){ dbg('ERR save state', e.message); }
     });
 
-    const note = document.createElement('input');
+    const note=document.createElement('input');
     note.className='note'; note.placeholder='Optional note to supervisor.'; note.value='';
     let t=null;
-    const commit=()=>postJSON(API+'/api/notes',{userId:currentUser,date:dateISO,half,note:note.value||''}).catch(e=>dbg('ERR save note',e.message||e));
-    note.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(commit,450); });
+    const commit=()=>postJSON(API+'/api/notes',{userId:currentUser,date:dateISO,half,note:note.value||''}).catch(e=>dbg('ERR save note',e.message));
+    note.addEventListener('input',()=>{clearTimeout(t); t=setTimeout(commit,450);});
     note.addEventListener('blur',commit);
 
-    right.appendChild(btn);
-    right.appendChild(note);
+    const right=document.createElement('div'); right.style.display='flex'; right.style.gap='8px'; right.style.flex='1';
+    right.appendChild(pill); right.appendChild(note);
+
     row.appendChild(l); row.appendChild(right);
     return row;
   }
 
-  function paintCalendar(start,end,availForUser){
-    grid.innerHTML='';
-    const dow = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    dow.forEach(d=>{ const h=document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h); });
+  function paintCalendar(){
+    const grid=document.getElementById('grid'); grid.innerHTML='';
+    const {start,end}=monthWindow(anchor);
+    setMonthLabel(anchor);
+
+    const dow=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    dow.forEach(d=>{const h=document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h);});
+
+    const userAvail = availabilityByUser[currentUser] || {};
     for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-      const k=iso(d); const a=(availForUser[k]&&availForUser[k]['AM'])||'unset'; const p=(availForUser[k]&&availForUser[k]['PM'])||'unset';
-      const card=document.createElement('div'); card.className='card'; card.dataset.date=k;
-      const h3=document.createElement('h3'); h3.textContent=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); card.appendChild(h3);
-      card.appendChild(makeRow('AM',k,'AM',a));
-      card.appendChild(makeRow('PM',k,'PM',p));
+      const key=iso(d);
+      const am=(userAvail[key] && userAvail[key].AM) || 'unset';
+      const pm=(userAvail[key] && userAvail[key].PM) || 'unset';
+
+      const card=document.createElement('div'); card.className='card'; card.dataset.date=key;
+      const h3=document.createElement('h3'); h3.textContent=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+      card.appendChild(h3);
+      card.appendChild(makeRow('AM',key,'AM',am));
+      card.appendChild(makeRow('PM',key,'PM',pm));
       grid.appendChild(card);
     }
   }
 
-  async function loadStateAndPaint(){
-    const health = await getJSON(API+'/api/health').catch(()=>({ok:false}));
-    dbg('health', JSON.stringify(health));
-    const {start,end} = monthWindow(anchor);
-    windowStart=iso(start); windowEnd=iso(end);
-    setMonthLabel(anchor);
-    const data = await getJSON(`${API}/api/state?start=${windowStart}&end=${windowEnd}`);
-    const availUser = (data.availability && data.availability[currentUser]) || {};
-    paintCalendar(start,end,availUser);
-  }
-
-  // ====== BULK TOOLS ======
-  function applyQuickFill(targetState){
-    grid.querySelectorAll('.card').forEach(card=>{
-      const d=card.dataset.date;
+  // ---------- bulk tools ----------
+  function applyQuickFill(target){
+    const cards=[...document.querySelectorAll('.card')];
+    const ops = [];
+    for(const c of cards){
+      const date=c.dataset.date;
       ['AM','PM'].forEach(half=>{
-        postJSON(API+'/api/availability',{userId:currentUser,date:d,half,state:targetState}).catch(()=>{});
+        ops.push(postJSON(API+'/api/availability',{userId:currentUser,date,half,state:target}).catch(()=>{}));
       });
-      // reflect instantly
-      const am = card.querySelector('.row:nth-of-type(2) .pill'); am.className=stateClass(targetState); am.textContent=stateLabel[targetState];
-      const pm = card.querySelector('.row:nth-of-type(3) .pill'); pm.className=stateClass(targetState); pm.textContent=stateLabel[targetState];
-    });
+      const am=c.querySelector('.row:nth-of-type(2) .pill'); am.className=stateClass(target); am.textContent=stateLabel[target];
+      const pm=c.querySelector('.row:nth-of-type(3) .pill'); pm.className=stateClass(target); pm.textContent=stateLabel[target];
+    }
+    Promise.allSettled(ops);
   }
   function applyWeekdayMask(){
-    const daysTxt = (document.getElementById('weekdayMask').value||'').trim();
-    const days = new Set(daysTxt ? daysTxt.split(/[,\s]+/).map(n=>parseInt(n,10)).filter(x=>x>=1&&x<=7) : [1,2,3,4,5,6,7]);
-    const amState = document.getElementById('amMask').value;
-    const pmState = document.getElementById('pmMask').value;
-    grid.querySelectorAll('.card').forEach(card=>{
-      const d=new Date(card.dataset.date+'T00:00:00'); const wd=((d.getDay()+6)%7)+1; if(!days.has(wd)) return;
-      if(amState){ postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'AM',state:amState}).catch(()=>{}); const am=card.querySelector('.row:nth-of-type(2) .pill'); am.className=stateClass(amState); am.textContent=stateLabel[amState]; }
-      if(pmState){ postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'PM',state:pmState}).catch(()=>{}); const pm=card.querySelector('.row:nth-of-type(3) .pill'); pm.className=stateClass(pmState); pm.textContent=stateLabel[pmState]; }
-    });
+    const txt=document.getElementById('weekdayMask').value.trim();
+    const days = new Set(txt ? txt.split(/[,\s]+/).map(n=>parseInt(n,10)).filter(n=>n>=1&&n<=7) : [1,2,3,4,5,6,7]);
+    const am=document.getElementById('amMask').value;
+    const pm=document.getElementById('pmMask').value;
+    const cards=[...document.querySelectorAll('.card')];
+    const ops=[];
+    for(const c of cards){
+      const d=new Date(c.dataset.date+'T00:00:00'); const wd=((d.getDay()+6)%7)+1;
+      if(!days.has(wd)) continue;
+      if(am){ ops.push(postJSON(API+'/api/availability',{userId:currentUser,date:c.dataset.date,half:'AM',state:am}).catch(()=>{}));
+        const x=c.querySelector('.row:nth-of-type(2) .pill'); x.className=stateClass(am); x.textContent=stateLabel[am]; }
+      if(pm){ ops.push(postJSON(API+'/api/availability',{userId:currentUser,date:c.dataset.date,half:'PM',state:pm}).catch(()=>{}));
+        const x=c.querySelector('.row:nth-of-type(3) .pill'); x.className=stateClass(pm); x.textContent=stateLabel[pm]; }
+    }
+    Promise.allSettled(ops);
   }
   function clearAllNotes(){
-    grid.querySelectorAll('.card').forEach(card=>{
+    const cards=[...document.querySelectorAll('.card')];
+    const ops=[];
+    for(const c of cards){
       ['AM','PM'].forEach(half=>{
-        postJSON(API+'/api/notes',{userId:currentUser,date:card.dataset.date,half,note:''}).catch(()=>{});
-        const input = card.querySelector(half==='AM'?'.row:nth-of-type(2) .note':'.row:nth-of-type(3) .note');
-        input.value='';
+        ops.push(postJSON(API+'/api/notes',{userId:currentUser,date:c.dataset.date,half,note:''}).catch(()=>{}));
+        const inp=c.querySelector(half==='AM'?'.row:nth-of-type(2) .note':'.row:nth-of-type(3) .note'); inp.value='';
       });
-    });
+    }
+    Promise.allSettled(ops);
   }
-  document.getElementById('bulkTools').addEventListener('click', e=>{
-    const chip = e.target.closest('.chip'); if(!chip) return;
-    const q = chip.dataset.q; if(q) applyQuickFill(q);
+
+  // events
+  document.getElementById('bulkTools').addEventListener('click',e=>{
+    const k=e.target.closest('.chip'); if(!k) return; applyQuickFill(k.dataset.q);
   });
-  document.getElementById('applyMask').addEventListener('click', applyWeekdayMask);
-  document.getElementById('clearNotes').addEventListener('click', clearAllNotes);
+  document.getElementById('applyMask').addEventListener('click',applyWeekdayMask);
+  document.getElementById('clearNotes').addEventListener('click',clearAllNotes);
+  document.getElementById('prevBtn').addEventListener('click',async ()=>{anchor.setMonth(anchor.getMonth()-1); await loadUsersFromStateWindow(); paintCalendar();});
+  document.getElementById('nextBtn').addEventListener('click',async ()=>{anchor.setMonth(anchor.getMonth()+1); await loadUsersFromStateWindow(); paintCalendar();});
+  document.getElementById('memberSel').addEventListener('change',e=>{currentUser=e.target.value; paintCalendar();});
 
-  // ====== NAV + MEMBER ======
-  document.getElementById('prevBtn').addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()-1); loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
-  document.getElementById('nextBtn').addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()+1); loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
-  memberSel.addEventListener('change', ()=>{ currentUser = memberSel.value; loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
-
-  // ====== BOOT ======
-  (async function boot(){
+  // ---------- boot ----------
+  (async function(){
     try{
-      dbg('booting…');
-      await loadUsersWithFallback();
-      await loadStateAndPaint();
+      const health = await getJSON(API+'/api/health'); dbg('health', JSON.stringify(health));
+    }catch(e){ dbg('health check failed', e.message); }
+    try{
+      await loadUsersFromStateWindow();  // ← never calls /api/users
+      paintCalendar();
       dbg('ready.');
     }catch(e){
       dbg('ERR boot', e.message||e);
@@ -203,3 +265,5 @@
   })();
 })();
 </script>
+</body>
+</html>
