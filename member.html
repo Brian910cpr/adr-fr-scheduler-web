@@ -1,268 +1,327 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>ShiftCommander Member</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ShiftCommander · Member</title>
 <style>
   :root{
-    --bg:#0f1419; --panel:#111a22; --muted:#1a2631; --ink:#e9eef2;
-    --pill:#20303d; --ok:#155c2f; --okText:#d4f8da;
-    --warn:#693; --no:#5a1216; --noText:#ffd7db;
-    --ring:#23313e; --accent:#8fb8ff; --chip:#1f2a36;
+    --bg:#0f1419;--card:#121a23;--ink:#dfe7ef;--muted:#9eb0c3;
+    --chip:#1e2b38;--chip-b:#223343;--ok:#0e5a2a;--ok-b:#0f6a31;
+    --warn:#7a1616;--warn-b:#8b1a1a;--mid:#2b4a2b;--mid-b:#305530;
+    --unset:#2a3140;--unset-b:#333a4a;--ring:#2a3b4e;
+    --btn:#1c2633;--btn-b:#243041;--accent:#2f4056;
   }
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-  .wrap{max-width:1100px;margin:18px auto;padding:0 14px}
-  h1{font-size:18px;margin:0 0 12px;}
-  .tabs a{display:inline-block;background:#0d1720;border:1px solid var(--ring);border-radius:8px;padding:6px 10px;margin-right:8px;color:var(--ink);text-decoration:none}
-  .rowbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--ring);border-radius:10px;padding:10px}
-  .navbtn{border:1px solid var(--ring);background:var(--chip);color:var(--ink);border-radius:8px;padding:6px 9px;cursor:pointer}
-  select,input,button{background:var(--chip);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 9px}
-  .chip{display:inline-block;background:var(--chip);border:1px solid var(--ring);padding:6px 10px;border-radius:999px;cursor:pointer}
-  .hint{opacity:.65;font-size:12px}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
-  .dow{opacity:.75;font-weight:600}
-  .card{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px}
-  .card h3{margin:0 0 8px;font-size:14px;opacity:.9}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
-  .lbl{opacity:.9;width:28px}
-  .pill{display:inline-block;background:var(--pill);padding:6px 12px;border-radius:999px;border:1px solid var(--ring);cursor:pointer;user-select:none}
-  .state-prefer{background:var(--ok);color:var(--okText)}
-  .state-available{background:#153b5c;color:#d7ecff}
-  .state-unset{background:var(--pill)}
-  .state-no{background:var(--no);color:var(--noText)}
-  .note{min-width:48%;flex:1}
-  #debug{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;background:#0b0f14;border:1px dashed #264255;border-radius:8px;padding:8px;margin-top:12px;max-height:180px;overflow:auto}
-  @media (max-width:950px){ .grid{grid-template-columns:repeat(2,1fr)} }
-  @media (max-width:640px){ .grid{grid-template-columns:1fr} .note{min-width:40%} }
+  html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+  h1{font-size:18px;margin:0 0 12px}
+  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;background:var(--btn);border:1px solid var(--btn-b);border-radius:8px;color:var(--ink);text-decoration:none}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .spacer{flex:1}
+  .navbtn{width:28px;height:28px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink)}
+  .monthlabel{font-weight:600;letter-spacing:.3px}
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:14px}
+  .dow{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px}
+  .card{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:86px;display:flex;flex-direction:column;gap:8px}
+  .datehead{font-size:13px;color:var(--muted);font-weight:600}
+  .line{display:flex;align-items:center;gap:10px}
+  .label{width:28px;color:var(--muted);font-size:12px}
+  .toggle{min-width:110px;display:inline-flex;justify-content:center;align-items:center;height:30px;border-radius:16px;border:1px solid var(--chip-b);background:var(--chip);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;user-select:none}
+  .state-prefer{background:var(--ok);border-color:var(--ok-b)}
+  .state-available{background:var(--mid);border-color:var(--mid-b)}
+  .state-unset{background:var(--unset);border-color:var(--unset-b);color:#b9c7d6}
+  .state-no{background:var(--warn);border-color:var(--warn-b)}
+  .note{flex:1;min-width:140px;height:30px;border-radius:8px;border:1px solid var(--accent);background:#0c1218;color:var(--ink);padding:0 10px;font-size:13px}
+  .small{font-size:12px;color:var(--muted)}
+  .panel{margin-top:16px;padding:10px;background:#0c1218;border:1px dashed var(--accent);border-radius:10px}
+  .btn{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);padding:0 10px;cursor:pointer}
+  .btn.warn{background:#3a1b1b;border-color:#532222}
+  .btn.ok{background:#193d29;border-color:#1f4d32}
+  .sel{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:#0c1218;color:var(--ink);padding:0 8px}
+  .console{margin-top:14px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px;color:#a6b7c8;background:#0a0f14;border:1px dashed var(--accent);border-radius:10px;padding:10px;white-space:pre-wrap}
+  .right{margin-left:auto}
+  .muted{color:var(--muted)}
+  @media (max-width:900px){.toggle{min-width:96px}.note{min-width:120px}}
+  @media (max-width:700px){.grid{grid-template-columns:repeat(1,1fr)} .dow{display:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>ShiftCommander <b>Member</b></h1>
-  <div class="tabs">
-    <a href="/member.html">Member</a>
-    <a href="/supervisor.html">Supervisor</a>
-    <a href="/wallboard.html">Wallboard</a>
-  </div>
-
-  <div class="rowbar" style="justify-content:space-between">
-    <div style="display:flex;gap:10px;align-items:center">
-      <label>Member</label>
-      <select id="memberSel"></select>
+  <div class="row">
+    <h1 style="margin-right:10px">ShiftCommander <span class="muted">Member</span></h1>
+    <div class="tabs">
+      <a href="/member.html">Member</a>
+      <a href="/supervisor.html">Supervisor</a>
+      <a href="/wallboard.html">Wallboard</a>
     </div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <button id="prevBtn" class="navbtn">◀</button>
-      <div id="monthLabel" style="min-width:140px;text-align:center">Month YYYY</div>
-      <button id="nextBtn" class="navbtn">▶</button>
+    <div class="spacer"></div>
+    <button id="prev" class="navbtn" aria-label="Previous month">◀</button>
+    <div id="monthLabel" class="monthlabel" style="min-width:140px;text-align:center"></div>
+    <button id="next" class="navbtn" aria-label="Next month">▶</button>
+  </div>
+
+  <!-- Weekday row labels -->
+  <div class="row" style="margin-top:8px;gap:12px">
+    <div class="dow" style="flex:1">Mon</div><div class="dow" style="flex:1">Tue</div><div class="dow" style="flex:1">Wed</div>
+    <div class="dow" style="flex:1">Thu</div><div class="dow" style="flex:1">Fri</div><div class="dow" style="flex:1">Sat</div><div class="dow" style="flex:1">Sun</div>
+  </div>
+
+  <div id="grid" class="grid" aria-live="polite"></div>
+
+  <!-- Preferences (bulk) restored -->
+  <div class="panel">
+    <div class="small" style="margin-bottom:6px">Options · Quick Fill · Weekday masks · Clear tools</div>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" data-bulk="prefer">All → Prefer</button>
+      <button class="btn" data-bulk="available">All → Available</button>
+      <button class="btn" data-bulk="unset">All → Unset</button>
+      <button class="btn" data-bulk="no">All → Do Not</button>
+      <button class="btn warn right" id="clearNotes">Clear all notes</button>
+    </div>
+    <div class="row" style="gap:8px">
+      <span class="small">Weekday mask (Mon=1…Sun=7):</span>
+      <input id="mask" class="note" style="max-width:180px" placeholder="e.g. 1,2,3,4,5" />
+      <span class="small">AM state:</span>
+      <select id="maskAM" class="sel">
+        <option value="">(leave)</option>
+        <option value="prefer">Prefer</option>
+        <option value="available">Available</option>
+        <option value="unset">Unset</option>
+        <option value="no">Do Not</option>
+      </select>
+      <span class="small">PM state:</span>
+      <select id="maskPM" class="sel">
+        <option value="">(leave)</option>
+        <option value="prefer">Prefer</option>
+        <option value="available">Available</option>
+        <option value="unset">Unset</option>
+        <option value="no">Do Not</option>
+      </select>
+      <button class="btn ok" id="applyMask">Apply weekday mask</button>
+      <span class="small muted right">State order on click: Prefer → Available → Unset → Do Not → …</span>
     </div>
   </div>
 
-  <div class="rowbar" id="bulkTools">
-    <span class="hint">Options · Quick fill, Weekday mask, Clear tools</span>
-    <span class="chip" data-q="prefer">All → Prefer</span>
-    <span class="chip" data-q="available">All → Available</span>
-    <span class="chip" data-q="unset">All → Unset</span>
-    <span class="chip" data-q="no">All → Do Not</span>
-    <button id="clearNotes">Clear all notes</button>
-    <span style="margin-left:8px">Weekday mask (Mon=1…Sun=7):</span>
-    <input id="weekdayMask" placeholder="e.g. 1,2,3,4,5" style="width:140px">
-    <span class="hint">State order cycles on click: Prefer → Available → Unset → Do Not → …</span>
-    <span style="margin-left:auto">AM state:</span>
-    <select id="amMask"><option value="">(leave)</option><option value="prefer">Prefer</option><option value="available">Available</option><option value="unset">Unset</option><option value="no">Do Not</option></select>
-    <span>PM state:</span>
-    <select id="pmMask"><option value="">(leave)</option><option value="prefer">Prefer</option><option value="available">Available</option><option value="unset">Unset</option><option value="no">Do Not</option></select>
-    <button id="applyMask">Apply weekday mask</button>
-  </div>
-
-  <div class="grid" id="grid"></div>
-  <div id="debug">booting…</div>
+  <div id="console" class="console">booting…</div>
 </div>
 
 <script>
 (function(){
-  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  // --- CONFIG ---
+  const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  // You can set this from auth later; for now keep your test user:
+  const USER_ID = 'uq2w4or';
 
-  // ---------- helpers ----------
-  const dbg=(...a)=>{const el=document.getElementById('debug'); if(el){el.textContent += '\n'+a.join(' ')}};
-  const iso = d=>d.toISOString().slice(0,10);
-  function getParam(name){ const u=new URL(location.href); return u.searchParams.get(name); }
+  // --- STATE ---
+  let anchor = new Date(); // month anchor
+  anchor.setDate(1);
+  let availability = {};   // availability[userId][date] = { AM:'state', PM:'state', notes? }
+  const order = ['prefer','available','unset','no'];
 
-  async function getJSON(url){
-    const r = await fetch(url);
-    if(!r.ok){ const e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
-    return r.json();
-  }
-  async function postJSON(url, body){
-    const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){ const e=new Error('POST '+url+' → '+r.status); e.status=r.status; throw e; }
-    try { return await r.json(); } catch { return {ok:true}; }
-  }
+  // --- UTIL ---
+  const fmt = (d)=> d.toISOString().slice(0,10);
+  const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const pad = (v)=> v<10 ? '0'+v : ''+v;
+  const monthLabel = (d)=> d.toLocaleString(undefined,{month:'long', year:'numeric'});
+  function log(msg){ const c=document.getElementById('console'); c.textContent += (c.textContent?'\n':'')+msg; c.scrollTop=c.scrollHeight; }
 
-  function monthWindow(anchor){
-    const first=new Date(anchor.getFullYear(),anchor.getMonth(),1);
-    const last=new Date(anchor.getFullYear(),anchor.getMonth()+1,0);
-    const start=new Date(first); start.setDate(first.getDate()-((first.getDay()+6)%7));
-    const end=new Date(last); end.setDate(end.getDate()+(6-((end.getDay()+6)%7)));
-    return {start,end,first,last};
-  }
-  function setMonthLabel(d){
-    document.getElementById('monthLabel').textContent =
-      d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
-  }
-
-  const stateLabel={prefer:'Prefer',available:'Available',unset:'Unset',no:'Do Not'};
-  const cycle=['prefer','available','unset','no'];
-  function stateClass(s){ return 'pill state-'+(s||'unset'); }
-
-  // ---------- state ----------
-  let anchor=new Date(); anchor.setDate(1);
-  let currentUser = getParam('u') || 'uq2w4or';
-  let availabilityByUser = {}; // loaded from /api/state
-
-  // ---------- build users from /api/state (NO /api/users dependency) ----------
-  async function loadUsersFromStateWindow(){
-    const {start,end} = monthWindow(anchor);
-    const st = await getJSON(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
-    availabilityByUser = st.availability || {};
-    const ids = Object.keys(availabilityByUser);
-    const sel = document.getElementById('memberSel');
-    sel.innerHTML='';
-    if(ids.length===0){
-      // still allow page to work
-      if(!availabilityByUser[currentUser]) availabilityByUser[currentUser]={};
-      const opt=document.createElement('option'); opt.value=currentUser; opt.textContent=currentUser; sel.appendChild(opt);
-      sel.value=currentUser;
-      return;
-    }
-    ids.forEach(id=>{
-      const opt=document.createElement('option');
-      opt.value=id; opt.textContent=id;
-      sel.appendChild(opt);
+  // --- API ---
+  async function api(path, opts={}){
+    const res = await fetch(API_BASE+path, {
+      headers:{'Content-Type':'application/json'},
+      ...opts
     });
-    if(!ids.includes(currentUser)) currentUser = ids[0];
-    sel.value=currentUser;
+    if(!res.ok) throw new Error('HTTP '+res.status+' '+path);
+    if(res.status===204) return null;
+    return res.json();
+  }
+  async function loadWindow(){
+    const start = startOfCalendar(anchor);
+    const end   = addDays(endOfCalendar(anchor), 1); // exclusive
+    const qs = '?start='+fmt(start)+'&end='+fmt(addDays(end,-1));
+    const data = await api('/api/state'+qs);
+    availability = data.availability || {};
+    return {start,end};
+  }
+  async function saveHalf(dateStr, half, newState, noteVal){
+    const body = { userId: USER_ID, date: dateStr, half, state: newState };
+    if(typeof noteVal === 'string') body.note = noteVal;
+    await api('/api/availability', { method:'POST', body: JSON.stringify(body) });
   }
 
-  // ---------- paint ----------
-  function makeRow(label, dateISO, half, current){
-    const row=document.createElement('div'); row.className='row';
-    const l=document.createElement('div'); l.className='lbl'; l.textContent=label;
+  // --- CALENDAR RANGE (Mon–Sun rows) ---
+  function startOfCalendar(d){
+    const x = new Date(d);
+    x.setDate(1);
+    const dow = (x.getDay()+6)%7; // Mon=0 … Sun=6
+    return addDays(x, -dow);
+  }
+  function endOfCalendar(d){
+    const x = new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); // last day of month
+    const dow = (x.getDay()+6)%7; // Mon=0
+    return addDays(x, 6-dow);
+  }
 
-    const pill=document.createElement('span');
-    pill.className=stateClass(current); pill.textContent=stateLabel[current||'unset'];
-    pill.style.minWidth='104px';
-    pill.addEventListener('click', async ()=>{
-      const next=cycle[(cycle.indexOf(current||'unset')+1)%cycle.length];
+  // --- RENDER ---
+  function paint(){
+    document.getElementById('monthLabel').textContent = monthLabel(anchor);
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    const start = startOfCalendar(anchor);
+    const end   = endOfCalendar(anchor);
+    for(let d=new Date(start); d<=end; d=addDays(d,1)){
+      const dateStr = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+      const day = document.createElement('div'); day.className='card';
+
+      const head = document.createElement('div');
+      head.className='datehead';
+      head.textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+      day.appendChild(head);
+
+      // AM line (toggle + note)
+      day.appendChild(lineFor(dateStr,'AM'));
+      // PM line (toggle + note)
+      day.appendChild(lineFor(dateStr,'PM'));
+
+      grid.appendChild(day);
+    }
+  }
+
+  function lineFor(dateStr, half){
+    const line = document.createElement('div'); line.className='line';
+    const label = document.createElement('div'); label.className='label'; label.textContent = half;
+    const btn = document.createElement('div'); btn.className='toggle'; btn.setAttribute('role','button'); btn.dataset.date=dateStr; btn.dataset.half=half;
+
+    function stateOf(){
+      const u = availability[USER_ID]||{};
+      const day = u[dateStr]||{};
+      return (day[half]||'unset');
+    }
+    function noteOf(){
+      const u = availability[USER_ID]||{};
+      const day = u[dateStr]||{};
+      // server stores note per half via same endpoint
+      return (day[half+'_note'] || day.note || '');
+    }
+    function applyLook(s){
+      btn.classList.remove('state-prefer','state-available','state-unset','state-no');
+      btn.classList.add('state-'+s);
+      btn.textContent = (s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset');
+    }
+
+    applyLook(stateOf());
+
+    btn.addEventListener('click', async () => {
+      // cycle Prefer → Available → Unset → Do Not → …
+      const cur = stateOf();
+      const nxt = order[(order.indexOf(cur)+1)%order.length];
+      applyLook(nxt);
       try{
-        await postJSON(API+'/api/availability',{userId:currentUser,date:dateISO,half,state:next});
-        current=next; pill.className=stateClass(current); pill.textContent=stateLabel[current];
-      }catch(e){ dbg('ERR save state', e.message); }
+        await saveHalf(btn.dataset.date, btn.dataset.half, nxt, note.value.trim());
+        // reflect local
+        availability[USER_ID] ||= {};
+        availability[USER_ID][btn.dataset.date] ||= {};
+        availability[USER_ID][btn.dataset.date][btn.dataset.half] = nxt;
+        log(`saved ${btn.dataset.date} ${btn.dataset.half} = ${nxt}`);
+      }catch(e){ log('ERR save state '+e.message); applyLook(cur); }
     });
 
-    const note=document.createElement('input');
-    note.className='note'; note.placeholder='Optional note to supervisor.'; note.value='';
-    let t=null;
-    const commit=()=>postJSON(API+'/api/notes',{userId:currentUser,date:dateISO,half,note:note.value||''}).catch(e=>dbg('ERR save note',e.message));
-    note.addEventListener('input',()=>{clearTimeout(t); t=setTimeout(commit,450);});
-    note.addEventListener('blur',commit);
+    const note = document.createElement('input');
+    note.className='note';
+    note.placeholder='Optional note to supervisor.';
+    note.value = noteOf();
+    note.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'){ ev.target.blur(); }});
+    note.addEventListener('blur', async () => {
+      try{
+        await saveHalf(btn.dataset.date, btn.dataset.half, stateOf(), note.value.trim());
+        availability[USER_ID] ||= {};
+        availability[USER_ID][btn.dataset.date] ||= {};
+        availability[USER_ID][btn.dataset.date][btn.dataset.half+'_note'] = note.value.trim();
+        log(`note saved ${btn.dataset.date} ${btn.dataset.half}`);
+      }catch(e){ log('ERR save note '+e.message); }
+    });
 
-    const right=document.createElement('div'); right.style.display='flex'; right.style.gap='8px'; right.style.flex='1';
-    right.appendChild(pill); right.appendChild(note);
-
-    row.appendChild(l); row.appendChild(right);
-    return row;
+    line.appendChild(label);
+    line.appendChild(btn);
+    line.appendChild(note);
+    return line;
   }
 
-  function paintCalendar(){
-    const grid=document.getElementById('grid'); grid.innerHTML='';
-    const {start,end}=monthWindow(anchor);
-    setMonthLabel(anchor);
-
-    const dow=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    dow.forEach(d=>{const h=document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h);});
-
-    const userAvail = availabilityByUser[currentUser] || {};
-    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-      const key=iso(d);
-      const am=(userAvail[key] && userAvail[key].AM) || 'unset';
-      const pm=(userAvail[key] && userAvail[key].PM) || 'unset';
-
-      const card=document.createElement('div'); card.className='card'; card.dataset.date=key;
-      const h3=document.createElement('h3'); h3.textContent=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-      card.appendChild(h3);
-      card.appendChild(makeRow('AM',key,'AM',am));
-      card.appendChild(makeRow('PM',key,'PM',pm));
-      grid.appendChild(card);
-    }
-  }
-
-  // ---------- bulk tools ----------
-  function applyQuickFill(target){
-    const cards=[...document.querySelectorAll('.card')];
-    const ops = [];
-    for(const c of cards){
-      const date=c.dataset.date;
-      ['AM','PM'].forEach(half=>{
-        ops.push(postJSON(API+'/api/availability',{userId:currentUser,date,half,state:target}).catch(()=>{}));
-      });
-      const am=c.querySelector('.row:nth-of-type(2) .pill'); am.className=stateClass(target); am.textContent=stateLabel[target];
-      const pm=c.querySelector('.row:nth-of-type(3) .pill'); pm.className=stateClass(target); pm.textContent=stateLabel[target];
-    }
-    Promise.allSettled(ops);
+  // --- BULK TOOLS ---
+  function bulkSet(state){
+    const grid = document.getElementById('grid');
+    const toggles = grid.querySelectorAll('.toggle');
+    toggles.forEach(async el=>{
+      const date = el.dataset.date;
+      const half = el.dataset.half;
+      try{
+        await saveHalf(date, half, state);
+        availability[USER_ID] ||= {};
+        availability[USER_ID][date] ||= {};
+        availability[USER_ID][date][half] = state;
+        el.classList.remove('state-prefer','state-available','state-unset','state-no');
+        el.classList.add('state-'+state);
+        el.textContent = (state==='prefer'?'Prefer':state==='available'?'Available':state==='no'?'Do Not':'Unset');
+      }catch(e){ log('ERR bulk '+e.message); }
+    });
   }
   function applyWeekdayMask(){
-    const txt=document.getElementById('weekdayMask').value.trim();
-    const days = new Set(txt ? txt.split(/[,\s]+/).map(n=>parseInt(n,10)).filter(n=>n>=1&&n<=7) : [1,2,3,4,5,6,7]);
-    const am=document.getElementById('amMask').value;
-    const pm=document.getElementById('pmMask').value;
-    const cards=[...document.querySelectorAll('.card')];
-    const ops=[];
-    for(const c of cards){
-      const d=new Date(c.dataset.date+'T00:00:00'); const wd=((d.getDay()+6)%7)+1;
-      if(!days.has(wd)) continue;
-      if(am){ ops.push(postJSON(API+'/api/availability',{userId:currentUser,date:c.dataset.date,half:'AM',state:am}).catch(()=>{}));
-        const x=c.querySelector('.row:nth-of-type(2) .pill'); x.className=stateClass(am); x.textContent=stateLabel[am]; }
-      if(pm){ ops.push(postJSON(API+'/api/availability',{userId:currentUser,date:c.dataset.date,half:'PM',state:pm}).catch(()=>{}));
-        const x=c.querySelector('.row:nth-of-type(3) .pill'); x.className=stateClass(pm); x.textContent=stateLabel[pm]; }
-    }
-    Promise.allSettled(ops);
+    const mask = document.getElementById('mask').value.trim();
+    const am = document.getElementById('maskAM').value;
+    const pm = document.getElementById('maskPM').value;
+    if(!mask && !am && !pm) return;
+    const set = new Set(mask.split(',').map(s=>parseInt(s,10)).filter(n=>n>=1&&n<=7));
+    const grid = document.getElementById('grid');
+    const cards = Array.from(grid.children);
+    cards.forEach(card=>{
+      const head = card.querySelector('.datehead').textContent; // e.g., "Mon, Oct 27"
+      const dow = new Date(head).getDay(); // 0..6 Sun..Sat (we need Mon..Sun=1..7)
+      const idx = ((dow+6)%7)+1;
+      if(set.size===0 || set.has(idx)){
+        if(am){ const btn=card.querySelector('.line:first-child .toggle'); if(btn) btn.click = btn.click; if(btn) saveHalf(btn.dataset.date,'AM',am).then(()=>{btn.className='toggle state-'+am;btn.textContent=labelFor(am);}); }
+        if(pm){ const btn=card.querySelector('.line:last-child .toggle'); if(btn) saveHalf(btn.dataset.date,'PM',pm).then(()=>{btn.className='toggle state-'+pm;btn.textContent=labelFor(pm);}); }
+      }
+    });
   }
-  function clearAllNotes(){
-    const cards=[...document.querySelectorAll('.card')];
-    const ops=[];
-    for(const c of cards){
-      ['AM','PM'].forEach(half=>{
-        ops.push(postJSON(API+'/api/notes',{userId:currentUser,date:c.dataset.date,half,note:''}).catch(()=>{}));
-        const inp=c.querySelector(half==='AM'?'.row:nth-of-type(2) .note':'.row:nth-of-type(3) .note'); inp.value='';
-      });
+  function labelFor(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
+  async function clearAllNotes(){
+    const ins = document.querySelectorAll('.note');
+    for(const i of ins){
+      i.value='';
+      const date = i.previousSibling.dataset.date;
+      const half = i.previousSibling.dataset.half;
+      try{ await saveHalf(date,half,(availability[USER_ID]?.[date]?.[half]||'unset'),''); }
+      catch(e){ log('ERR clear notes '+e.message); }
     }
-    Promise.allSettled(ops);
   }
 
-  // events
-  document.getElementById('bulkTools').addEventListener('click',e=>{
-    const k=e.target.closest('.chip'); if(!k) return; applyQuickFill(k.dataset.q);
-  });
-  document.getElementById('applyMask').addEventListener('click',applyWeekdayMask);
-  document.getElementById('clearNotes').addEventListener('click',clearAllNotes);
-  document.getElementById('prevBtn').addEventListener('click',async ()=>{anchor.setMonth(anchor.getMonth()-1); await loadUsersFromStateWindow(); paintCalendar();});
-  document.getElementById('nextBtn').addEventListener('click',async ()=>{anchor.setMonth(anchor.getMonth()+1); await loadUsersFromStateWindow(); paintCalendar();});
-  document.getElementById('memberSel').addEventListener('change',e=>{currentUser=e.target.value; paintCalendar();});
+  // --- WIRE UI ---
+  document.getElementById('prev').onclick = ()=>{ anchor.setMonth(anchor.getMonth()-1); boot(); };
+  document.getElementById('next').onclick = ()=>{ anchor.setMonth(anchor.getMonth()+1); boot(); };
+  document.querySelectorAll('[data-bulk]').forEach(b=> b.onclick = ()=> bulkSet(b.dataset.bulk));
+  document.getElementById('applyMask').onclick = applyWeekdayMask;
+  document.getElementById('clearNotes').onclick = clearAllNotes;
 
-  // ---------- boot ----------
-  (async function(){
+  // --- BOOT ---
+  async function boot(){
+    log('booting…');
+    document.getElementById('grid').innerHTML='';
+    document.getElementById('monthLabel').textContent = '…';
     try{
-      const health = await getJSON(API+'/api/health'); dbg('health', JSON.stringify(health));
-    }catch(e){ dbg('health check failed', e.message); }
-    try{
-      await loadUsersFromStateWindow();  // ← never calls /api/users
-      paintCalendar();
-      dbg('ready.');
+      const health = await api('/api/health');
+      log('health '+JSON.stringify(health));
+      await loadWindow();
+      paint();
+      log('ready.');
     }catch(e){
-      dbg('ERR boot', e.message||e);
+      log('ERR '+e.message);
+      // draw empty grid so the page never looks “broken”
+      paint();
     }
-  })();
+  }
+  boot();
 })();
 </script>
 </body>
