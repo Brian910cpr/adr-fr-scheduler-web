@@ -2,381 +2,426 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="color-scheme" content="light dark" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ShiftCommander · Member</title>
 <style>
-  /* Minimal guardrails so this looks like your current site without
-     fighting your existing CSS. If your site already styles these classes,
-     these rules will be naturally overridden. */
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
-  .wrap { padding: 16px; max-width: 1100px; margin: 0 auto; }
-  .tabs { display:inline-flex; gap:8px; margin: 4px 0 12px }
-  .tabs a{ text-decoration:none; padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.08)}
-  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap }
-  .muted { opacity:.75; font-size:12px }
-  .toolbar { display:flex; align-items:center; gap:10px; margin:6px 0 12px }
-  .btn { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); cursor:pointer; user-select:none }
-  .btn:hover { filter: brightness(1.05) }
-  .ghost { background:transparent }
-  .pill { border-radius:999px; padding:6px 12px; border:1px solid rgba(255,255,255,.12); }
-  .grid { display:grid; grid-template-columns: repeat(7,minmax(140px,1fr)); gap:12px }
-  @media (max-width: 980px){ .grid{ grid-template-columns: repeat(2,1fr) } }
-  .day { border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px }
-  .day .dhead { font-weight:600; margin-bottom:6px }
-  .lane { display:flex; align-items:center; gap:10px; margin:6px 0 }
-  .intent-btn { min-width:110px; text-align:center; font-weight:600; }
-  .prefer { background:#173b1a; color:#a3ffaf; border-color: #2f7a35 }
-  .available { background:#0e2a44; color:#a5d8ff; border-color:#285f8e }
-  .unset { background:#2a2a2a; color:#e2e2e2; border-color:#3a3a3a }
-  .no { background:#3a0e12; color:#ffb3b8; border-color:#7a2730 }
-  .note-input { flex:1; min-width:120px; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,.14); background:transparent; color:inherit }
-  .tiny { font-size: 12px; opacity:.7 }
-  details.opt { margin:8px 0 14px }
-  .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding:2px 6px; border:1px solid rgba(255,255,255,.2); border-radius:6px }
-  #debug { margin-top:12px; padding:8px; border-radius:12px; border:1px dashed rgba(255,255,255,.15); white-space:pre-wrap; font-family:ui-monospace,Consolas,monaco,monospace; font-size:12px; }
+  :root{
+    --bg:#0f141a; --panel:#121a22; --muted:#1b2430; --ring:#263243;
+    --text:#e8eef6; --sub:#a9b4c0; --note:#97a6b5;
+    --pill:#2a3646; --ok:#174d2a; --ok-glow:#0b7a33; 
+    --warn:#4f2a18; --warn-glow:#9a2b1f; --avail:#133a53; --avail-glow:#116aa1; 
+    --unset:#2b2f36;
+    --radius:14px; --pad:10px;
+  }
+  html,body{background:var(--bg);color:var(--text);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 16px;}
+  h1{font-size:18px;margin:0 0 12px 0;font-weight:700}
+  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:10px;background:var(--muted);color:var(--text);text-decoration:none;font-weight:600}
+  .tabs a.active{outline:2px solid var(--ring)}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 16px}
+  .select{background:var(--muted);border-radius:10px;padding:4px 8px}
+  select,button,input{background:var(--muted);color:var(--text);border:1px solid var(--ring);border-radius:10px;padding:6px 10px;outline:none}
+  button{cursor:pointer}
+  .hint{color:var(--sub)}
+  .debug{white-space:pre-wrap;background:#0b0f14;border:1px dashed var(--ring);border-radius:10px;padding:10px;margin-top:14px;color:#9bb1c9;font-size:12px}
+
+  /* Calendar grid */
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .dow{color:var(--sub);font-size:12px;text-align:center;margin-bottom:6px}
+  .card{background:var(--panel);border:1px solid var(--ring);border-radius:16px;padding:10px;min-height:92px;display:flex;flex-direction:column;gap:8px}
+  .card h3{margin:0 0 6px 0;font-size:13px;color:#cfe2ff;font-weight:700}
+  .row{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+  .lbl{color:var(--sub);font-weight:700;font-size:12px;letter-spacing:.2px}
+  .pill{display:inline-block;min-width:84px;text-align:center;border-radius:999px;padding:6px 10px;font-weight:800;user-select:none;border:1px solid transparent;transition:.15s}
+  .pill.state-prefer   {background:var(--ok);    border-color:var(--ok-glow)}
+  .pill.state-available{background:var(--avail); border-color:var(--avail-glow)}
+  .pill.state-unset    {background:var(--unset); border-color:var(--ring); color:#ccd6e3}
+  .pill.state-no       {background:var(--warn);  border-color:var(--warn-glow)}
+  .pill:hover{filter:brightness(1.08)}
+  .note{display:block;width:100%;padding:6px 8px;border-radius:10px;background:#0e1520;border:1px solid var(--ring);color:var(--text);font-size:13px}
+  .note::placeholder{color:var(--note)}
+  .tiny{font-size:11px;color:var(--sub)}
+  .tools{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:10px;margin:10px 0}
+  .tools .row{grid-template-columns:auto auto auto 1fr;gap:10px}
+  .chip{padding:6px 10px;border-radius:999px;background:var(--pill);border:1px solid var(--ring);cursor:pointer}
+  .chip:hover{filter:brightness(1.08)}
+  .spacer{flex:1}
+  .nav{display:flex;gap:8px;align-items:center}
+  .nav .month{font-weight:800}
+  .muted{color:var(--sub)}
+  @media (max-width:1000px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h3>ShiftCommander <strong>Member</strong></h3>
-    <div class="tabs">
-      <a class="btn" href="/member.html"><strong>Member</strong></a>
-      <a class="btn" href="/supervisor.html">Supervisor</a>
-      <a class="btn" href="/wallboard.html">Wallboard</a>
-    </div>
+<div class="wrap">
+  <h1>ShiftCommander <span class="muted">Member</span></h1>
 
-    <div class="toolbar">
-      <div class="row">
-        <label class="tiny">Member</label>
-        <select id="userSel" class="pill"></select>
-        <button id="prevBtn" class="btn ghost" title="Previous month">◀</button>
-        <div id="monthLabel" class="pill"></div>
-        <button id="nextBtn" class="btn ghost" title="Next month">▶</button>
-      </div>
-    </div>
-
-    <details class="opt">
-      <summary class="btn">Options · Quick Fill, Weekday masks, Clear tools</summary>
-      <div style="padding:10px 2px 2px">
-        <div class="row" style="gap:8px; margin-bottom:8px">
-          <span class="tiny">Quick fill this month:</span>
-          <button data-qf="prefer" class="btn">All → Prefer</button>
-          <button data-qf="available" class="btn">All → Available</button>
-          <button data-qf="unset" class="btn">All → Unset</button>
-          <button data-qf="no" class="btn">All → Do Not</button>
-          <button id="clearNotes" class="btn">Clear all notes</button>
-        </div>
-        <div class="row" style="gap:10px">
-          <span class="tiny">Weekday masks (Mon–Sun as 1–7):</span>
-          <label class="tiny">Apply to days: <input id="maskDays" class="pill" placeholder="1,2,3,4,5" style="width:140px"></label>
-          <label class="tiny">AM state:
-            <select id="maskAM" class="pill">
-              <option value="">(leave)</option>
-              <option value="prefer">Prefer</option>
-              <option value="available">Available</option>
-              <option value="unset">Unset</option>
-              <option value="no">Do Not</option>
-            </select>
-          </label>
-          <label class="tiny">PM state:
-            <select id="maskPM" class="pill">
-              <option value="">(leave)</option>
-              <option value="prefer">Prefer</option>
-              <option value="available">Available</option>
-              <option value="unset">Unset</option>
-              <option value="no">Do Not</option>
-            </select>
-          </label>
-          <button id="applyMask" class="btn">Apply mask</button>
-        </div>
-      </div>
-    </details>
-
-    <div id="cal" class="grid" aria-live="polite"></div>
-
-    <div id="debug" class="muted"></div>
+  <div class="tabs">
+    <a href="/member.html" class="active">Member</a>
+    <a href="/supervisor.html">Supervisor</a>
+    <a href="/wallboard.html">Wallboard</a>
   </div>
 
+  <div class="bar">
+    <div class="select">
+      <label class="tiny">Member</label>
+      <select id="memberSel"></select>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="nav">
+      <button id="prevBtn">◀</button>
+      <div class="month" id="monthLabel">Month YYYY</div>
+      <button id="nextBtn">▶</button>
+    </div>
+  </div>
+
+  <!-- Bulk tools (original set) -->
+  <div class="tools" id="bulkTools">
+    <div class="tiny" style="margin-bottom:6px">Options · Quick Fill, Weekday masks, Clear tools</div>
+
+    <div class="row">
+      <div>
+        <span class="chip" data-q="prefer">All → Prefer</span>
+        <span class="chip" data-q="available">All → Available</span>
+        <span class="chip" data-q="unset">All → Unset</span>
+        <span class="chip" data-q="no">All → Do Not</span>
+        <span class="chip" id="clearNotes">Clear all notes</span>
+      </div>
+      <div>
+        <label class="tiny">AM state:</label>
+        <select id="amMask">
+          <option value="">(leave)</option>
+          <option value="prefer">Prefer</option>
+          <option value="available">Available</option>
+          <option value="unset">Unset</option>
+          <option value="no">Do Not</option>
+        </select>
+      </div>
+      <div>
+        <label class="tiny">PM state:</label>
+        <select id="pmMask">
+          <option value="">(leave)</option>
+          <option value="prefer">Prefer</option>
+          <option value="available">Available</option>
+          <option value="unset">Unset</option>
+          <option value="no">Do Not</option>
+        </select>
+      </div>
+      <div>
+        <button id="applyMask">Apply weekday mask</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <div>
+        <label class="tiny">Weekday mask (Mon=1..Sun=7):</label>
+        <input id="weekdayMask" placeholder="e.g. 1,2,3,4,5" style="width:150px" />
+      </div>
+      <div class="spacer"></div>
+      <div class="tiny">State order cycles on click: Prefer → Available → Unset → Do Not → …</div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="debug" id="debug"></div>
+</div>
+
 <script>
-(() => {
-  // ---------- CONFIG ----------
-  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-  const cycle = ["prefer","available","unset","no"];
-  const label = { prefer:"Prefer", available:"Available", unset:"Unset", no:"Do Not" };
+(function(){
+  const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const dbg = (...a)=>{ const el = document.getElementById('debug'); el.textContent += a.join(' ')+'\n'; };
+  const memberSel = document.getElementById('memberSel');
+  const grid = document.getElementById('grid');
+  const monthLabel = document.getElementById('monthLabel');
 
-  // Default test member; override with ?user=… or the dropdown.
-  const url = new URL(location.href);
-  let currentUser = url.searchParams.get("user") || "uq2w4or";
+  const stateCycle = ['prefer','available','unset','no'];
+  const stateLabel  = {prefer:'Prefer', available:'Available', unset:'Unset', no:'Do Not'};
+  const stateClass  = s => 'pill state-'+s;
 
-  // Month being shown (UTC noon to avoid TZ edge cases)
-  let view = new Date();
-  view.setUTCDate(1);
-  view.setUTCHours(12,0,0,0);
+  let anchor = new Date(); anchor.setDate(1); // current month
+  let usersById = {};
+  let currentUser = null; // userId
+  let windowStart, windowEnd; // ISO dates for /api/state
 
-  const el = {
-    userSel: document.getElementById("userSel"),
-    monthLabel: document.getElementById("monthLabel"),
-    prevBtn: document.getElementById("prevBtn"),
-    nextBtn: document.getElementById("nextBtn"),
-    cal: document.getElementById("cal"),
-    debug: document.getElementById("debug"),
-    optRoot: document.querySelector("details.opt"),
-    clearNotes: document.getElementById("clearNotes"),
-    maskDays: document.getElementById("maskDays"),
-    maskAM: document.getElementById("maskAM"),
-    maskPM: document.getElementById("maskPM"),
-    applyMask: document.getElementById("applyMask"),
-  };
-
-  // You may populate this select from your directory. For now, keep the selected one.
-  function paintUserSel() {
-    el.userSel.innerHTML = "";
-    const opt = document.createElement("option");
-    opt.value = currentUser;
-    opt.textContent = `1003 AJ (${currentUser})`;
-    el.userSel.appendChild(opt);
-    el.userSel.value = currentUser;
+  // helpers
+  const iso = d => d.toISOString().slice(0,10);
+  function monthWindow(d){
+    // compute full month window + pad to show all weeks of the month (Mon..Sun rows)
+    const first = new Date(d); first.setDate(1);
+    const last = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const start = new Date(first);
+    const wd = (first.getDay()+6)%7; // Mon=0
+    start.setDate(first.getDate()-wd);
+    const end = new Date(last);
+    const wd2 = (end.getDay()+6)%7;
+    end.setDate(end.getDate()+(6-wd2));
+    return {start, end, first, last};
   }
 
-  // ---------- API helpers ----------
-  async function aget(path){
-    const r = await fetch(API+path, { credentials: "omit" });
-    if(!r.ok){ throw new Error(`GET ${path} → ${r.status}`); }
+  async function getJSON(url){
+    const r = await fetch(url, {credentials:'omit'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
     return r.json();
   }
-  async function apost(path, data){
-    const r = await fetch(API+path, {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify(data),
+  async function postJSON(url, body){
+    const r = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
     });
-    if(!r.ok){
-      let t=""; try{ t=await r.text(); }catch{}
-      throw new Error(`POST ${path} → ${r.status} ${t}`);
-    }
-    return r.json();
+    if(!r.ok) throw new Error('POST '+url+' -> '+r.status);
+    return r.json().catch(()=>({ok:true}));
   }
 
-  // ---------- Utilities ----------
-  function pad(n){ return (n<10?"0":"")+n; }
-  function ymd(d){ return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; }
-  function addDays(d, n){ const x = new Date(d); x.setUTCDate(x.getUTCDate()+n); return x; }
-  function monthLabel(d){
-    return d.toLocaleDateString(undefined,{ month:"long", year:"numeric", timeZone:"UTC" });
+  // API calls
+  async function loadUsers(){
+    const list = await getJSON(API+'/api/users'); // [{id, callsign, name, active, reserve, …}]
+    usersById = {};
+    memberSel.innerHTML = '';
+    list.forEach(u=>{
+      usersById[u.id] = u;
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = `${u.callsign || u.name || u.id} (${u.id})`;
+      memberSel.appendChild(opt);
+    });
+    // prefer uq2w4or if present
+    currentUser = list.find(u=>u.id==='uq2w4or')?.id || list[0]?.id;
+    memberSel.value = currentUser;
   }
-  function debounce(fn, ms=400){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
 
-  function nextState(cur){ const i=cycle.indexOf(cur||"unset"); return cycle[(i+1)%cycle.length]; }
-
-  function setBtn(btn, state){
-    btn.dataset.state = state;
-    btn.textContent = label[state] || "Unset";
-    btn.classList.remove("prefer","available","unset","no");
-    btn.classList.add(state);
+  function setMonthLabel(d){
+    const opts = {month:'long', year:'numeric'};
+    monthLabel.textContent = d.toLocaleDateString(undefined, opts);
   }
 
-  // ---------- Calendar paint ----------
-  async function paintMonth(){
-    el.monthLabel.textContent = monthLabel(view);
-    el.cal.innerHTML = "";
-    log("Booting…");
+  async function loadStateAndPaint(){
+    const {start,end,first,last} = monthWindow(anchor);
+    windowStart = iso(start); windowEnd = iso(end);
+    setMonthLabel(anchor);
+    dbg('health', JSON.stringify(await getJSON(API+'/api/health')));
+    const data = await getJSON(`${API}/api/state?start=${windowStart}&end=${windowEnd}`);
+    const avail = (data.availability && data.availability[currentUser]) || {};
+    paintCalendar(start,end,first,last,avail);
+  }
 
-    // compute a 6-row calendar window (Sun..Sat) to match your current layout
-    const first = new Date(view);
-    const firstDow = (first.getUTCDay()+6)%7; // make Monday=0 if desired; using Sunday=0 here:
-    const gridStart = addDays(first, -first.getUTCDay()); // start Sunday before/at 1st
-    const gridEnd = addDays(gridStart, 6*7 - 1);         // 6 weeks
+  function pill(state){
+    const span = document.createElement('span');
+    span.className = stateClass(state||'unset');
+    span.textContent = stateLabel[state||'unset'];
+    return span;
+  }
 
-    // fetch current state one shot
-    let state = { availability:{}, notes:{} };
-    try{
-      state = await aget(`/api/state?start=${ymd(gridStart)}&end=${ymd(gridEnd)}`);
-      log(`health OK; fetched ${ymd(gridStart)}..${ymd(gridEnd)}`);
-    }catch(e){
-      log(`ERR fetching state: ${e.message}`);
-    }
+  function nextState(s){
+    const i = stateCycle.indexOf(s||'unset');
+    return stateCycle[(i+1) % stateCycle.length];
+  }
 
-    // build the 42 cells
-    for(let i=0;i<42;i++){
-      const d = addDays(gridStart, i);
-      const dateStr = ymd(d);
-      const day = document.createElement("div");
-      day.className = "day";
-      day.dataset.date = dateStr;
+  function paintCalendar(start,end,first,last,avail){
+    grid.innerHTML = '';
+    // day-of-week header (Mon..Sun)
+    const dow = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    dow.forEach(d=>{
+      const h = document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h);
+    });
 
-      const head = document.createElement("div");
-      head.className = "dhead tiny";
-      head.textContent = d.toLocaleDateString(undefined,{ weekday:"short", month:"short", day:"numeric", timeZone:"UTC" });
-      day.appendChild(head);
-
-      // AM lane
-      day.appendChild(makeLane("AM", dateStr, state));
-      // PM lane
-      day.appendChild(makeLane("PM", dateStr, state));
-
-      el.cal.appendChild(day);
+    const days = [];
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+      days.push(new Date(d));
     }
 
-    // hooks
-    hookQuickFill();
-    hookMaskTools();
+    days.forEach(d=>{
+      const k = iso(d);
+      const a = (avail[k] && avail[k]['AM']) || 'unset';
+      const p = (avail[k] && avail[k]['PM']) || 'unset';
+
+      const card = document.createElement('div');
+      card.className='card';
+
+      const h3 = document.createElement('h3');
+      const ds = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+      h3.textContent = ds;
+      card.appendChild(h3);
+
+      // AM row
+      card.appendChild(makeRow('AM', k, 'AM', a));
+
+      // PM row
+      card.appendChild(makeRow('PM', k, 'PM', p));
+
+      grid.appendChild(card);
+    });
   }
 
-  function makeLane(half, dateStr, state){
-    const lane = document.createElement("div");
-    lane.className = "lane";
+  function makeRow(label, dateISO, half, current){
+    const row = document.createElement('div');
+    row.className='row';
+    const l = document.createElement('div');
+    l.className='lbl';
+    l.textContent = label;
+    const right = document.createElement('div');
 
-    // label
-    const lb = document.createElement("div");
-    lb.className = "tiny";
-    lb.textContent = half;
-    lane.appendChild(lb);
-
-    // toggle button
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn intent-btn unset";
-    btn.dataset.user = currentUser;
-    btn.dataset.date = dateStr;
-    btn.dataset.half = half;
-
-    const cur = state.availability?.[currentUser]?.[dateStr]?.[half] || "unset";
-    setBtn(btn, cur);
-    btn.addEventListener("click", () => onToggle(btn));
-    lane.appendChild(btn);
-
-    // note input (aligned within the lane)
-    const input = document.createElement("input");
-    input.className = "note-input";
-    input.placeholder = "Optional note to supervisor…";
-    input.dataset.user = currentUser;
-    input.dataset.date = dateStr;
-    input.dataset.half = half;
-    input.value = state.notes?.[currentUser]?.[dateStr]?.[half] || "";
-    const saveNote = debounce(async () => {
+    const btn = pill(current);
+    btn.style.minWidth='100px';
+    btn.style.display='inline-block';
+    btn.style.cursor='pointer';
+    btn.addEventListener('click', async ()=>{
+      const next = nextState(current);
       try{
-        const neighborState = btn.dataset.state || "unset";
-        await apost("/api/availability", {
-          userId: currentUser, date: dateStr, half, state: neighborState, note: input.value || ""
+        await postJSON(API+'/api/availability', {
+          userId: currentUser,
+          date: dateISO,
+          half: half,
+          state: next
         });
-      }catch(e){ log(`ERR save note ${dateStr} ${half}: ${e.message}`); }
-    }, 450);
-    input.addEventListener("input", saveNote);
-    input.addEventListener("keydown", ev => { if(ev.key==="Enter"){ ev.preventDefault(); saveNote(); }});
-    lane.appendChild(input);
-
-    return lane;
-  }
-
-  async function onToggle(btn){
-    const prior = btn.dataset.state || "unset";
-    const next = nextState(prior);
-    setBtn(btn, next); // optimistic
-
-    try{
-      // pick up latest note for this half on the same day
-      const day = btn.closest(".day");
-      const half = btn.dataset.half;
-      const noteVal = day?.querySelector(`.note-input[data-half="${half}"]`)?.value || "";
-      await apost("/api/availability", {
-        userId: btn.dataset.user,
-        date: btn.dataset.date,
-        half,
-        state: next,
-        note: noteVal
-      });
-    }catch(e){
-      // rollback
-      setBtn(btn, prior);
-      log(`ERR save state ${btn.dataset.date} ${btn.dataset.half}: ${e.message}`);
-      alert("Save failed. Check network/CORS.");
-    }
-  }
-
-  // ---------- Bulk tools ----------
-  function hookQuickFill(){
-    document.querySelectorAll('[data-qf]').forEach(b=>{
-      b.onclick = async () => {
-        const target = b.getAttribute("data-qf");
-        const jobs = [];
-        document.querySelectorAll(".intent-btn").forEach(btn=>{
-          setBtn(btn, target); // optimistic UI
-          const day = btn.closest(".day");
-          const note = day?.querySelector(`.note-input[data-half="${btn.dataset.half}"]`)?.value || "";
-          jobs.push(apost("/api/availability", {
-            userId: currentUser, date: btn.dataset.date, half: btn.dataset.half, state: target, note
-          }));
-        });
-        for(let i=0;i<jobs.length;i+=20){ await Promise.all(jobs.slice(i,i+20)); }
-      };
+        current = next;
+        btn.className = stateClass(current);
+        btn.textContent = stateLabel[current];
+        dbg('saved', currentUser, dateISO, half, next);
+      }catch(e){
+        dbg('ERR save state', e.message||e);
+      }
     });
 
-    el.clearNotes.onclick = async () => {
-      const jobs = [];
-      document.querySelectorAll(".note-input").forEach(inp=>{
-        inp.value = "";
-        const btn = inp.closest(".day")?.querySelector(`.intent-btn[data-half="${inp.dataset.half}"]`);
-        const s = btn?.dataset.state || "unset";
-        jobs.push(apost("/api/availability", {
-          userId: currentUser, date: inp.dataset.date, half: inp.dataset.half, state: s, note:""
-        }));
-      });
-      for(let i=0;i<jobs.length;i+=20){ await Promise.all(jobs.slice(i,i+20)); }
-    };
+    // note field
+    const note = document.createElement('input');
+    note.className='note';
+    note.placeholder='Optional note to supervisor.';
+    note.value = ''; // we can extend /api/state to include notes; for now get lazily
+    // lazy-load existing note (optional)
+    (async ()=>{
+      try{
+        const r = await getJSON(`${API}/api/notes?userId=${encodeURIComponent(currentUser)}&date=${dateISO}&half=${half}`);
+        if(r && typeof r.note==='string') note.value = r.note;
+      }catch(_e){}
+    })();
+
+    let noteTimer = null;
+    function commitNote(){
+      postJSON(API+'/api/notes', {
+        userId: currentUser, date: dateISO, half: half, note: note.value||''
+      }).then(()=>dbg('note saved', dateISO, half))
+        .catch(e=>dbg('ERR save note', e.message||e));
+    }
+    note.addEventListener('input', ()=>{
+      clearTimeout(noteTimer);
+      noteTimer = setTimeout(commitNote, 450);
+    });
+    note.addEventListener('blur', commitNote);
+
+    right.appendChild(btn);
+    right.appendChild(note);
+
+    row.appendChild(l);
+    row.appendChild(right);
+    return row;
   }
 
-  function hookMaskTools(){
-    el.applyMask.onclick = async () => {
-      const days = (el.maskDays.value||"").split(",").map(s=>parseInt(s.trim(),10)).filter(n=>n>=1&&n<=7);
-      const amState = el.maskAM.value;
-      const pmState = el.maskPM.value;
-      if(!days.length || (!amState && !pmState)){ alert("Provide weekday list and at least one AM/PM state."); return; }
-
-      const jobs = [];
-      document.querySelectorAll(".day").forEach(day=>{
-        const d = new Date(day.dataset.date+"T12:00:00Z");
-        const dow = d.getUTCDay()===0 ? 7 : d.getUTCDay(); // 1..7
-        if(!days.includes(dow)) return;
-
-        if(amState){
-          const btn = day.querySelector('.intent-btn[data-half="AM"]');
-          const note = day.querySelector('.note-input[data-half="AM"]')?.value || "";
-          setBtn(btn, amState);
-          jobs.push(apost("/api/availability",{ userId:currentUser, date:day.dataset.date, half:"AM", state:amState, note }));
-        }
-        if(pmState){
-          const btn = day.querySelector('.intent-btn[data-half="PM"]');
-          const note = day.querySelector('.note-input[data-half="PM"]')?.value || "";
-          setBtn(btn, pmState);
-          jobs.push(apost("/api/availability",{ userId:currentUser, date:day.dataset.date, half:"PM", state:pmState, note }));
-        }
-      });
-      for(let i=0;i<jobs.length;i+=20){ await Promise.all(jobs.slice(i,i+20)); }
-    };
+  // Bulk tools
+  function forEachDayCell(fn){
+    // iterate over rendered grid cards
+    [...grid.querySelectorAll('.card')].forEach(card=>{
+      const title = card.querySelector('h3').textContent; // e.g. "Mon, Oct 6"
+      // reconstruct date from label (we already know we rendered continuous range; we can attach data-date)
+    });
   }
 
-  // ---------- Nav / boot ----------
-  el.prevBtn.onclick = () => { view.setUTCMonth(view.getUTCMonth()-1); paintMonth(); };
-  el.nextBtn.onclick = () => { view.setUTCMonth(view.getUTCMonth()+1); paintMonth(); };
-  el.userSel.onchange = () => { currentUser = el.userSel.value; paintMonth(); };
-
-  function log(msg){ el.debug.textContent += (el.debug.textContent ? "\n" : "") + msg; }
-
-  async function healthCheck(){
-    try{
-      const h = await aget("/api/health");
-      log(`health ${JSON.stringify(h)}`);
-    }catch(e){
-      log(`ERR health: ${e.message}`);
+  // Because we need dates, tag each card during paint:
+  const paintCalendarOrig = paintCalendar;
+  paintCalendar = function(start,end,first,last,avail){
+    grid.innerHTML='';
+    const dow = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    dow.forEach(d=>{ const h=document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h); });
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+      const k = iso(d);
+      const a = (avail[k] && avail[k]['AM']) || 'unset';
+      const p = (avail[k] && avail[k]['PM']) || 'unset';
+      const card = document.createElement('div'); card.className='card'; card.dataset.date=k;
+      const h3 = document.createElement('h3'); h3.textContent = d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+      card.appendChild(h3);
+      card.appendChild(makeRow('AM', k, 'AM', a));
+      card.appendChild(makeRow('PM', k, 'PM', p));
+      grid.appendChild(card);
     }
   }
 
+  function applyQuickFill(targetState){
+    grid.querySelectorAll('.card').forEach(card=>{
+      ['AM','PM'].forEach(half=>{
+        postJSON(API+'/api/availability',{
+          userId: currentUser, date: card.dataset.date, half, state: targetState
+        }).catch(e=>dbg('ERR bulk', e.message||e));
+        const btn = card.querySelector(`.row:nth-of-type(${half==='AM'?2:3}) .pill`);
+        btn.className = stateClass(targetState);
+        btn.textContent = stateLabel[targetState];
+      });
+    });
+  }
+
+  function applyWeekdayMask(){
+    const amState = document.getElementById('amMask').value;
+    const pmState = document.getElementById('pmMask').value;
+    const maskTxt = (document.getElementById('weekdayMask').value||'').trim();
+    if(!amState && !pmState) return;
+    const days = new Set(maskTxt ? maskTxt.split(/[,\s]+/).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7) : [1,2,3,4,5,6,7]);
+    grid.querySelectorAll('.card').forEach(card=>{
+      const d = new Date(card.dataset.date+'T00:00:00');
+      const wd = ((d.getDay()+6)%7)+1; // 1..7
+      if(!days.has(wd)) return;
+      if(amState){
+        postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'AM',state:amState}).catch(e=>dbg('ERR mask',e.message));
+        const btn = card.querySelector('.row:nth-of-type(2) .pill'); btn.className=stateClass(amState); btn.textContent=stateLabel[amState];
+      }
+      if(pmState){
+        postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'PM',state:pmState}).catch(e=>dbg('ERR mask',e.message));
+        const btn = card.querySelector('.row:nth-of-type(3) .pill'); btn.className=stateClass(pmState); btn.textContent=stateLabel[pmState];
+      }
+    });
+  }
+
+  function clearAllNotes(){
+    grid.querySelectorAll('.card').forEach(card=>{
+      ['AM','PM'].forEach(half=>{
+        const input = card.querySelector(half==='AM'?'.row:nth-of-type(2) .note':'.row:nth-of-type(3) .note');
+        input.value='';
+        postJSON(API+'/api/notes',{userId:currentUser,date:card.dataset.date,half,note:''}).catch(()=>{});
+      });
+    });
+  }
+
+  // wire bulk tool buttons
+  document.getElementById('bulkTools').addEventListener('click', e=>{
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    const q = chip.dataset.q;
+    if(q==='prefer' || q==='available' || q==='unset' || q==='no'){
+      applyQuickFill(q);
+    }
+  });
+  document.getElementById('applyMask').addEventListener('click', applyWeekdayMask);
+  document.getElementById('clearNotes').addEventListener('click', clearAllNotes);
+
+  // Nav + member change
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()-1); loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()+1); loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
+  memberSel.addEventListener('change', ()=>{ currentUser = memberSel.value; loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
+
+  // init
   (async function boot(){
-    paintUserSel();
-    await healthCheck();
-    await paintMonth();
-    log("Ready.");
+    try{
+      dbg('booting…');
+      await loadUsers();
+      if(!currentUser){ dbg('No users found.'); return; }
+      await loadStateAndPaint();
+      dbg('Ready.');
+    }catch(e){
+      dbg('ERR boot', e.message||e);
+    }
   })();
 })();
 </script>
