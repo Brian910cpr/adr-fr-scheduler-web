@@ -1,86 +1,105 @@
-<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ShiftCommander · Wallboard</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShiftCommander • Wallboard</title>
 <style>
-  :root{--bg:#0f1720;--panel:#111a23;--panel2:#0d141b;--muted:#2a3847;--ring:#2a3b4e;--text:#e6f0ff;--sub:#a9b8c7;--needs:#f5a524}
-  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:1200px;margin:26px auto;padding:0 16px}
-  .bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-  .nav{width:34px;height:34px;border-radius:10px;border:1px solid var(--muted);background:var(--panel2);color:var(--text);cursor:pointer}
-  .label{flex:1;text-align:center;color:var(--sub)}
-  .row{display:grid;grid-template-columns:repeat(7,1fr);gap:16px}
-  .card{background:var(--panel);border:1px dashed var(--muted);border-radius:16px;padding:12px}
-  .h{font-size:13px;color:var(--sub)}.d{font-size:22px;font-weight:800}
-  .slot{margin-top:10px;background:var(--panel2);border:1px solid var(--muted);border-radius:14px;padding:12px}
-  .slot h4{margin:0 0 8px;font-size:12px;letter-spacing:.08em;color:var(--sub)}
-  .names{display:flex;flex-wrap:wrap;gap:6px}
-  .name{background:#1f2b38;border:1px solid var(--ring);padding:6px 10px;border-radius:999px}
-  .need{display:inline-block;background:var(--needs);color:#000;font-weight:800;border-radius:12px;padding:6px 12px}
-  .dbg{margin-top:12px;color:#8aa1b7;font:12px ui-monospace,Consolas,Menlo}
-  @media (max-width:900px){.row{grid-template-columns:repeat(2,1fr)}}
-  @media (min-width:901px) and (max-width:1200px){.row{grid-template-columns:repeat(4,1fr)}}
+  :root{ --bg:#0b1220; --panel:#111a2b; --panel2:#0f1726; --ink:#e5ecff; --muted:#99a6c7; --ring:#233657; --need:#f59e0b; --radius:16px; }
+  html,body{background:var(--bg); color:var(--ink); font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; margin:0}
+  .wrap{max-width:1200px; margin:24px auto; padding:0 16px}
+  .toolbar{display:flex; gap:8px; align-items:center; margin-bottom:12px}
+  .btn{background:var(--panel2); border:1px solid var(--ring); color:var(--ink); padding:6px 10px; border-radius:10px; cursor:pointer}
+  .week{display:grid; grid-template-columns:repeat(7,1fr); gap:12px}
+  .card{background:var(--panel); border:1px solid var(--ring); border-radius:var(--radius); padding:12px}
+  .hdr{font-weight:700; margin-bottom:8px}
+  .slot{margin-top:8px; background:var(--panel2); border:1px dashed var(--ring); border-radius:12px; padding:12px}
+  .slot h4{margin:0 0 8px; font-size:13px; color:#b9c5e6}
+  .names{display:flex; gap:8px; flex-wrap:wrap; min-height:26px}
+  .tag{background:#203052; border:1px solid #2b436b; padding:4px 10px; border-radius:999px; font-size:13px}
+  .need{background:var(--need); color:#1b1b1b; border-color:#d97706; font-weight:800}
+  .debug{margin-top:14px; padding:10px; background:#0a1020; border:1px solid #1a2946; border-radius:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; white-space:pre-wrap; color:#bcd2ff}
+  @media (max-width:1000px){ .week{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:600px){ .week{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="bar">
-    <button id="prev" class="nav">◀</button>
-    <div id="label" class="label"></div>
-    <button id="next" class="nav">▶</button>
+  <div class="toolbar">
+    <button id="prev" class="btn">◀</button>
+    <div id="label" style="min-width:220px;text-align:center"></div>
+    <button id="next" class="btn">▶</button>
   </div>
-  <div id="row" class="row"></div>
-  <div id="dbg" class="dbg"></div>
+
+  <div id="grid" class="week"></div>
+  <div id="debug" class="debug">Booting…</div>
 </div>
 
 <script>
-(()=> {
-  const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-  let anchor=new Date();
-  const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const add=(d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x};
-  const sow=d=>{const x=new Date(d), wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x};
-  const $=s=>document.querySelector(s);
+(() => {
+  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const debug=(...a)=>{ const el=document.getElementById('debug'); el.textContent+='\n'+a.join(' '); el.scrollTop=el.scrollHeight; };
 
-  async function paint(){
-    const s=sow(anchor), e=add(s,6);
-    $('#label').textContent=`${s.toLocaleString(undefined,{month:'long',day:'numeric'})} – ${e.toLocaleString(undefined,{month:'long',day:'numeric'})}`;
-    let j; try{
-      const r=await fetch(`${API}/api/state?start=${ymd(s)}&end=${ymd(e)}`); if(!r.ok) throw new Error(r.status);
-      j=await r.json(); $('#dbg').textContent='OK';
-    }catch(err){ $('#dbg').textContent='ERR '+err.message; return; }
+  // start on current Monday
+  const today = new Date();
+  let start = new Date(today); start.setDate(start.getDate() - ((start.getDay()+6)%7));
 
-    const row=$('#row'); row.innerHTML='';
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function fmt(d){ return d.toISOString().slice(0,10); }
+  function label(a,b){
+    return a.toLocaleString(undefined,{month:'long', day:'numeric'}) + ' – ' +
+           b.toLocaleString(undefined,{month:'long', day:'numeric'});
+  }
+
+  async function loadWeek(s){
+    const e = addDays(s, 6);
+    const r = await fetch(`${API}/api/state?start=${fmt(s)}&end=${fmt(e)}`);
+    if(!r.ok) throw new Error('state '+r.status);
+    return await r.json();
+  }
+
+  function paint(s, data){
+    const e = addDays(s,6);
+    document.getElementById('label').textContent = label(s,e);
+
+    const grid=document.getElementById('grid'); grid.innerHTML='';
     for(let i=0;i<7;i++){
-      const d=add(s,i), key=ymd(d);
+      const d = addDays(s,i);
+      const ymd=fmt(d);
+
       const card=document.createElement('div'); card.className='card';
-      card.innerHTML=`<div class="h">${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="d">${d.getDate()}</div>`;
+      card.innerHTML = `<div class="hdr">${d.toLocaleString(undefined,{weekday:'short'})}<br><span style="font-size:28px;font-weight:800">${d.getDate()}</span></div>`;
 
-      ["AM","PM"].forEach(half=>{
+      ['AM','PM'].forEach(half=>{
         const slot=document.createElement('div'); slot.className='slot';
-        slot.innerHTML=`<h4>${half}</h4>`;
+        slot.innerHTML = `<h4>${half}</h4>`;
         const names=document.createElement('div'); names.className='names';
-
-        let shown=0;
-        for(const uid of Object.keys(j.availability||{})){
-          const s=j.availability[uid]?.[key]?.[half];
-          if(s==="prefer"||s==="available"){
-            const chip=document.createElement('span'); chip.className='name';
-            chip.textContent=uid+(s==="prefer"?" · ★":"");
-            names.appendChild(chip); shown++;
-          }
+        const sft = data?.shifts?.[ymd]?.[half] || {assignees:[],status:'unassigned'};
+        if(sft.assignees?.length){
+          sft.assignees.forEach(n=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=n; names.appendChild(span); });
+        } else {
+          const span=document.createElement('span'); span.className='tag need'; span.textContent='Needs ALS & EMT';
+          names.appendChild(span);
         }
-        if(!shown){ const need=document.createElement('span'); need.className='need'; need.textContent='Needs ALS & EMT'; names.appendChild(need); }
-
-        slot.appendChild(names); card.appendChild(slot);
+        slot.appendChild(names);
+        card.appendChild(slot);
       });
 
-      row.appendChild(card);
+      grid.appendChild(card);
     }
   }
-  $('#prev').onclick=()=>{ anchor=add(anchor,-7); paint(); };
-  $('#next').onclick=()=>{ anchor=add(anchor,+7); paint(); };
-  paint();
+
+  async function refresh(){
+    const j = await loadWeek(start);
+    paint(start, j);
+    debug('Loaded week', fmt(start), '→', fmt(addDays(start,6)), 'paint OK');
+  }
+
+  document.getElementById('prev').onclick=()=>{ start=addDays(start,-7); refresh().catch(e=>debug(e.message)); };
+  document.getElementById('next').onclick=()=>{ start=addDays(start, 7); refresh().catch(e=>debug(e.message)); };
+
+  refresh().catch(e=>debug('Boot ERR', e.message));
 })();
 </script>
-</body></html>
+</body>
+</html>
