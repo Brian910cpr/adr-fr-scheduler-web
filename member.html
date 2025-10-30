@@ -1,154 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="color-scheme" content="light dark" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ShiftCommander · Member</title>
+<style>
+  /* Minimal guardrails so this looks like your current site without
+     fighting your existing CSS. If your site already styles these classes,
+     these rules will be naturally overridden. */
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
+  .wrap { padding: 16px; max-width: 1100px; margin: 0 auto; }
+  .tabs { display:inline-flex; gap:8px; margin: 4px 0 12px }
+  .tabs a{ text-decoration:none; padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.08)}
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap }
+  .muted { opacity:.75; font-size:12px }
+  .toolbar { display:flex; align-items:center; gap:10px; margin:6px 0 12px }
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); cursor:pointer; user-select:none }
+  .btn:hover { filter: brightness(1.05) }
+  .ghost { background:transparent }
+  .pill { border-radius:999px; padding:6px 12px; border:1px solid rgba(255,255,255,.12); }
+  .grid { display:grid; grid-template-columns: repeat(7,minmax(140px,1fr)); gap:12px }
+  @media (max-width: 980px){ .grid{ grid-template-columns: repeat(2,1fr) } }
+  .day { border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px }
+  .day .dhead { font-weight:600; margin-bottom:6px }
+  .lane { display:flex; align-items:center; gap:10px; margin:6px 0 }
+  .intent-btn { min-width:110px; text-align:center; font-weight:600; }
+  .prefer { background:#173b1a; color:#a3ffaf; border-color: #2f7a35 }
+  .available { background:#0e2a44; color:#a5d8ff; border-color:#285f8e }
+  .unset { background:#2a2a2a; color:#e2e2e2; border-color:#3a3a3a }
+  .no { background:#3a0e12; color:#ffb3b8; border-color:#7a2730 }
+  .note-input { flex:1; min-width:120px; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,.14); background:transparent; color:inherit }
+  .tiny { font-size: 12px; opacity:.7 }
+  details.opt { margin:8px 0 14px }
+  .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding:2px 6px; border:1px solid rgba(255,255,255,.2); border-radius:6px }
+  #debug { margin-top:12px; padding:8px; border-radius:12px; border:1px dashed rgba(255,255,255,.15); white-space:pre-wrap; font-family:ui-monospace,Consolas,monaco,monospace; font-size:12px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h3>ShiftCommander <strong>Member</strong></h3>
+    <div class="tabs">
+      <a class="btn" href="/member.html"><strong>Member</strong></a>
+      <a class="btn" href="/supervisor.html">Supervisor</a>
+      <a class="btn" href="/wallboard.html">Wallboard</a>
+    </div>
+
+    <div class="toolbar">
+      <div class="row">
+        <label class="tiny">Member</label>
+        <select id="userSel" class="pill"></select>
+        <button id="prevBtn" class="btn ghost" title="Previous month">◀</button>
+        <div id="monthLabel" class="pill"></div>
+        <button id="nextBtn" class="btn ghost" title="Next month">▶</button>
+      </div>
+    </div>
+
+    <details class="opt">
+      <summary class="btn">Options · Quick Fill, Weekday masks, Clear tools</summary>
+      <div style="padding:10px 2px 2px">
+        <div class="row" style="gap:8px; margin-bottom:8px">
+          <span class="tiny">Quick fill this month:</span>
+          <button data-qf="prefer" class="btn">All → Prefer</button>
+          <button data-qf="available" class="btn">All → Available</button>
+          <button data-qf="unset" class="btn">All → Unset</button>
+          <button data-qf="no" class="btn">All → Do Not</button>
+          <button id="clearNotes" class="btn">Clear all notes</button>
+        </div>
+        <div class="row" style="gap:10px">
+          <span class="tiny">Weekday masks (Mon–Sun as 1–7):</span>
+          <label class="tiny">Apply to days: <input id="maskDays" class="pill" placeholder="1,2,3,4,5" style="width:140px"></label>
+          <label class="tiny">AM state:
+            <select id="maskAM" class="pill">
+              <option value="">(leave)</option>
+              <option value="prefer">Prefer</option>
+              <option value="available">Available</option>
+              <option value="unset">Unset</option>
+              <option value="no">Do Not</option>
+            </select>
+          </label>
+          <label class="tiny">PM state:
+            <select id="maskPM" class="pill">
+              <option value="">(leave)</option>
+              <option value="prefer">Prefer</option>
+              <option value="available">Available</option>
+              <option value="unset">Unset</option>
+              <option value="no">Do Not</option>
+            </select>
+          </label>
+          <button id="applyMask" class="btn">Apply mask</button>
+        </div>
+      </div>
+    </details>
+
+    <div id="cal" class="grid" aria-live="polite"></div>
+
+    <div id="debug" class="muted"></div>
+  </div>
+
 <script>
 (() => {
-  const API_BASE = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  // ---------- CONFIG ----------
+  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
   const cycle = ["prefer","available","unset","no"];
   const label = { prefer:"Prefer", available:"Available", unset:"Unset", no:"Do Not" };
 
-  // SELECTORS — adjust to your actual markup classes if needed
-  const SELECTORS = {
-    dayCard:    ".day",           // container per date, has data-date
-    intentBtn:  ".intent-btn",    // the colored pill the user taps
-    noteInput:  ".note-input"     // small text input next to AM/PM
+  // Default test member; override with ?user=… or the dropdown.
+  const url = new URL(location.href);
+  let currentUser = url.searchParams.get("user") || "uq2w4or";
+
+  // Month being shown (UTC noon to avoid TZ edge cases)
+  let view = new Date();
+  view.setUTCDate(1);
+  view.setUTCHours(12,0,0,0);
+
+  const el = {
+    userSel: document.getElementById("userSel"),
+    monthLabel: document.getElementById("monthLabel"),
+    prevBtn: document.getElementById("prevBtn"),
+    nextBtn: document.getElementById("nextBtn"),
+    cal: document.getElementById("cal"),
+    debug: document.getElementById("debug"),
+    optRoot: document.querySelector("details.opt"),
+    clearNotes: document.getElementById("clearNotes"),
+    maskDays: document.getElementById("maskDays"),
+    maskAM: document.getElementById("maskAM"),
+    maskPM: document.getElementById("maskPM"),
+    applyMask: document.getElementById("applyMask"),
   };
 
-  // Fetch helpers with friendly CORS errors
-  async function apiGET(path) {
-    const r = await fetch(API_BASE + path, { credentials: "omit" });
-    if (!r.ok) throw new Error(`GET ${path} -> ${r.status}`);
+  // You may populate this select from your directory. For now, keep the selected one.
+  function paintUserSel() {
+    el.userSel.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = currentUser;
+    opt.textContent = `1003 AJ (${currentUser})`;
+    el.userSel.appendChild(opt);
+    el.userSel.value = currentUser;
+  }
+
+  // ---------- API helpers ----------
+  async function aget(path){
+    const r = await fetch(API+path, { credentials: "omit" });
+    if(!r.ok){ throw new Error(`GET ${path} → ${r.status}`); }
     return r.json();
   }
-  async function apiPOST(path, data) {
-    const r = await fetch(API_BASE + path, {
+  async function apost(path, data){
+    const r = await fetch(API+path, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify(data),
     });
-    if (!r.ok) {
-      const t = await r.text().catch(()=> "");
-      throw new Error(`POST ${path} -> ${r.status} ${t}`);
+    if(!r.ok){
+      let t=""; try{ t=await r.text(); }catch{}
+      throw new Error(`POST ${path} → ${r.status} ${t}`);
     }
     return r.json();
   }
 
-  // Apply visual state on a button without changing CSS structure
-  function setBtnState(btn, state) {
+  // ---------- Utilities ----------
+  function pad(n){ return (n<10?"0":"")+n; }
+  function ymd(d){ return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; }
+  function addDays(d, n){ const x = new Date(d); x.setUTCDate(x.getUTCDate()+n); return x; }
+  function monthLabel(d){
+    return d.toLocaleDateString(undefined,{ month:"long", year:"numeric", timeZone:"UTC" });
+  }
+  function debounce(fn, ms=400){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
+  function nextState(cur){ const i=cycle.indexOf(cur||"unset"); return cycle[(i+1)%cycle.length]; }
+
+  function setBtn(btn, state){
     btn.dataset.state = state;
     btn.textContent = label[state] || "Unset";
-    // If you have state classes, toggle here; otherwise text-only is fine.
     btn.classList.remove("prefer","available","unset","no");
     btn.classList.add(state);
   }
 
-  // Toggle algorithm: Prefer → Available → Unset → Do Not → Prefer
-  function nextState(cur) {
-    const i = cycle.indexOf(cur);
-    return cycle[(i + 1) % cycle.length];
+  // ---------- Calendar paint ----------
+  async function paintMonth(){
+    el.monthLabel.textContent = monthLabel(view);
+    el.cal.innerHTML = "";
+    log("Booting…");
+
+    // compute a 6-row calendar window (Sun..Sat) to match your current layout
+    const first = new Date(view);
+    const firstDow = (first.getUTCDay()+6)%7; // make Monday=0 if desired; using Sunday=0 here:
+    const gridStart = addDays(first, -first.getUTCDay()); // start Sunday before/at 1st
+    const gridEnd = addDays(gridStart, 6*7 - 1);         // 6 weeks
+
+    // fetch current state one shot
+    let state = { availability:{}, notes:{} };
+    try{
+      state = await aget(`/api/state?start=${ymd(gridStart)}&end=${ymd(gridEnd)}`);
+      log(`health OK; fetched ${ymd(gridStart)}..${ymd(gridEnd)}`);
+    }catch(e){
+      log(`ERR fetching state: ${e.message}`);
+    }
+
+    // build the 42 cells
+    for(let i=0;i<42;i++){
+      const d = addDays(gridStart, i);
+      const dateStr = ymd(d);
+      const day = document.createElement("div");
+      day.className = "day";
+      day.dataset.date = dateStr;
+
+      const head = document.createElement("div");
+      head.className = "dhead tiny";
+      head.textContent = d.toLocaleDateString(undefined,{ weekday:"short", month:"short", day:"numeric", timeZone:"UTC" });
+      day.appendChild(head);
+
+      // AM lane
+      day.appendChild(makeLane("AM", dateStr, state));
+      // PM lane
+      day.appendChild(makeLane("PM", dateStr, state));
+
+      el.cal.appendChild(day);
+    }
+
+    // hooks
+    hookQuickFill();
+    hookMaskTools();
   }
 
-  // Debounce for notes
-  function debounce(fn, ms=400) {
-    let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-  }
+  function makeLane(half, dateStr, state){
+    const lane = document.createElement("div");
+    lane.className = "lane";
 
-  // Wire one intent button
-  function wireIntentButton(btn) {
-    btn.addEventListener("click", async () => {
-      const userId = btn.dataset.user;
-      const date   = btn.dataset.date;
-      const half   = btn.dataset.half; // AM/PM
-      const cur    = btn.dataset.state || "unset";
-      const next   = nextState(cur);
+    // label
+    const lb = document.createElement("div");
+    lb.className = "tiny";
+    lb.textContent = half;
+    lane.appendChild(lb);
 
-      // find sibling note input (optional)
-      const day = btn.closest(SELECTORS.dayCard);
-      let noteVal = "";
-      if (day) {
-        const n = day.querySelector(`${SELECTORS.noteInput}[data-half="${half}"]`);
-        if (n) noteVal = n.value || "";
-      }
+    // toggle button
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn intent-btn unset";
+    btn.dataset.user = currentUser;
+    btn.dataset.date = dateStr;
+    btn.dataset.half = half;
 
-      // optimistic
-      setBtnState(btn, next);
+    const cur = state.availability?.[currentUser]?.[dateStr]?.[half] || "unset";
+    setBtn(btn, cur);
+    btn.addEventListener("click", () => onToggle(btn));
+    lane.appendChild(btn);
 
-      try {
-        await apiPOST("/api/availability", { userId, date, half, state: next, note: noteVal });
-        // optionally flash a tiny "saved" tag; keeping UI unchanged otherwise
-      } catch (e) {
-        // rollback on error
-        setBtnState(btn, cur);
-        console.error("save intent failed:", e);
-        alert("Network error saving your selection. If this keeps happening, it’s likely CORS/SSL. (We just patched CORS in the Worker.)");
-      }
-    });
-  }
-
-  // Wire one note input
-  function wireNoteInput(input) {
-    const save = debounce(async () => {
-      const userId = input.dataset.user;
-      const date   = input.dataset.date;
-      const half   = input.dataset.half;
-      // current state from the neighbor button (don’t change it)
-      const btn = input.closest(SELECTORS.dayCard)?.querySelector(`${SELECTORS.intentBtn}[data-half="${half}"]`);
-      const cur = btn?.dataset.state || "unset";
-
-      try {
-        await apiPOST("/api/availability", { userId, date, half, state: cur, note: input.value || "" });
-      } catch (e) {
-        console.error("save note failed:", e);
-        // Don’t change visuals; user can try again
-      }
+    // note input (aligned within the lane)
+    const input = document.createElement("input");
+    input.className = "note-input";
+    input.placeholder = "Optional note to supervisor…";
+    input.dataset.user = currentUser;
+    input.dataset.date = dateStr;
+    input.dataset.half = half;
+    input.value = state.notes?.[currentUser]?.[dateStr]?.[half] || "";
+    const saveNote = debounce(async () => {
+      try{
+        const neighborState = btn.dataset.state || "unset";
+        await apost("/api/availability", {
+          userId: currentUser, date: dateStr, half, state: neighborState, note: input.value || ""
+        });
+      }catch(e){ log(`ERR save note ${dateStr} ${half}: ${e.message}`); }
     }, 450);
+    input.addEventListener("input", saveNote);
+    input.addEventListener("keydown", ev => { if(ev.key==="Enter"){ ev.preventDefault(); saveNote(); }});
+    lane.appendChild(input);
 
-    input.addEventListener("input", save);
-    input.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") { ev.preventDefault(); save(); }
-    });
+    return lane;
   }
 
-  // Initial paint wiring — no visual/markup changes
-  function bootWire() {
-    document.querySelectorAll(SELECTORS.intentBtn).forEach((btn) => {
-      // default state if missing
-      if (!btn.dataset.state) setBtnState(btn, "unset");
-      wireIntentButton(btn);
-    });
-    document.querySelectorAll(SELECTORS.noteInput).forEach(wireNoteInput);
+  async function onToggle(btn){
+    const prior = btn.dataset.state || "unset";
+    const next = nextState(prior);
+    setBtn(btn, next); // optimistic
+
+    try{
+      // pick up latest note for this half on the same day
+      const day = btn.closest(".day");
+      const half = btn.dataset.half;
+      const noteVal = day?.querySelector(`.note-input[data-half="${half}"]`)?.value || "";
+      await apost("/api/availability", {
+        userId: btn.dataset.user,
+        date: btn.dataset.date,
+        half,
+        state: next,
+        note: noteVal
+      });
+    }catch(e){
+      // rollback
+      setBtn(btn, prior);
+      log(`ERR save state ${btn.dataset.date} ${btn.dataset.half}: ${e.message}`);
+      alert("Save failed. Check network/CORS.");
+    }
   }
 
-  // Optional: tiny bulk tools restore (no CSS changes)
-  function wireBulkTools() {
-    const bulk = document.getElementById("bulk-apply");
-    if (!bulk) return;
-    bulk.addEventListener("click", async () => {
-      // expects you have hidden inputs/selects with IDs below; this does not change UI
-      const userId = document.getElementById("bulk-user")?.value;
-      const start  = document.getElementById("bulk-start")?.value;
-      const end    = document.getElementById("bulk-end")?.value;
-      const am     = document.getElementById("bulk-am")?.value; // '', prefer, available, unset, no
-      const pm     = document.getElementById("bulk-pm")?.value;
-      if (!userId || !start || !end) return alert("Need user/start/end");
+  // ---------- Bulk tools ----------
+  function hookQuickFill(){
+    document.querySelectorAll('[data-qf]').forEach(b=>{
+      b.onclick = async () => {
+        const target = b.getAttribute("data-qf");
+        const jobs = [];
+        document.querySelectorAll(".intent-btn").forEach(btn=>{
+          setBtn(btn, target); // optimistic UI
+          const day = btn.closest(".day");
+          const note = day?.querySelector(`.note-input[data-half="${btn.dataset.half}"]`)?.value || "";
+          jobs.push(apost("/api/availability", {
+            userId: currentUser, date: btn.dataset.date, half: btn.dataset.half, state: target, note
+          }));
+        });
+        for(let i=0;i<jobs.length;i+=20){ await Promise.all(jobs.slice(i,i+20)); }
+      };
+    });
 
-      // build date range
-      const dates = [];
-      let d = new Date(start + "T12:00:00Z");
-      const to = new Date(end + "T12:00:00Z");
-      while (d <= to) { dates.push(d.toISOString().slice(0,10)); d.setUTCDate(d.getUTCDate()+1); }
-
-      // throttle in chunks to avoid hammering
+    el.clearNotes.onclick = async () => {
       const jobs = [];
-      for (const date of dates) {
-        if (am) jobs.push(apiPOST("/api/availability", { userId, date, half:"AM", state: am }));
-        if (pm) jobs.push(apiPOST("/api/availability", { userId, date, half:"PM", state: pm }));
-      }
-      for (let i=0;i<jobs.length;i+=12) { await Promise.all(jobs.slice(i,i+12)); }
-      alert("Bulk applied.");
-      // you can optionally re-fetch and repaint
-    });
+      document.querySelectorAll(".note-input").forEach(inp=>{
+        inp.value = "";
+        const btn = inp.closest(".day")?.querySelector(`.intent-btn[data-half="${inp.dataset.half}"]`);
+        const s = btn?.dataset.state || "unset";
+        jobs.push(apost("/api/availability", {
+          userId: currentUser, date: inp.dataset.date, half: inp.dataset.half, state: s, note:""
+        }));
+      });
+      for(let i=0;i<jobs.length;i+=20){ await Promise.all(jobs.slice(i,i+20)); }
+    };
   }
 
-  // Kick
-  bootWire();
-  wireBulkTools();
+  function hookMaskTools(){
+    el.applyMask.onclick = async () => {
+      const days = (el.maskDays.value||"").split(",").map(s=>parseInt(s.trim(),10)).filter(n=>n>=1&&n<=7);
+      const amState = el.maskAM.value;
+      const pmState = el.maskPM.value;
+      if(!days.length || (!amState && !pmState)){ alert("Provide weekday list and at least one AM/PM state."); return; }
+
+      const jobs = [];
+      document.querySelectorAll(".day").forEach(day=>{
+        const d = new Date(day.dataset.date+"T12:00:00Z");
+        const dow = d.getUTCDay()===0 ? 7 : d.getUTCDay(); // 1..7
+        if(!days.includes(dow)) return;
+
+        if(amState){
+          const btn = day.querySelector('.intent-btn[data-half="AM"]');
+          const note = day.querySelector('.note-input[data-half="AM"]')?.value || "";
+          setBtn(btn, amState);
+          jobs.push(apost("/api/availability",{ userId:currentUser, date:day.dataset.date, half:"AM", state:amState, note }));
+        }
+        if(pmState){
+          const btn = day.querySelector('.intent-btn[data-half="PM"]');
+          const note = day.querySelector('.note-input[data-half="PM"]')?.value || "";
+          setBtn(btn, pmState);
+          jobs.push(apost("/api/availability",{ userId:currentUser, date:day.dataset.date, half:"PM", state:pmState, note }));
+        }
+      });
+      for(let i=0;i<jobs.length;i+=20){ await Promise.all(jobs.slice(i,i+20)); }
+    };
+  }
+
+  // ---------- Nav / boot ----------
+  el.prevBtn.onclick = () => { view.setUTCMonth(view.getUTCMonth()-1); paintMonth(); };
+  el.nextBtn.onclick = () => { view.setUTCMonth(view.getUTCMonth()+1); paintMonth(); };
+  el.userSel.onchange = () => { currentUser = el.userSel.value; paintMonth(); };
+
+  function log(msg){ el.debug.textContent += (el.debug.textContent ? "\n" : "") + msg; }
+
+  async function healthCheck(){
+    try{
+      const h = await aget("/api/health");
+      log(`health ${JSON.stringify(h)}`);
+    }catch(e){
+      log(`ERR health: ${e.message}`);
+    }
+  }
+
+  (async function boot(){
+    paintUserSel();
+    await healthCheck();
+    await paintMonth();
+    log("Ready.");
+  })();
 })();
 </script>
+</body>
+</html>

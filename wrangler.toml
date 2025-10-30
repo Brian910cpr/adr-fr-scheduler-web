@@ -1,12 +1,8 @@
 name = "adr-fr-scheduler-api"
-main = "src/index.js"
-compatibility_date = "2024-11-01"
-
-[vars]
-IMPORT_TOKEN = "qwerty123"
+main = "index.js"
+compatibility_date = "2024-09-23"
 
 [[d1_databases]]
-binding = "DB"
+binding = "DB"            # used in index.js as env.DB
 database_name = "adr_fr"
 database_id = "eedd9a67-410c-4bc9-b428-5bf7c3f12773"
-
