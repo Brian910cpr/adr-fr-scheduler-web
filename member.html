@@ -1,348 +1,225 @@
-<!-- member.html -->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ShiftCommander • Member</title>
+<meta charset="UTF-8">
+<title>ADR-FR Scheduler | Member Availability</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-  :root{
-    --bg:#0c0f14;--panel:#111822;--ring:#2a384a;--ink:#e8eef7;--muted:#9bb0c7;--card:#0e151d;
-    --prefer:#2d6bff;--avail:#18a957;--unset:#243143;--no:#cd3b3b;--note:#ffffff;--noteInk:#0c0f14;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
-  h1{margin:0;font-size:18px}
-  nav a{color:#c7d6ea;text-decoration:none;border:1px solid var(--ring);padding:6px 10px;border-radius:999px;margin-left:6px}
-  nav a.active{background:var(--ring);color:var(--ink)}
-  .bar{display:flex;gap:10px;align-items:center;padding:10px 16px}
-  select, input[type="date"]{background:var(--card);color:var(--ink);border:1px solid var(--ring);border-radius:8px;padding:6px 8px}
-  .grid{padding:12px 16px}
-  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .day{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:134px}
-  .dhead{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-weight:700}
-  .big{font-size:20px;color:var(--ink);font-weight:900}
-  .pills{display:flex;gap:8px;margin-top:10px}
-  .pill{flex:1;text-align:center;padding:10px 0;border-radius:12px;font-weight:900;cursor:pointer;border:1px solid var(--ring);user-select:none}
-  .am{ }
-  .pm{ }
-  .state-prefer{background:var(--prefer)}
-  .state-available{background:var(--avail)}
-  .state-unset{background:var(--unset)}
-  .state-no{background:var(--no)}
-  .noteRow{margin-top:8px;display:flex;justify-content:center}
-  .noteBtn{border:1px solid var(--ring);background:var(--card);color:var(--muted);padding:6px 10px;border-radius:999px;font-weight:700;cursor:pointer}
-  .noteBtn.has{background:var(--note);color:var(--noteInk)}
-  .legend{display:flex;gap:10px;align-items:center;padding:4px 16px;color:var(--muted);font-size:12px}
-  .dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--ring);display:inline-block;margin-right:6px}
-  .lprefer{background:var(--prefer)} .lavail{background:var(--avail)} .lunset{background:var(--unset)} .lno{background:var(--no)}
-  .opts{margin:12px 16px;padding:12px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
-  .opts h3{margin:0 0 10px 0;font-size:14px}
-  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .btn{padding:8px 10px;border:1px solid var(--ring);border-radius:8px;background:#0f141b;color:var(--ink);cursor:pointer}
-  label.chk{display:flex;gap:8px;align-items:center;border:1px solid var(--ring);padding:6px 8px;border-radius:8px;background:#0f141b}
-  input[type="checkbox"]{transform:scale(1.2)}
-  @media (max-width:900px){ .week{grid-template-columns:repeat(2,1fr)} }
-  @media (min-width:901px) and (max-width:1200px){ .week{grid-template-columns:repeat(4,1fr)} }
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f7fa;
+  margin: 0;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+  color: #333;
+}
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.day-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.day-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #222;
+}
+.intent-row {
+  display: flex;
+  justify-content: space-around;
+  margin: 10px 0;
+}
+.intent {
+  flex: 1;
+  margin: 0 4px;
+  border-radius: 8px;
+  padding: 8px 0;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+}
+.intent[data-state="prefer"] { background: #d1e7ff; color: #004085; }
+.intent[data-state="available"] { background: #d4edda; color: #155724; }
+.intent[data-state="no"] { background: #f8d7da; color: #721c24; }
+.intent[data-state="unset"] { background: #f0f0f0; color: #333; }
+
+.intent.active { outline: 2px solid currentColor; }
+
+.btn-note {
+  margin-top: 6px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #444;
+  color: #fff;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: 0.2s;
+}
+.btn-note.has-note {
+  background: #fff;
+  color: #000;
+  border: 1px solid #000;
+}
+
+.note-input {
+  display: none;
+  font-size: 0.85rem;
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+.note-input.open { display: block; }
 </style>
 </head>
+
 <body>
-<header>
-  <h1>ShiftCommander <span style="color:#9bb0c7;font-weight:600;margin-left:6px;">Member</span></h1>
-  <nav>
-    <a class="active" href="/member.html">Member</a>
-    <a href="/supervisor.html">Supervisor</a>
-    <a href="/wallboard.html">Wallboard</a>
-  </nav>
-</header>
+<h1>Member Availability</h1>
 
-<div class="bar">
-  <label>Member #
-    <select id="who"></select>
-  </label>
-  <button class="btn" id="prev">◀ Prev</button>
-  <div id="when" style="color:#9bb0c7"></div>
-  <button class="btn" id="next">Next ▶</button>
-  <label style="margin-left:auto"><input id="monthView" type="checkbox"/> Month</label>
-</div>
-
-<div class="legend">
-  <span><span class="dot lprefer"></span>Prefer</span>
-  <span><span class="dot lavail"></span>Available</span>
-  <span><span class="dot lunset"></span>Unset</span>
-  <span><span class="dot lno"></span>Do Not</span>
-</div>
-
-<div class="grid">
-  <div id="weeks"></div>
-</div>
-
-<section class="opts">
-  <h3>Preferences &amp; bulk tools</h3>
-
-  <div class="row" style="margin-bottom:8px">
-    <label class="chk"><input id="prefer24s" type="checkbox"/> Prefer 24s</label>
-    <label class="chk"><input id="type3" type="checkbox"/> Type III driver approved</label>
-    <label class="chk"><input id="inactive" type="checkbox"/> Inactive (block new scheduling)</label>
-    <label class="chk"><input id="reserve" type="checkbox"/> Reserve</label>
-    <button class="btn" id="saveFlags">Save flags</button>
-    <span id="flagMsg" style="color:#9bb0c7"></span>
-  </div>
-
-  <div class="row" style="margin-top:10px">
-    <strong>Bulk set (date range)</strong>
-    <label>From <input id="bulkFrom" type="date"/></label>
-    <label>Until <input id="bulkUntil" type="date"/></label>
-    <label>Set to:
-      <select id="bulkState">
-        <option value="available">Available</option>
-        <option value="prefer">Prefer</option>
-        <option value="no">Do Not</option>
-        <option value="unset">Unset</option>
-      </select>
-    </label>
-    <label class="chk"><input id="bulkAM" type="checkbox" checked/> AM</label>
-    <label class="chk"><input id="bulkPM" type="checkbox" checked/> PM</label>
-    <button class="btn" id="applyBulk">Apply</button>
-  </div>
-
-  <div class="row" style="margin-top:10px">
-    <strong>Weekly pattern (repeat until date)</strong>
-    <label>Start <input id="patStart" type="date"/></label>
-    <label>Repeat until <input id="patUntil" type="date"/></label>
-    <label class="chk"><input class="dow" data-dow="1" type="checkbox"/> Mon</label>
-    <label class="chk"><input class="dow" data-dow="2" type="checkbox"/> Tue</label>
-    <label class="chk"><input class="dow" data-dow="3" type="checkbox"/> Wed</label>
-    <label class="chk"><input class="dow" data-dow="4" type="checkbox"/> Thu</label>
-    <label class="chk"><input class="dow" data-dow="5" type="checkbox"/> Fri</label>
-    <label class="chk"><input class="dow" data-dow="6" type="checkbox"/> Sat</label>
-    <label class="chk"><input class="dow" data-dow="0" type="checkbox"/> Sun</label>
-    <label class="chk"><input id="patAM" type="checkbox" checked/> AM</label>
-    <label class="chk"><input id="patPM" type="checkbox" checked/> PM</label>
-    <label>Set to:
-      <select id="patState">
-        <option value="available">Available</option>
-        <option value="prefer">Prefer</option>
-        <option value="no">Do Not</option>
-        <option value="unset">Unset</option>
-      </select>
-    </label>
-    <button class="btn" id="applyPattern">Apply pattern</button>
-  </div>
-</section>
+<div class="calendar" id="calendar"></div>
 
 <script>
-(() => {
-  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+const USER_ID = "uq2w4or"; // your test user
 
-  const who = document.getElementById('who');
-  const weeksEl = document.getElementById('weeks');
-  const monthView = document.getElementById('monthView');
-  const when = document.getElementById('when');
-  const prev = document.getElementById('prev');
-  const next = document.getElementById('next');
+// Utility functions
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function postJSON(url, obj, retries=3){
+  const body = JSON.stringify(obj);
+  const attempt = (n) => fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body
+  }).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
+  .catch(async err => { if(n>=retries) throw err; await sleep(200*n); return attempt(n+1); });
+  return attempt(1);
+}
 
-  // flags
-  const prefer24s = document.getElementById('prefer24s');
-  const type3 = document.getElementById('type3');
-  const inactive = document.getElementById('inactive');
-  const reserve = document.getElementById('reserve');
-  const saveFlags = document.getElementById('saveFlags');
-  const flagMsg = document.getElementById('flagMsg');
+async function writeAvailability({userId, date, half, state, note}) {
+  const payload = { userId, date, half, state };
+  if(note) payload.note = note;
+  const res = await postJSON(`${API}/api/availability`, payload);
+  return res?.ok === true;
+}
 
-  // bulk & pattern
-  const bulkFrom = document.getElementById('bulkFrom');
-  const bulkUntil = document.getElementById('bulkUntil');
-  const bulkAM = document.getElementById('bulkAM');
-  const bulkPM = document.getElementById('bulkPM');
-  const bulkState = document.getElementById('bulkState');
-  const applyBulk = document.getElementById('applyBulk');
+function setIntentButtonActive(btns, state){
+  btns.forEach(b => {
+    const v = b.dataset.state;
+    b.classList.toggle('active', v === state);
+  });
+}
+function updateNoteButtonVisual(noteBtn, noteText){
+  const has = !!(noteText && noteText.trim().length);
+  noteBtn.classList.toggle('has-note', has);
+  noteBtn.textContent = has ? 'Note ✓' : 'Note';
+}
 
-  const patStart = document.getElementById('patStart');
-  const patUntil = document.getElementById('patUntil');
-  const patAM = document.getElementById('patAM');
-  const patPM = document.getElementById('patPM');
-  const patState = document.getElementById('patState');
-  const applyPattern = document.getElementById('applyPattern');
+function bindDayCard(card){
+  const date = card.dataset.date;
+  const amBtns = card.querySelectorAll('[data-intent-group="AM"] .intent');
+  const pmBtns = card.querySelectorAll('[data-intent-group="PM"] .intent');
+  const noteBtn = card.querySelector('.btn-note');
+  const noteInput = card.querySelector('.note-input');
 
-  let anchor=new Date(); // start of week or month
-
-  const iso = d => d.toISOString().slice(0,10);
-  const monday = d => { const c=new Date(d); const wd=(c.getDay()+6)%7; c.setDate(c.getDate()-wd); c.setHours(0,0,0,0); return c; };
-  const addDays=(d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
-
-  const STATES=['prefer','available','unset','no']; // cycle order
-
-  const jget = async (u)=> (await fetch(u)).json();
-  const jpost = async (u,body)=> (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-
-  let users=[], state={shifts:{}, availability:{}, prefs:{}};
-  let currentUser=null;
-
-  async function loadUsers(){
-    users = await jget(`${API}/api/users`);
-    who.innerHTML = users.map(u=>`<option value="${u.id}">${u.member_no?u.member_no+' ':''}${u.name}</option>`).join('');
-    currentUser = users[0]?.id || null;
-    who.value = currentUser;
-  }
-
-  function pillClass(s){ return `pill state-${s}`; }
-
-  function pillLabel(s){ return (s==='no')?'DO NOT':(s==='unset'?'UNSET':(s==='available'?'AM':'AM')); } // label text stays AM/PM on pill
-
-  function renderWhen(start,days){
-    const end=addDays(start,days-1);
-    when.textContent = monthView.checked
-      ? start.toLocaleString(undefined,{month:'long',year:'numeric'})
-      : `${start.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${end.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
-  }
-
-  function drawGrid(){
-    const start = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth(),1) : monday(anchor);
-    const days  = monthView.checked ? 42 : 7;
-    renderWhen(start,days);
-    weeksEl.innerHTML='';
-    const rows=Math.ceil(days/7), cols=7;
-
-    for(let r=0;r<rows;r++){
-      const row=document.createElement('div'); row.className='week';
-      for(let c=0;c<cols;c++){
-        const i=r*7+c; const day=addDays(start,i); const key=iso(day);
-        const av=(state.availability[currentUser]?.[key]||{});
-        const amState=av.AM||'unset', pmState=av.PM||'unset';
-        const amHasNote=(state.notes?.[currentUser]?.[key]?.AM||'').trim().length>0;
-        const pmHasNote=(state.notes?.[currentUser]?.[key]?.PM||'').trim().length>0;
-
-        const card=document.createElement('div'); card.className='day';
-        card.innerHTML=`
-          <div class="dhead"><div>${day.toLocaleString(undefined,{weekday:'short'})}</div><div class="big">${day.toLocaleString(undefined,{month:'short'})} ${day.getDate()}</div></div>
-          <div class="pills">
-            <div class="pill am ${'state-'+amState}" data-half="AM" data-date="${key}">AM</div>
-            <div class="pill pm ${'state-'+pmState}" data-half="PM" data-date="${key}">PM</div>
-          </div>
-          <div class="noteRow">
-            <button class="noteBtn ${amHasNote?'has':''}" data-half="AM" data-date="${key}" style="margin-right:10px">Note</button>
-            <button class="noteBtn ${pmHasNote?'has':''}" data-half="PM" data-date="${key}">Note</button>
-          </div>
-        `;
-        row.appendChild(card);
-      }
-      weeksEl.appendChild(row);
-    }
-
-    // events
-    weeksEl.querySelectorAll('.pill').forEach(el=>{
-      el.addEventListener('click', async ()=>{
-        const half=el.dataset.half, date=el.dataset.date;
-        const curr = (state.availability[currentUser]?.[date]?.[half]) || 'unset';
-        const next = STATES[(STATES.indexOf(curr)+1)%STATES.length];
-        el.className = `pill ${half.toLowerCase()} state-${next}`;
-        state.availability[currentUser] = state.availability[currentUser] || {};
-        state.availability[currentUser][date] = state.availability[currentUser][date] || {};
-        state.availability[currentUser][date][half]=next;
-        // persist immediately
-        await jpost(`${API}/api/availability`, {userId: currentUser, date, half, state: next});
-      });
+  amBtns.forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const state = btn.dataset.state;
+      setIntentButtonActive(amBtns, state);
+      card.dataset.lastHalf='AM';
+      await writeAvailability({userId:USER_ID, date, half:'AM', state});
     });
-
-    weeksEl.querySelectorAll('.noteBtn').forEach(el=>{
-      el.addEventListener('click', async ()=>{
-        const half=el.dataset.half, date=el.dataset.date;
-        const existing = (state.notes?.[currentUser]?.[date]?.[half]) || '';
-        const input = prompt("Note to supervisor (ie; 'In at 10am')", existing);
-        if(input===null) return;
-        el.classList.toggle('has', !!input.trim());
-        // Save while preserving current state
-        const curr = (state.availability[currentUser]?.[date]?.[half]) || 'unset';
-        await jpost(`${API}/api/availability`, {userId: currentUser, date, half, state: curr, note: input.trim()});
-        // reflect locally
-        state.notes = state.notes || {};
-        state.notes[currentUser] = state.notes[currentUser] || {};
-        state.notes[currentUser][date] = state.notes[currentUser][date] || {};
-        state.notes[currentUser][date][half] = input.trim();
-      });
+  });
+  pmBtns.forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const state = btn.dataset.state;
+      setIntentButtonActive(pmBtns, state);
+      card.dataset.lastHalf='PM';
+      await writeAvailability({userId:USER_ID, date, half:'PM', state});
     });
-  }
-
-  async function loadState(){
-    // compute window
-    const start = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth(),1) : monday(anchor);
-    const days  = monthView.checked ? 42 : 7;
-    const end   = addDays(start,days-1);
-    state = await jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
-    // flags/prefs
-    const prefs = state.prefs[currentUser] || {prefer24s:false, notes:''};
-    prefer24s.checked = !!prefs.prefer24s;
-    // user flags from /api/users
-    const me = users.find(u=>u.id===currentUser) || {};
-    type3.checked = !!me.type3_driver;
-    inactive.checked = !!me.inactive;
-    reserve.checked = !!me.reserve;
-
-    drawGrid();
-  }
-
-  // Bulk tools
-  async function setHalf(date, half, newState){
-    await jpost(`${API}/api/availability`, {userId: currentUser, date, half, state: newState});
-  }
-
-  applyBulk.addEventListener('click', async ()=>{
-    if(!bulkFrom.value || !bulkUntil.value) return alert('Choose From and Until dates.');
-    const from = new Date(bulkFrom.value), to = new Date(bulkUntil.value);
-    for(let d=new Date(from); d<=to; d.setDate(d.getDate()+1)){
-      const key=iso(d);
-      if(bulkAM.checked) await setHalf(key,'AM',bulkState.value);
-      if(bulkPM.checked) await setHalf(key,'PM',bulkState.value);
-    }
-    await loadState();
   });
 
-  applyPattern.addEventListener('click', async ()=>{
-    if(!patStart.value || !patUntil.value) return alert('Choose Start and Repeat until.');
-    const start = new Date(patStart.value), end = new Date(patUntil.value);
-    const dows = [...document.querySelectorAll('.dow')].filter(x=>x.checked).map(x=>+x.dataset.dow);
-    if(dows.length===0) return alert('Select at least one weekday.');
-    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-      if(!dows.includes(d.getDay())) continue;
-      const key=iso(d);
-      if(patAM.checked) await setHalf(key,'AM',patState.value);
-      if(patPM.checked) await setHalf(key,'PM',patState.value);
-    }
-    await loadState();
+  noteBtn.addEventListener('click', ()=>{
+    noteInput.classList.toggle('open');
+    if(noteInput.classList.contains('open')) noteInput.focus();
   });
 
-  // Flags save (best-effort; ignore if API isn’t present)
-  saveFlags.addEventListener('click', async ()=>{
-    flagMsg.textContent='Saving…';
-    try{
-      await jpost(`${API}/api/user-flags`, {
-        userId: currentUser,
-        inactive: !!inactive.checked,
-        reserve: !!reserve.checked,
-        type3_driver: !!type3.checked,
-        prefer24s: !!prefer24s.checked
-      });
-      flagMsg.textContent='Saved.';
-      setTimeout(()=>flagMsg.textContent='',1200);
-    }catch(_){
-      flagMsg.textContent='(Flags API not available; visual only)';
-      setTimeout(()=>flagMsg.textContent='',2500);
-    }
+  const commitNote = async ()=>{
+    const val = noteInput.value || '';
+    const lastHalf = card.dataset.lastHalf || 'AM';
+    await writeAvailability({userId:USER_ID, date, half:lastHalf, state:'unset', note:val});
+    updateNoteButtonVisual(noteBtn, val);
+  };
+  noteInput.addEventListener('blur', commitNote);
+  noteInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); commitNote(); }
   });
+}
 
-  // Pager
-  prev.addEventListener('click', ()=>{ anchor = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth()-1,1) : addDays(monday(anchor),-7); loadState(); });
-  next.addEventListener('click', ()=>{ anchor = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth()+1,1) : addDays(monday(anchor),+7); loadState(); });
-  monthView.addEventListener('change', loadState);
-  who.addEventListener('change', ()=>{ currentUser = who.value; loadState(); });
+async function loadWindow(start,end){
+  const url = `${API}/api/state?start=${start}&end=${end}`;
+  const data = await fetch(url).then(r=>r.json());
+  Object.entries(data.availability || {}).forEach(([uid,days])=>{
+    if(uid!==USER_ID) return;
+    Object.entries(days).forEach(([date,halves])=>{
+      const card = document.querySelector(`.day-card[data-date="${date}"]`);
+      if(!card) return;
+      if(halves.AM) setIntentButtonActive(card.querySelectorAll('[data-intent-group="AM"] .intent'), halves.AM);
+      if(halves.PM) setIntentButtonActive(card.querySelectorAll('[data-intent-group="PM"] .intent'), halves.PM);
+    });
+  });
+}
 
-  (async function init(){
-    await loadUsers();
-    await loadState();
-  })();
-})();
+// Simple mock calendar (next 7 days)
+function buildCalendar(){
+  const cal = document.getElementById('calendar');
+  const today = new Date();
+  for(let i=0;i<7;i++){
+    const d = new Date(today);
+    d.setDate(today.getDate()+i);
+    const dateStr = d.toISOString().split('T')[0];
+    const card = document.createElement('div');
+    card.className='day-card';
+    card.dataset.date=dateStr;
+    card.innerHTML=`
+      <h3>${d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</h3>
+      <div class="intent-row" data-intent-group="AM">
+        <div class="intent" data-state="prefer">Prefer</div>
+        <div class="intent" data-state="available">Avail</div>
+        <div class="intent" data-state="no">No</div>
+      </div>
+      <div class="intent-row" data-intent-group="PM">
+        <div class="intent" data-state="prefer">Prefer</div>
+        <div class="intent" data-state="available">Avail</div>
+        <div class="intent" data-state="no">No</div>
+      </div>
+      <button class="btn-note">Note</button>
+      <input type="text" class="note-input" placeholder="Enter note...">
+    `;
+    cal.appendChild(card);
+    bindDayCard(card);
+  }
+  const start=today.toISOString().split('T')[0];
+  const end=new Date(today.getTime()+6*86400000).toISOString().split('T')[0];
+  loadWindow(start,end);
+}
+
+window.addEventListener('DOMContentLoaded', buildCalendar);
 </script>
 </body>
 </html>
