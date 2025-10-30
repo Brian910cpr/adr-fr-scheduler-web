@@ -1,225 +1,187 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>ADR-FR Scheduler | Member Availability</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f7fa;
-  margin: 0;
-  padding: 20px;
-}
-h1 {
-  text-align: center;
-  color: #333;
-}
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
-  margin-top: 20px;
-}
-.day-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-.day-card h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #222;
-}
-.intent-row {
-  display: flex;
-  justify-content: space-around;
-  margin: 10px 0;
-}
-.intent {
-  flex: 1;
-  margin: 0 4px;
-  border-radius: 8px;
-  padding: 8px 0;
-  border: 1px solid #ccc;
-  cursor: pointer;
-  text-align: center;
-  font-weight: 600;
-  transition: background 0.2s, color 0.2s;
-}
-.intent[data-state="prefer"] { background: #d1e7ff; color: #004085; }
-.intent[data-state="available"] { background: #d4edda; color: #155724; }
-.intent[data-state="no"] { background: #f8d7da; color: #721c24; }
-.intent[data-state="unset"] { background: #f0f0f0; color: #333; }
-
-.intent.active { outline: 2px solid currentColor; }
-
-.btn-note {
-  margin-top: 6px;
-  border-radius: 8px;
-  border: 1px solid #444;
-  background: #444;
-  color: #fff;
-  padding: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: 0.2s;
-}
-.btn-note.has-note {
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
-}
-
-.note-input {
-  display: none;
-  font-size: 0.85rem;
-  width: 100%;
-  margin-top: 6px;
-  padding: 5px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-.note-input.open { display: block; }
-</style>
-</head>
-
-<body>
-<h1>Member Availability</h1>
-
-<div class="calendar" id="calendar"></div>
-
+<!-- member.html — paste this just before </body> -->
 <script>
-const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-const USER_ID = "uq2w4or"; // your test user
+/**
+ * Shared API client
+ */
+window.SCHED = (function(){
+  const API = "https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+  const CURRENT_USER_ID = window.CURRENT_USER_ID || "uq2w4or"; // replace with real auth
 
-// Utility functions
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-function postJSON(url, obj, retries=3){
-  const body = JSON.stringify(obj);
-  const attempt = (n) => fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body
-  }).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
-  .catch(async err => { if(n>=retries) throw err; await sleep(200*n); return attempt(n+1); });
-  return attempt(1);
-}
-
-async function writeAvailability({userId, date, half, state, note}) {
-  const payload = { userId, date, half, state };
-  if(note) payload.note = note;
-  const res = await postJSON(`${API}/api/availability`, payload);
-  return res?.ok === true;
-}
-
-function setIntentButtonActive(btns, state){
-  btns.forEach(b => {
-    const v = b.dataset.state;
-    b.classList.toggle('active', v === state);
-  });
-}
-function updateNoteButtonVisual(noteBtn, noteText){
-  const has = !!(noteText && noteText.trim().length);
-  noteBtn.classList.toggle('has-note', has);
-  noteBtn.textContent = has ? 'Note ✓' : 'Note';
-}
-
-function bindDayCard(card){
-  const date = card.dataset.date;
-  const amBtns = card.querySelectorAll('[data-intent-group="AM"] .intent');
-  const pmBtns = card.querySelectorAll('[data-intent-group="PM"] .intent');
-  const noteBtn = card.querySelector('.btn-note');
-  const noteInput = card.querySelector('.note-input');
-
-  amBtns.forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const state = btn.dataset.state;
-      setIntentButtonActive(amBtns, state);
-      card.dataset.lastHalf='AM';
-      await writeAvailability({userId:USER_ID, date, half:'AM', state});
-    });
-  });
-  pmBtns.forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const state = btn.dataset.state;
-      setIntentButtonActive(pmBtns, state);
-      card.dataset.lastHalf='PM';
-      await writeAvailability({userId:USER_ID, date, half:'PM', state});
-    });
-  });
-
-  noteBtn.addEventListener('click', ()=>{
-    noteInput.classList.toggle('open');
-    if(noteInput.classList.contains('open')) noteInput.focus();
-  });
-
-  const commitNote = async ()=>{
-    const val = noteInput.value || '';
-    const lastHalf = card.dataset.lastHalf || 'AM';
-    await writeAvailability({userId:USER_ID, date, half:lastHalf, state:'unset', note:val});
-    updateNoteButtonVisual(noteBtn, val);
-  };
-  noteInput.addEventListener('blur', commitNote);
-  noteInput.addEventListener('keydown', e=>{
-    if(e.key==='Enter'){ e.preventDefault(); commitNote(); }
-  });
-}
-
-async function loadWindow(start,end){
-  const url = `${API}/api/state?start=${start}&end=${end}`;
-  const data = await fetch(url).then(r=>r.json());
-  Object.entries(data.availability || {}).forEach(([uid,days])=>{
-    if(uid!==USER_ID) return;
-    Object.entries(days).forEach(([date,halves])=>{
-      const card = document.querySelector(`.day-card[data-date="${date}"]`);
-      if(!card) return;
-      if(halves.AM) setIntentButtonActive(card.querySelectorAll('[data-intent-group="AM"] .intent'), halves.AM);
-      if(halves.PM) setIntentButtonActive(card.querySelectorAll('[data-intent-group="PM"] .intent'), halves.PM);
-    });
-  });
-}
-
-// Simple mock calendar (next 7 days)
-function buildCalendar(){
-  const cal = document.getElementById('calendar');
-  const today = new Date();
-  for(let i=0;i<7;i++){
-    const d = new Date(today);
-    d.setDate(today.getDate()+i);
-    const dateStr = d.toISOString().split('T')[0];
-    const card = document.createElement('div');
-    card.className='day-card';
-    card.dataset.date=dateStr;
-    card.innerHTML=`
-      <h3>${d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</h3>
-      <div class="intent-row" data-intent-group="AM">
-        <div class="intent" data-state="prefer">Prefer</div>
-        <div class="intent" data-state="available">Avail</div>
-        <div class="intent" data-state="no">No</div>
-      </div>
-      <div class="intent-row" data-intent-group="PM">
-        <div class="intent" data-state="prefer">Prefer</div>
-        <div class="intent" data-state="available">Avail</div>
-        <div class="intent" data-state="no">No</div>
-      </div>
-      <button class="btn-note">Note</button>
-      <input type="text" class="note-input" placeholder="Enter note...">
-    `;
-    cal.appendChild(card);
-    bindDayCard(card);
+  async function _post(url, body, tries=3){
+    try{
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      });
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    }catch(e){
+      if(tries>1) return _post(url, body, tries-1);
+      throw e;
+    }
   }
-  const start=today.toISOString().split('T')[0];
-  const end=new Date(today.getTime()+6*86400000).toISOString().split('T')[0];
-  loadWindow(start,end);
-}
 
-window.addEventListener('DOMContentLoaded', buildCalendar);
+  async function health(){
+    const r = await fetch(`${API}/api/health`);
+    return r.json();
+  }
+  async function writeAvailability({userId=CURRENT_USER_ID, date, half, state, note}){
+    const payload = { userId, date, half, state };
+    if(typeof note==="string") payload.note = note; // optional
+    return _post(`${API}/api/availability`, payload);
+  }
+  async function fetchState({start, end}){
+    const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
+    if(!r.ok) throw new Error("state fetch failed");
+    return r.json();
+  }
+
+  return { API, CURRENT_USER_ID, health, writeAvailability, fetchState };
+})();
 </script>
-</body>
-</html>
+<script>
+// ================= MEMBER PAGE WIRING (no visual changes) =================
+//
+// Expected DOM per day:
+// <div class="day" data-date="YYYY-MM-DD">
+//   <div class="am">
+//     <button class="intent" data-state="prefer">Prefer</button>
+//     <button class="intent" data-state="available">Available</button>
+//     <button class="intent" data-state="no">No</button>
+//     <button class="note-toggle">Note</button>
+//     <textarea class="note-input" placeholder="ie: 'In at 10am'"></textarea>
+//   </div>
+//   <div class="pm"> ...same structure... </div>
+// </div>
+
+(function(){
+  const style = document.createElement("style");
+  style.textContent = `
+    .note-toggle.has-note { background:#fff !important; color:#000 !important; }
+    .note-input { display:none; width:100%; min-height:48px; margin-top:6px; }
+    .note-input.open { display:block; }
+    .intent.active { outline:2px solid currentColor; }
+  `;
+  document.head.appendChild(style);
+
+  const Q = {
+    day:        ".day[data-date]",
+    amBox:      ".am",
+    pmBox:      ".pm",
+    intentBtns: ".intent",
+    noteBtn:    ".note-toggle",
+    noteInput:  ".note-input",
+  };
+
+  function getHalfBox(dayEl, half){ return dayEl.querySelector(half==="AM" ? Q.amBox : Q.pmBox); }
+
+  function paintIntent(halfBox, state){
+    halfBox.querySelectorAll(Q.intentBtns).forEach(btn=>{
+      btn.classList.toggle("active", btn.dataset.state === state);
+    });
+  }
+
+  function invertNoteButton(noteBtn, hasNote){
+    if(!noteBtn) return;
+    noteBtn.classList.toggle("has-note", !!hasNote);
+  }
+
+  async function onIntentClick(e){
+    const btn = e.target.closest(Q.intentBtns);
+    if(!btn) return;
+    const halfBox = e.currentTarget;
+    const dayEl = halfBox.closest(Q.day);
+    const date = dayEl?.dataset.date;
+    const half = halfBox.classList.contains("am") ? "AM" : "PM";
+    const state = btn.dataset.state; // prefer | available | no
+
+    try{
+      await SCHED.writeAvailability({ date, half, state });
+      paintIntent(halfBox, state);
+    }catch(err){
+      console.error("writeAvailability failed", err);
+      alert("Could not save. Please try again.");
+    }
+  }
+
+  function onNoteToggle(e){
+    const noteBtn = e.target.closest(Q.noteBtn);
+    if(!noteBtn) return;
+    const halfBox = noteBtn.closest(".am, .pm");
+    const input = halfBox.querySelector(Q.noteInput);
+    if(!input) return;
+    input.classList.toggle("open");
+    if(input.classList.contains("open")) input.focus();
+  }
+
+  async function onNoteCommit(e){
+    const input = e.target.closest(Q.noteInput);
+    if(!input) return;
+    const isBlur = e.type==="blur";
+    const isSubmit = (e.type==="keydown" && (e.ctrlKey||e.metaKey) && e.key==="Enter");
+    if(!isBlur && !isSubmit) return;
+
+    const halfBox = input.closest(".am, .pm");
+    const dayEl = input.closest(Q.day);
+    const date = dayEl?.dataset.date;
+    const half = halfBox.classList.contains("am") ? "AM" : "PM";
+    const text = (input.value||"").trim();
+
+    try{
+      // state:'unset' so we don't change user's current intent colors accidentally
+      await SCHED.writeAvailability({ date, half, state:"unset", note:text });
+      invertNoteButton(halfBox.querySelector(Q.noteBtn), text.length>0);
+      input.classList.remove("open");
+    }catch(err){
+      console.error("note save failed", err);
+      alert("Could not save note. Please try again.");
+    }
+  }
+
+  async function initialPaint(){
+    const dates = Array.from(document.querySelectorAll(Q.day)).map(d=>d.dataset.date).sort();
+    if(!dates.length) return;
+    const start = dates[0], end = dates[dates.length-1];
+
+    let data;
+    try{ data = await SCHED.fetchState({ start, end }); }
+    catch(e){ console.warn("state fetch failed", e); return; }
+
+    const my = (data.availability && data.availability[SCHED.CURRENT_USER_ID]) || {};
+
+    document.querySelectorAll(Q.day).forEach(dayEl=>{
+      const d = dayEl.dataset.date;
+      const rec = my[d] || {};
+      const amBox = getHalfBox(dayEl, "AM");
+      const pmBox = getHalfBox(dayEl, "PM");
+
+      if(amBox && rec.AM) paintIntent(amBox, rec.AM);
+      if(pmBox && rec.PM) paintIntent(pmBox, rec.PM);
+
+      // When API exposes notes per half, invert note buttons here accordingly.
+      // Example:
+      // if(amBox && typeof rec.AM_note==="string") invertNoteButton(amBox.querySelector(Q.noteBtn), rec.AM_note.length>0);
+      // if(pmBox && typeof rec.PM_note==="string") invertNoteButton(pmBox.querySelector(Q.noteBtn), rec.PM_note.length>0);
+    });
+  }
+
+  function bind(){
+    document.querySelectorAll(`${Q.day} ${Q.amBox}, ${Q.day} ${Q.pmBox}`).forEach(halfBox=>{
+      halfBox.addEventListener("click", onIntentClick);
+      halfBox.addEventListener("click", onNoteToggle);
+      const input = halfBox.querySelector(Q.noteInput);
+      if(input){
+        input.addEventListener("blur", onNoteCommit);
+        input.addEventListener("keydown", onNoteCommit);
+      }
+    });
+  }
+
+  (async function(){
+    try{ await SCHED.health(); }catch(e){}
+    bind();
+    initialPaint();
+  })();
+})();
+</script>

@@ -1,154 +1,82 @@
-<!-- supervisor.html -->
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ShiftCommander • Supervisor</title>
-<style>
-  :root{--bg:#0c0f14;--panel:#141a22;--ring:#2b394b;--ink:#e8eef7;--muted:#8ea0b5;--card:#10161d;--ok:#18a957}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ring);background:linear-gradient(180deg,var(--panel),var(--card))}
-  h1{margin:0;font-size:18px;font-weight:700}
-  .tabs{margin-left:auto;display:flex;gap:6px}
-  .tab{padding:6px 10px;border:1px solid var(--ring);border-radius:999px;background:transparent;color:#c5cfdb;text-decoration:none}
-  .tab.active{background:var(--ring);color:var(--ink)}
-  .controls{display:flex;gap:10px;align-items:center;padding:10px 16px}
-  .btn{padding:6px 10px;border:1px solid var(--ring);border-radius:8px;background:#0f141b;color:var(--ink);cursor:pointer}
-  .toggle{display:flex;gap:8px;align-items:center;margin-left:auto}
-  .cal{padding:12px 16px}
-  .grid{display:grid;gap:10px}
-  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .day{background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:140px}
-  .dhead{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
-  .big{font-size:24px;color:var(--ink);font-weight:900}
-  .row{display:flex;gap:8px;margin-top:10px}
-  .slot{flex:1;background:var(--card);border:1px dashed var(--ring);border-radius:10px;padding:8px}
-  .slot h4{margin:0 0 6px 0;font-size:12px;color:var(--muted);letter-spacing:.5px}
-  .name{display:block;font-weight:800}
-  .nudge{margin-top:6px;padding:8px;border-radius:10px;background:#2a3950;border:1px solid var(--ring);color:#fff;font-weight:900;text-align:center}
-  .notes{margin:14px 16px;background:var(--panel);border:1px solid var(--ring);border-radius:12px}
-  .notes h3{margin:10px 12px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px 12px;border-top:1px solid var(--ring);text-align:left}
-  .muted{color:var(--muted)}
-</style>
-</head>
-<body>
-<header>
-  <h1>ShiftCommander <span style="color:#8ea0b5;font-weight:600;margin-left:6px;">Supervisor</span></h1>
-  <nav class="tabs">
-    <a class="tab" href="/member.html">Member</a>
-    <a class="tab active" href="/supervisor.html">Supervisor</a>
-    <a class="tab" href="/wallboard.html">Wallboard</a>
-  </nav>
-</header>
-
-<div class="controls">
-  <button class="btn" id="prev">◀ Prev</button>
-  <div id="when" class="muted"></div>
-  <button class="btn" id="next">Next ▶</button>
-  <label class="toggle"><input type="checkbox" id="monthView"> Month</label>
-</div>
-
-<div class="cal"><div id="weeks" class="grid"></div></div>
-
-<section class="notes" id="notesBox" hidden>
-  <h3>Notes (member → supervisor) <span id="range" class="muted"></span></h3>
-  <table>
-    <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
-    <tbody id="notesBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
-  </table>
-</section>
-
+<!-- supervisor.html — paste this just before </body> -->
 <script>
-(() => {
-  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const weeksEl=document.getElementById('weeks');
-  const when=document.getElementById('when');
-  const monthView=document.getElementById('monthView');
-  const prev=document.getElementById('prev');
-  const next=document.getElementById('next');
-  const notesBox=document.getElementById('notesBox');
-  const notesBody=document.getElementById('notesBody');
-  const rangeEl=document.getElementById('range');
+/* Reuse SCHED client if present */
+if(!window.SCHED){
+  window.SCHED=(function(){
+    const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
+    async function fetchState({start,end}){ const r=await fetch(`${API}/api/state?start=${start}&end=${end}`); if(!r.ok)throw new Error("state fetch failed"); return r.json(); }
+    async function health(){ const r=await fetch(`${API}/api/health`); return r.json(); }
+    return {fetchState, health};
+  })();
+}
+</script>
+<script>
+// ================= SUPERVISOR (calendar) WIRING ======================
+// No layout changes; fill seats and enlarge date text a bit.
 
-  let anchor=new Date();
-  const iso=d=>d.toISOString().slice(0,10);
-  const addDays=(d,n)=>{const c=new Date(d); c.setDate(c.getDate()+n); return c;};
-  const monday=d=>{const c=new Date(d);const wd=(c.getDay()+6)%7;c.setDate(c.getDate()-wd);c.setHours(0,0,0,0);return c;};
+(function(){
+  const MAX_SEATS = 4;
 
-  async function jget(u){ const r=await fetch(u); const t=await r.text(); if(!r.ok) throw new Error(t); return JSON.parse(t); }
+  const style = document.createElement("style");
+  style.textContent = `
+    .day .date-num, .day .dow { font-size: clamp(18px, 2.2vw, 28px); font-weight:700; }
+    .seat-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .note-dot { display:inline-block; width:8px; height:8px; border-radius:50%; vertical-align:middle; margin-left:6px; }
+  `;
+  document.head.appendChild(style);
 
-  async function render(){
-    const start = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth(),1) : monday(anchor);
-    const days  = monthView.checked ? 42 : 7;
-    const end   = addDays(start,days-1);
+  function idToName(id){ return (window.USER_LABELS && window.USER_LABELS[id]) || id; }
 
-    when.textContent = monthView.checked
-      ? start.toLocaleString(undefined,{month:'long',year:'numeric'})
-      : `${start.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${end.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
-
-    const [state, users] = await Promise.all([
-      jget(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`),
-      jget(`${API}/api/users`)
-    ]);
-    const id2name=id => (users.find(u=>u.id===id)||{}).name||id;
-
-    // notes
-    try{
-      rangeEl.textContent = `(${iso(start)} → ${iso(end)})`;
-      const notes = await jget(`${API}/api/notes?start=${iso(start)}&end=${iso(end)}`);
-      const rows=[];
-      for (const uid of Object.keys(notes.notes||{})){
-        const byDate=notes.notes[uid]; const name=id2name(uid);
-        for(const d of Object.keys(byDate)){
-          for(const half of Object.keys(byDate[d])){
-            const txt=(byDate[d][half]||'').trim(); if(!txt) continue;
-            rows.push(`<tr><td>${d}</td><td>${half}</td><td>${name}</td><td>${txt}</td></tr>`);
-          }
-        }
-      }
-      notesBody.innerHTML = rows.length? rows.join('') : `<tr><td colspan="4" class="muted">No notes.</td></tr>`;
-      notesBox.hidden=false;
-    }catch(_){ notesBox.hidden=false; notesBody.innerHTML=`<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`; }
-
-    // grid
-    weeksEl.innerHTML='';
-    const rows=Math.ceil(days/7), cols=7;
-    for(let r=0;r<rows;r++){
-      const row=document.createElement('div'); row.className='week';
-      for(let c=0;c<cols;c++){
-        const i=r*7+c; const d=addDays(start,i); const key=iso(d); const sh=state.shifts[key]||{};
-        const card=document.createElement('div'); card.className='day';
-        card.innerHTML=`
-          <div class="dhead"><div>${d.toLocaleString(undefined,{weekday:'short'})}</div>
-          <div class="big">${d.toLocaleString(undefined,{month:'short'})} ${d.getDate()}</div></div>
-          <div class="row">
-            <div class="slot"><h4>AM</h4><div id="am-${key}"></div></div>
-            <div class="slot"><h4>PM</h4><div id="pm-${key}"></div></div>
-          </div>`;
-        row.appendChild(card);
-
-        const paint=(half)=> {
-          const arr=(sh[half]?.assignees||[]).map(id2name);
-          const target=card.querySelector(`#${half.toLowerCase()}-${key}`);
-          if(arr.length===0){ target.innerHTML=`<div class="nudge">NUDGE: Need ALS &amp; EMT</div>`; return; }
-          const names=arr.slice(0,4).map(n=>`<span class="name">${n}</span>`).join('');
-          target.innerHTML = names + (arr.length>4? `<span class="name">+${arr.length-4} more</span>`:'');
-        };
-        paint('AM'); paint('PM');
-      }
-      weeksEl.appendChild(row);
-    }
+  function renderSeats(halfBox, ids){
+    const list = halfBox.querySelector(".seats") || document.createElement("div");
+    list.className = "seats";
+    list.innerHTML = "";
+    (ids||[]).slice(0,MAX_SEATS).forEach(id=>{
+      const line = document.createElement("div");
+      line.className = "seat-line";
+      line.textContent = idToName(id);
+      list.appendChild(line);
+    });
+    if(!halfBox.querySelector(".seats")) halfBox.appendChild(list);
   }
 
-  prev.addEventListener('click', ()=>{ anchor = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth()-1,1) : addDays(monday(anchor),-7); render(); });
-  next.addEventListener('click', ()=>{ anchor = monthView.checked ? new Date(anchor.getFullYear(),anchor.getMonth()+1,1) : addDays(monday(anchor),+7); render(); });
-  monthView.addEventListener('change', render);
+  function paintNoteDot(halfBox, has){
+    let dot = halfBox.querySelector(".note-dot");
+    if(!dot){ dot = document.createElement("span"); dot.className="note-dot"; halfBox.appendChild(dot); }
+    dot.style.background = has ? "#000" : "transparent";
+    dot.title = has ? "Note present" : "";
+  }
 
-  render().catch(err=>{ weeksEl.innerHTML=`<div class="muted">API error: ${err}</div>`; });
+  async function loadAndPaint(){
+    const days = Array.from(document.querySelectorAll(".day[data-date]"));
+    if(!days.length) return;
+    const dates = days.map(d=>d.dataset.date).sort();
+    const start = dates[0], end = dates[dates.length-1];
+
+    let data;
+    try{ data = await SCHED.fetchState({ start, end }); }
+    catch(e){ console.error("state fetch failed", e); return; }
+
+    days.forEach(day=>{
+      const d = day.dataset.date;
+      const amBox = day.querySelector(".am");
+      const pmBox = day.querySelector(".pm");
+      const shift = (data.shifts && data.shifts[d]) || { AM:{assignees:[]}, PM:{assignees:[]} };
+
+      if(amBox){
+        renderSeats(amBox, shift.AM.assignees||[]);
+        // paintNoteDot(amBox, !!(data.notes?.[d]?.AM)); // enable when API exposes notes
+      }
+      if(pmBox){
+        renderSeats(pmBox, shift.PM.assignees||[]);
+        // paintNoteDot(pmBox, !!(data.notes?.[d]?.PM));
+      }
+    });
+  }
+
+  (async function(){
+    try{ await SCHED.health(); }catch(e){}
+    loadAndPaint();
+  })();
 })();
 </script>
-</body>
-</html>
