@@ -1,82 +1,153 @@
-<!-- supervisor.html — paste this just before </body> -->
+<!-- supervisor.html | ShiftCommander · Supervisor -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShiftCommander · Supervisor</title>
+<style>
+  :root{
+    --bg:#0f141b; --panel:#121a23; --muted:#7a8aa1; --text:#e7edf5; --bd:#243041;
+    --card:#151f2a; --accent:#7aa2ff; --nudge:#ffbe3d;
+  }
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+  header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  h1{font-size:18px;margin:0}
+  .tabs a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:14px;border:1px solid var(--bd);background:var(--panel)}
+  .tabs a.active{color:var(--text);border-color:#2b3a51}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .title{min-width:180px;text-align:center;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:12px;min-height:150px}
+  .date{font-weight:800;margin-bottom:8px}
+  .slot{margin-top:8px;padding:8px;border:1px dashed var(--bd);border-radius:8px;background:var(--card)}
+  .slot b{display:inline-block;width:32px}
+  .names{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .name{background:#1b2431;border:1px solid var(--bd);border-radius:999px;padding:4px 8px}
+  .nudge{margin-top:8px;color:#000;background:var(--nudge);display:inline-block;padding:4px 8px;border-radius:6px;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th,td{border-bottom:1px solid var(--bd);padding:8px;text-align:left;color:var(--text)}
+  th{color:#9db0c9}
+  .muted{color:#9db0c9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ShiftCommander <span class="muted">Supervisor</span></h1>
+    <nav class="tabs">
+      <a href="./member.html">Member</a>
+      <a class="active" href="./supervisor.html">Supervisor</a>
+      <a href="./wallboard.html">Wallboard</a>
+    </nav>
+  </header>
+
+  <div class="row">
+    <button id="prev" class="btn">◀</button>
+    <div id="title" class="title"></div>
+    <button id="next" class="btn">▶</button>
+    <label class="row" style="margin-left:auto">
+      <input type="checkbox" id="monthToggle"> Month at a glance
+    </label>
+  </div>
+
+  <div id="grid" class="grid" aria-live="polite"></div>
+
+  <h3 style="margin-top:24px">Notes (member → supervisor)</h3>
+  <div class="muted" id="notesRange"></div>
+  <table id="notesTbl">
+    <thead><tr><th>Date</th><th>Half</th><th>Member</th><th>Note</th></tr></thead>
+    <tbody><tr><td colspan="4" class="muted">Notes API not available.</td></tr></tbody>
+  </table>
+</div>
+
 <script>
-/* Reuse SCHED client if present */
-if(!window.SCHED){
-  window.SCHED=(function(){
-    const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    async function fetchState({start,end}){ const r=await fetch(`${API}/api/state?start=${start}&end=${end}`); if(!r.ok)throw new Error("state fetch failed"); return r.json(); }
-    async function health(){ const r=await fetch(`${API}/api/health`); return r.json(); }
-    return {fetchState, health};
-  })();
+const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+let anchor = new Date(); anchor.setHours(0,0,0,0);
+
+const title = document.getElementById('title');
+const grid = document.getElementById('grid');
+document.getElementById('prev').onclick = ()=>{ shift(-7) }
+document.getElementById('next').onclick = ()=>{ shift(+7) }
+document.getElementById('monthToggle').onchange = load;
+
+function fmt(d,opts){ return d.toLocaleDateString(undefined,opts||{weekday:'short',month:'short',day:'numeric'}) }
+function ymd(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+
+function shift(n){ anchor = addDays(anchor, n); load() }
+
+async function getState(start,end){
+  const r = await fetch(`${API}/api/state?start=${start}&end=${end}`);
+  if(!r.ok) throw new Error('state '+r.status);
+  return r.json();
 }
+
+async function load(){
+  const monthMode = document.getElementById('monthToggle').checked;
+  let start,end;
+  if(monthMode){
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const last = new Date(anchor.getFullYear(), anchor.getMonth()+1, 0);
+    start = ymd(first); end = ymd(last);
+    title.textContent = first.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  }else{
+    // week mode (Mon→Sun)
+    const dow = (anchor.getDay()+6)%7;
+    const monday = addDays(anchor, -dow);
+    start = ymd(monday); end = ymd(addDays(monday,6));
+    title.textContent = `${fmt(monday,{month:'short',day:'numeric'})} – ${fmt(addDays(monday,6),{month:'short',day:'numeric'})}`;
+  }
+
+  const data = await getState(start,end);
+  const days=[];
+  let d=new Date(start+'T00:00:00');
+  const endDate=new Date(end+'T00:00:00');
+  while(d<=endDate){ days.push(new Date(d)); d=addDays(d,1) }
+
+  grid.innerHTML='';
+  days.forEach(dt=>{
+    const day = ymd(dt);
+    const card = document.createElement('div');
+    card.className='card';
+    card.innerHTML = `
+      <div class="date">${fmt(dt)}</div>
+      <div class="slot"><b>AM</b> <span class="names" id="am-${day}"></span></div>
+      <div class="slot"><b>PM</b> <span class="names" id="pm-${day}"></span></div>
+    `;
+    grid.appendChild(card);
+
+    const AM = data.shifts?.[day]?.AM || {assignees:[],status:'unassigned'};
+    const PM = data.shifts?.[day]?.PM || {assignees:[],status:'unassigned'};
+
+    const amEl = document.getElementById(`am-${day}`);
+    const pmEl = document.getElementById(`pm-${day}`);
+
+    for(const u of (AM.assignees||[])){ amEl.append(chip(u)) }
+    for(const u of (PM.assignees||[])){ pmEl.append(chip(u)) }
+
+    // nudge banners (simple logic: if no assignees → Needs ALS & EMT)
+    if((AM.assignees||[]).length===0){
+      const n = document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; amEl.parentElement.appendChild(n);
+    }
+    if((PM.assignees||[]).length===0){
+      const n = document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; pmEl.parentElement.appendChild(n);
+    }
+  });
+
+  // Notes table (if/when you expose /api/notes, swap in real source)
+  document.getElementById('notesRange').textContent = `${start} → ${end}`;
+  const tbody = document.querySelector('#notesTbl tbody');
+  tbody.innerHTML = `<tr><td colspan="4" class="muted">Notes API not available.</td></tr>`;
+}
+
+function chip(name){
+  const s=document.createElement('span'); s.className='name'; s.textContent=name; return s;
+}
+
+load();
 </script>
-<script>
-// ================= SUPERVISOR (calendar) WIRING ======================
-// No layout changes; fill seats and enlarge date text a bit.
-
-(function(){
-  const MAX_SEATS = 4;
-
-  const style = document.createElement("style");
-  style.textContent = `
-    .day .date-num, .day .dow { font-size: clamp(18px, 2.2vw, 28px); font-weight:700; }
-    .seat-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .note-dot { display:inline-block; width:8px; height:8px; border-radius:50%; vertical-align:middle; margin-left:6px; }
-  `;
-  document.head.appendChild(style);
-
-  function idToName(id){ return (window.USER_LABELS && window.USER_LABELS[id]) || id; }
-
-  function renderSeats(halfBox, ids){
-    const list = halfBox.querySelector(".seats") || document.createElement("div");
-    list.className = "seats";
-    list.innerHTML = "";
-    (ids||[]).slice(0,MAX_SEATS).forEach(id=>{
-      const line = document.createElement("div");
-      line.className = "seat-line";
-      line.textContent = idToName(id);
-      list.appendChild(line);
-    });
-    if(!halfBox.querySelector(".seats")) halfBox.appendChild(list);
-  }
-
-  function paintNoteDot(halfBox, has){
-    let dot = halfBox.querySelector(".note-dot");
-    if(!dot){ dot = document.createElement("span"); dot.className="note-dot"; halfBox.appendChild(dot); }
-    dot.style.background = has ? "#000" : "transparent";
-    dot.title = has ? "Note present" : "";
-  }
-
-  async function loadAndPaint(){
-    const days = Array.from(document.querySelectorAll(".day[data-date]"));
-    if(!days.length) return;
-    const dates = days.map(d=>d.dataset.date).sort();
-    const start = dates[0], end = dates[dates.length-1];
-
-    let data;
-    try{ data = await SCHED.fetchState({ start, end }); }
-    catch(e){ console.error("state fetch failed", e); return; }
-
-    days.forEach(day=>{
-      const d = day.dataset.date;
-      const amBox = day.querySelector(".am");
-      const pmBox = day.querySelector(".pm");
-      const shift = (data.shifts && data.shifts[d]) || { AM:{assignees:[]}, PM:{assignees:[]} };
-
-      if(amBox){
-        renderSeats(amBox, shift.AM.assignees||[]);
-        // paintNoteDot(amBox, !!(data.notes?.[d]?.AM)); // enable when API exposes notes
-      }
-      if(pmBox){
-        renderSeats(pmBox, shift.PM.assignees||[]);
-        // paintNoteDot(pmBox, !!(data.notes?.[d]?.PM));
-      }
-    });
-  }
-
-  (async function(){
-    try{ await SCHED.health(); }catch(e){}
-    loadAndPaint();
-  })();
-})();
-</script>
+</body>
+</html>

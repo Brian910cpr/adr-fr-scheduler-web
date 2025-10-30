@@ -1,69 +1,94 @@
-<!-- wallboard.html — paste this just before </body> -->
+<!-- wallboard.html | ShiftCommander · Wallboard -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShiftCommander · Wallboard</title>
+<style>
+  :root{
+    --bg:#0b1117; --panel:#121a23; --bd:#233142; --text:#e7edf5; --muted:#8ea1b8;
+    --nudge:#ffbe3d; --slot:#172233; --pill:#1b2431;
+  }
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1400px;margin:24px auto;padding:0 16px}
+  .row{display:flex;gap:12px;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:12px}
+  .col{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px;min-height:220px}
+  .dow{color:var(--muted)}
+  .date{font-size:20px;font-weight:800;margin:4px 0 8px}
+  .slot{background:var(--slot);border:1px dashed var(--bd);border-radius:10px;padding:10px;margin-top:10px}
+  .slot h4{margin:0 0 8px}
+  .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px} /* up to 4 seats/day (2 per row) */
+  .name{background:var(--pill);border:1px solid var(--bd);border-radius:999px;padding:6px 10px;text-align:center}
+  .nudge{margin-top:8px;background:var(--nudge);color:#000;display:inline-block;padding:4px 8px;border-radius:6px;font-weight:700}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .btn{background:#2c394f;border:1px solid var(--bd);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .title{min-width:200px;text-align:center;font-weight:800;font-size:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <button id="prev" class="btn">◀</button>
+    <div id="title" class="title"></div>
+    <button id="next" class="btn">▶</button>
+  </div>
+
+  <div id="grid" class="grid" aria-live="polite"></div>
+</div>
+
 <script>
-/* Reuse SCHED client if present */
-if(!window.SCHED){
-  window.SCHED=(function(){
-    const API="https://adr-fr-scheduler-api.brian-9ac.workers.dev";
-    async function fetchState({start,end}){ const r=await fetch(`${API}/api/state?start=${start}&end=${end}`); if(!r.ok)throw new Error("state fetch failed"); return r.json(); }
-    async function health(){ const r=await fetch(`${API}/api/health`); return r.json(); }
-    return {fetchState, health};
-  })();
+const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+let anchor=new Date(); anchor.setHours(0,0,0,0);
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x }
+function ymd(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10) }
+function fmt(d,opts){ return d.toLocaleDateString(undefined,opts||{weekday:'short',month:'short',day:'numeric'}) }
+
+document.getElementById('prev').onclick=()=>{ anchor=addDays(anchor,-7); load() }
+document.getElementById('next').onclick=()=>{ anchor=addDays(anchor, 7); load() }
+
+async function load(){
+  const dow=(anchor.getDay()+6)%7, monday=addDays(anchor,-dow), start=ymd(monday), end=ymd(addDays(monday,6));
+  document.getElementById('title').textContent = `${fmt(monday,{month:'long',day:'numeric'})} – ${fmt(addDays(monday,6),{month:'long',day:'numeric'})}`;
+  const r=await fetch(`${API}/api/state?start=${start}&end=${end}`); const data=await r.json();
+
+  const grid=document.getElementById('grid'); grid.innerHTML='';
+  let d=new Date(monday);
+  for(let i=0;i<7;i++){
+    const day=ymd(d);
+    const col=document.createElement('div'); col.className='col';
+    col.innerHTML=`
+      <div class="dow">${d.toLocaleDateString(undefined,{weekday:'short'})}</div>
+      <div class="date">${d.getDate()}</div>
+      <div class="slot">
+        <h4>AM</h4>
+        <div class="names" id="am-${day}"></div>
+      </div>
+      <div class="slot">
+        <h4>PM</h4>
+        <div class="names" id="pm-${day}"></div>
+      </div>
+    `;
+    grid.appendChild(col);
+
+    const AM=data.shifts?.[day]?.AM||{assignees:[],status:'unassigned'};
+    const PM=data.shifts?.[day]?.PM||{assignees:[],status:'unassigned'};
+    const am=document.getElementById(`am-${day}`), pm=document.getElementById(`pm-${day}`);
+
+    // up to 4 seats/day (2 per AM, 2 per PM display)
+    fillNames(am, AM.assignees||[]);
+    fillNames(pm, PM.assignees||[]);
+
+    if((AM.assignees||[]).length===0){ const n=document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; am.parentElement.appendChild(n) }
+    if((PM.assignees||[]).length===0){ const n=document.createElement('div'); n.className='nudge'; n.textContent='Needs ALS & EMT'; pm.parentElement.appendChild(n) }
+
+    d=addDays(d,1);
+  }
 }
+function chip(t){ const s=document.createElement('div'); s.className='name'; s.textContent=t; return s }
+function fillNames(el, arr){ for(const a of arr.slice(0,2)) el.appendChild(chip(a)); } // 2 “seats” per half
+load();
 </script>
-<script>
-// ================= PUBLIC WALLBOARD WIRING =================
-// Keeps current visuals; fills up to 4 names; larger date/dow.
-
-(function(){
-  const MAX_SEATS = 4;
-
-  const style = document.createElement("style");
-  style.textContent = `
-    .wb-date { font-size: clamp(22px, 3vw, 38px); font-weight:800; letter-spacing:.3px; }
-    .wb-dow { font-size: clamp(16px, 2.2vw, 26px); font-weight:700; opacity:.9; }
-    .wb-names { display:grid; grid-template-rows: repeat(${MAX_SEATS}, 1fr); gap:2px; }
-    .wb-names .name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  `;
-  document.head.appendChild(style);
-
-  function idToName(id){ return (window.USER_LABELS && window.USER_LABELS[id]) || id; }
-
-  function fillHalf(halfBox, assignees){
-    const wrap = halfBox.querySelector(".wb-names") || document.createElement("div");
-    wrap.className = "wb-names";
-    wrap.innerHTML = "";
-    (assignees||[]).slice(0,MAX_SEATS).forEach(id=>{
-      const row = document.createElement("div");
-      row.className = "name";
-      row.textContent = idToName(id);
-      wrap.appendChild(row);
-    });
-    if(!halfBox.querySelector(".wb-names")) halfBox.appendChild(wrap);
-  }
-
-  async function paint(){
-    const days = Array.from(document.querySelectorAll(".wb-day[data-date]"));
-    if(!days.length) return;
-    const dates = days.map(d=>d.dataset.date).sort();
-    const start = dates[0], end = dates[dates.length-1];
-
-    let data;
-    try{ data = await SCHED.fetchState({ start, end }); }
-    catch(e){ console.error("state fetch failed", e); return; }
-
-    days.forEach(day=>{
-      const d = day.dataset.date;
-      const s = (data.shifts && data.shifts[d]) || { AM:{assignees:[]}, PM:{assignees:[]} };
-      const am = day.querySelector(".wb-am");
-      const pm = day.querySelector(".wb-pm");
-      if(am) fillHalf(am, s.AM.assignees||[]);
-      if(pm) fillHalf(pm, s.PM.assignees||[]);
-    });
-  }
-
-  (async function(){
-    try{ await SCHED.health(); }catch(e){}
-    paint();
-  })();
-})();
-</script>
+</body>
+</html>
