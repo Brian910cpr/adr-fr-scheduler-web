@@ -1,429 +1,205 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ShiftCommander · Member</title>
-<style>
-  :root{
-    --bg:#0f141a; --panel:#121a22; --muted:#1b2430; --ring:#263243;
-    --text:#e8eef6; --sub:#a9b4c0; --note:#97a6b5;
-    --pill:#2a3646; --ok:#174d2a; --ok-glow:#0b7a33; 
-    --warn:#4f2a18; --warn-glow:#9a2b1f; --avail:#133a53; --avail-glow:#116aa1; 
-    --unset:#2b2f36;
-    --radius:14px; --pad:10px;
-  }
-  html,body{background:var(--bg);color:var(--text);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px;}
-  h1{font-size:18px;margin:0 0 12px 0;font-weight:700}
-  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;border-radius:10px;background:var(--muted);color:var(--text);text-decoration:none;font-weight:600}
-  .tabs a.active{outline:2px solid var(--ring)}
-  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 16px}
-  .select{background:var(--muted);border-radius:10px;padding:4px 8px}
-  select,button,input{background:var(--muted);color:var(--text);border:1px solid var(--ring);border-radius:10px;padding:6px 10px;outline:none}
-  button{cursor:pointer}
-  .hint{color:var(--sub)}
-  .debug{white-space:pre-wrap;background:#0b0f14;border:1px dashed var(--ring);border-radius:10px;padding:10px;margin-top:14px;color:#9bb1c9;font-size:12px}
-
-  /* Calendar grid */
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .dow{color:var(--sub);font-size:12px;text-align:center;margin-bottom:6px}
-  .card{background:var(--panel);border:1px solid var(--ring);border-radius:16px;padding:10px;min-height:92px;display:flex;flex-direction:column;gap:8px}
-  .card h3{margin:0 0 6px 0;font-size:13px;color:#cfe2ff;font-weight:700}
-  .row{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
-  .lbl{color:var(--sub);font-weight:700;font-size:12px;letter-spacing:.2px}
-  .pill{display:inline-block;min-width:84px;text-align:center;border-radius:999px;padding:6px 10px;font-weight:800;user-select:none;border:1px solid transparent;transition:.15s}
-  .pill.state-prefer   {background:var(--ok);    border-color:var(--ok-glow)}
-  .pill.state-available{background:var(--avail); border-color:var(--avail-glow)}
-  .pill.state-unset    {background:var(--unset); border-color:var(--ring); color:#ccd6e3}
-  .pill.state-no       {background:var(--warn);  border-color:var(--warn-glow)}
-  .pill:hover{filter:brightness(1.08)}
-  .note{display:block;width:100%;padding:6px 8px;border-radius:10px;background:#0e1520;border:1px solid var(--ring);color:var(--text);font-size:13px}
-  .note::placeholder{color:var(--note)}
-  .tiny{font-size:11px;color:var(--sub)}
-  .tools{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:10px;margin:10px 0}
-  .tools .row{grid-template-columns:auto auto auto 1fr;gap:10px}
-  .chip{padding:6px 10px;border-radius:999px;background:var(--pill);border:1px solid var(--ring);cursor:pointer}
-  .chip:hover{filter:brightness(1.08)}
-  .spacer{flex:1}
-  .nav{display:flex;gap:8px;align-items:center}
-  .nav .month{font-weight:800}
-  .muted{color:var(--sub)}
-  @media (max-width:1000px){
-    .grid{grid-template-columns:repeat(2,1fr)}
-  }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>ShiftCommander <span class="muted">Member</span></h1>
-
-  <div class="tabs">
-    <a href="/member.html" class="active">Member</a>
-    <a href="/supervisor.html">Supervisor</a>
-    <a href="/wallboard.html">Wallboard</a>
-  </div>
-
-  <div class="bar">
-    <div class="select">
-      <label class="tiny">Member</label>
-      <select id="memberSel"></select>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="nav">
-      <button id="prevBtn">◀</button>
-      <div class="month" id="monthLabel">Month YYYY</div>
-      <button id="nextBtn">▶</button>
-    </div>
-  </div>
-
-  <!-- Bulk tools (original set) -->
-  <div class="tools" id="bulkTools">
-    <div class="tiny" style="margin-bottom:6px">Options · Quick Fill, Weekday masks, Clear tools</div>
-
-    <div class="row">
-      <div>
-        <span class="chip" data-q="prefer">All → Prefer</span>
-        <span class="chip" data-q="available">All → Available</span>
-        <span class="chip" data-q="unset">All → Unset</span>
-        <span class="chip" data-q="no">All → Do Not</span>
-        <span class="chip" id="clearNotes">Clear all notes</span>
-      </div>
-      <div>
-        <label class="tiny">AM state:</label>
-        <select id="amMask">
-          <option value="">(leave)</option>
-          <option value="prefer">Prefer</option>
-          <option value="available">Available</option>
-          <option value="unset">Unset</option>
-          <option value="no">Do Not</option>
-        </select>
-      </div>
-      <div>
-        <label class="tiny">PM state:</label>
-        <select id="pmMask">
-          <option value="">(leave)</option>
-          <option value="prefer">Prefer</option>
-          <option value="available">Available</option>
-          <option value="unset">Unset</option>
-          <option value="no">Do Not</option>
-        </select>
-      </div>
-      <div>
-        <button id="applyMask">Apply weekday mask</button>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:8px">
-      <div>
-        <label class="tiny">Weekday mask (Mon=1..Sun=7):</label>
-        <input id="weekdayMask" placeholder="e.g. 1,2,3,4,5" style="width:150px" />
-      </div>
-      <div class="spacer"></div>
-      <div class="tiny">State order cycles on click: Prefer → Available → Unset → Do Not → …</div>
-    </div>
-  </div>
-
-  <div class="grid" id="grid"></div>
-
-  <div class="debug" id="debug"></div>
-</div>
-
 <script>
 (function(){
+  // ====== CONFIG ======
   const API = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const dbg = (...a)=>{ const el = document.getElementById('debug'); el.textContent += a.join(' ')+'\n'; };
+
+  // ====== UTIL ======
+  const dbg = (...a)=>{ const el=document.getElementById('debug'); if(el) el.textContent += a.join(' ')+'\n'; };
+  const iso = d => d.toISOString().slice(0,10);
+  async function getJSON(url){
+    const r = await fetch(url, {credentials:'omit'});
+    if(!r.ok) { const e = new Error('HTTP '+r.status); e.status=r.status; throw e; }
+    return r.json();
+  }
+  async function postJSON(url, body){
+    const r = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){ const e=new Error('POST '+url+' -> '+r.status); e.status=r.status; throw e; }
+    return r.json().catch(()=>({ok:true}));
+  }
+  function stateClass(s){ return 'pill state-'+(s||'unset'); }
+  const stateLabel = {prefer:'Prefer', available:'Available', unset:'Unset', no:'Do Not'};
+  const nextStateOrder = ['prefer','available','unset','no'];
+
+  // ====== DOM refs ======
   const memberSel = document.getElementById('memberSel');
   const grid = document.getElementById('grid');
   const monthLabel = document.getElementById('monthLabel');
 
-  const stateCycle = ['prefer','available','unset','no'];
-  const stateLabel  = {prefer:'Prefer', available:'Available', unset:'Unset', no:'Do Not'};
-  const stateClass  = s => 'pill state-'+s;
-
-  let anchor = new Date(); anchor.setDate(1); // current month
-  let usersById = {};
-  let currentUser = null; // userId
-  let windowStart, windowEnd; // ISO dates for /api/state
-
-  // helpers
-  const iso = d => d.toISOString().slice(0,10);
+  // ====== MONTH WINDOW ======
+  let anchor = new Date(); anchor.setDate(1);
   function monthWindow(d){
-    // compute full month window + pad to show all weeks of the month (Mon..Sun rows)
     const first = new Date(d); first.setDate(1);
-    const last = new Date(d.getFullYear(), d.getMonth()+1, 0);
-    const start = new Date(first);
-    const wd = (first.getDay()+6)%7; // Mon=0
-    start.setDate(first.getDate()-wd);
-    const end = new Date(last);
-    const wd2 = (end.getDay()+6)%7;
-    end.setDate(end.getDate()+(6-wd2));
-    return {start, end, first, last};
+    const last  = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const start = new Date(first); const sOff=(first.getDay()+6)%7; start.setDate(first.getDate()-sOff);
+    const end   = new Date(last);  const eOff=(end.getDay()+6)%7;   end.setDate(end.getDate()+(6-eOff));
+    return {start,end,first,last};
   }
-
-  async function getJSON(url){
-    const r = await fetch(url, {credentials:'omit'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }
-  async function postJSON(url, body){
-    const r = await fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    if(!r.ok) throw new Error('POST '+url+' -> '+r.status);
-    return r.json().catch(()=>({ok:true}));
-  }
-
-  // API calls
-  async function loadUsers(){
-    const list = await getJSON(API+'/api/users'); // [{id, callsign, name, active, reserve, …}]
-    usersById = {};
-    memberSel.innerHTML = '';
-    list.forEach(u=>{
-      usersById[u.id] = u;
-      const opt = document.createElement('option');
-      opt.value = u.id;
-      opt.textContent = `${u.callsign || u.name || u.id} (${u.id})`;
-      memberSel.appendChild(opt);
-    });
-    // prefer uq2w4or if present
-    currentUser = list.find(u=>u.id==='uq2w4or')?.id || list[0]?.id;
-    memberSel.value = currentUser;
-  }
-
   function setMonthLabel(d){
-    const opts = {month:'long', year:'numeric'};
-    monthLabel.textContent = d.toLocaleDateString(undefined, opts);
+    monthLabel.textContent = d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
   }
 
-  async function loadStateAndPaint(){
-    const {start,end,first,last} = monthWindow(anchor);
-    windowStart = iso(start); windowEnd = iso(end);
-    setMonthLabel(anchor);
-    dbg('health', JSON.stringify(await getJSON(API+'/api/health')));
-    const data = await getJSON(`${API}/api/state?start=${windowStart}&end=${windowEnd}`);
-    const avail = (data.availability && data.availability[currentUser]) || {};
-    paintCalendar(start,end,first,last,avail);
-  }
+  // ====== STATE ======
+  let currentUser = null;
+  let windowStart, windowEnd;
+  let usersById = {}; // id -> {id,callsign,name}
 
-  function pill(state){
-    const span = document.createElement('span');
-    span.className = stateClass(state||'unset');
-    span.textContent = stateLabel[state||'unset'];
-    return span;
-  }
-
-  function nextState(s){
-    const i = stateCycle.indexOf(s||'unset');
-    return stateCycle[(i+1) % stateCycle.length];
-  }
-
-  function paintCalendar(start,end,first,last,avail){
-    grid.innerHTML = '';
-    // day-of-week header (Mon..Sun)
-    const dow = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    dow.forEach(d=>{
-      const h = document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h);
-    });
-
-    const days = [];
-    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-      days.push(new Date(d));
+  // ====== USERS LOADING with FALLBACK ======
+  async function loadUsersWithFallback(){
+    // 1) Try /api/users
+    try{
+      const list = await getJSON(API+'/api/users');
+      usersById = {};
+      memberSel.innerHTML='';
+      list.forEach(u=>{
+        usersById[u.id]=u;
+        const opt=document.createElement('option');
+        opt.value=u.id;
+        opt.textContent = `${u.callsign||u.name||u.id} (${u.id})`;
+        memberSel.appendChild(opt);
+      });
+      currentUser = list.find(u=>u.id==='uq2w4or')?.id || list[0]?.id || 'uq2w4or';
+      memberSel.value=currentUser;
+      return;
+    }catch(e){
+      if(e.status!==404) throw e; // real failure, not “missing route”
+      dbg('users 404 -> deriving from /api/state');
     }
-
-    days.forEach(d=>{
-      const k = iso(d);
-      const a = (avail[k] && avail[k]['AM']) || 'unset';
-      const p = (avail[k] && avail[k]['PM']) || 'unset';
-
-      const card = document.createElement('div');
-      card.className='card';
-
-      const h3 = document.createElement('h3');
-      const ds = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
-      h3.textContent = ds;
-      card.appendChild(h3);
-
-      // AM row
-      card.appendChild(makeRow('AM', k, 'AM', a));
-
-      // PM row
-      card.appendChild(makeRow('PM', k, 'PM', p));
-
-      grid.appendChild(card);
+    // 2) Derive from /api/state
+    const {start,end} = monthWindow(anchor);
+    const st = await getJSON(`${API}/api/state?start=${iso(start)}&end=${iso(end)}`);
+    const ids = Object.keys(st.availability||{});
+    if(ids.length===0){
+      // 3) last resort: single user
+      usersById = {'uq2w4or':{id:'uq2w4or',callsign:'1003 AJ'}};
+      memberSel.innerHTML = '<option value="uq2w4or">1003 AJ (uq2w4or)</option>';
+      currentUser = 'uq2w4or';
+      return;
+    }
+    usersById={};
+    memberSel.innerHTML='';
+    ids.forEach(id=>{
+      usersById[id]={id, callsign:id};
+      const opt=document.createElement('option');
+      opt.value=id; opt.textContent=id; memberSel.appendChild(opt);
     });
+    currentUser = ids.includes('uq2w4or') ? 'uq2w4or' : ids[0];
+    memberSel.value=currentUser;
   }
 
+  // ====== PAINT ======
   function makeRow(label, dateISO, half, current){
-    const row = document.createElement('div');
-    row.className='row';
-    const l = document.createElement('div');
-    l.className='lbl';
-    l.textContent = label;
+    const row = document.createElement('div'); row.className='row';
+    const l = document.createElement('div'); l.className='lbl'; l.textContent=label;
     const right = document.createElement('div');
 
-    const btn = pill(current);
+    const btn = document.createElement('span');
+    btn.className = stateClass(current);
+    btn.textContent = stateLabel[current||'unset'];
     btn.style.minWidth='100px';
     btn.style.display='inline-block';
     btn.style.cursor='pointer';
     btn.addEventListener('click', async ()=>{
-      const next = nextState(current);
+      const next = nextStateOrder[(nextStateOrder.indexOf(current||'unset')+1)%nextStateOrder.length];
       try{
-        await postJSON(API+'/api/availability', {
-          userId: currentUser,
-          date: dateISO,
-          half: half,
-          state: next
-        });
+        await postJSON(API+'/api/availability',{userId:currentUser,date:dateISO,half,state:next});
         current = next;
         btn.className = stateClass(current);
         btn.textContent = stateLabel[current];
-        dbg('saved', currentUser, dateISO, half, next);
-      }catch(e){
-        dbg('ERR save state', e.message||e);
-      }
+      }catch(e){ dbg('ERR save state', e.message||e); }
     });
 
-    // note field
     const note = document.createElement('input');
-    note.className='note';
-    note.placeholder='Optional note to supervisor.';
-    note.value = ''; // we can extend /api/state to include notes; for now get lazily
-    // lazy-load existing note (optional)
-    (async ()=>{
-      try{
-        const r = await getJSON(`${API}/api/notes?userId=${encodeURIComponent(currentUser)}&date=${dateISO}&half=${half}`);
-        if(r && typeof r.note==='string') note.value = r.note;
-      }catch(_e){}
-    })();
-
-    let noteTimer = null;
-    function commitNote(){
-      postJSON(API+'/api/notes', {
-        userId: currentUser, date: dateISO, half: half, note: note.value||''
-      }).then(()=>dbg('note saved', dateISO, half))
-        .catch(e=>dbg('ERR save note', e.message||e));
-    }
-    note.addEventListener('input', ()=>{
-      clearTimeout(noteTimer);
-      noteTimer = setTimeout(commitNote, 450);
-    });
-    note.addEventListener('blur', commitNote);
+    note.className='note'; note.placeholder='Optional note to supervisor.'; note.value='';
+    let t=null;
+    const commit=()=>postJSON(API+'/api/notes',{userId:currentUser,date:dateISO,half,note:note.value||''}).catch(e=>dbg('ERR save note',e.message||e));
+    note.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(commit,450); });
+    note.addEventListener('blur',commit);
 
     right.appendChild(btn);
     right.appendChild(note);
-
-    row.appendChild(l);
-    row.appendChild(right);
+    row.appendChild(l); row.appendChild(right);
     return row;
   }
 
-  // Bulk tools
-  function forEachDayCell(fn){
-    // iterate over rendered grid cards
-    [...grid.querySelectorAll('.card')].forEach(card=>{
-      const title = card.querySelector('h3').textContent; // e.g. "Mon, Oct 6"
-      // reconstruct date from label (we already know we rendered continuous range; we can attach data-date)
-    });
-  }
-
-  // Because we need dates, tag each card during paint:
-  const paintCalendarOrig = paintCalendar;
-  paintCalendar = function(start,end,first,last,avail){
+  function paintCalendar(start,end,availForUser){
     grid.innerHTML='';
     const dow = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     dow.forEach(d=>{ const h=document.createElement('div'); h.className='dow'; h.textContent=d; grid.appendChild(h); });
     for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-      const k = iso(d);
-      const a = (avail[k] && avail[k]['AM']) || 'unset';
-      const p = (avail[k] && avail[k]['PM']) || 'unset';
-      const card = document.createElement('div'); card.className='card'; card.dataset.date=k;
-      const h3 = document.createElement('h3'); h3.textContent = d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-      card.appendChild(h3);
-      card.appendChild(makeRow('AM', k, 'AM', a));
-      card.appendChild(makeRow('PM', k, 'PM', p));
+      const k=iso(d); const a=(availForUser[k]&&availForUser[k]['AM'])||'unset'; const p=(availForUser[k]&&availForUser[k]['PM'])||'unset';
+      const card=document.createElement('div'); card.className='card'; card.dataset.date=k;
+      const h3=document.createElement('h3'); h3.textContent=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); card.appendChild(h3);
+      card.appendChild(makeRow('AM',k,'AM',a));
+      card.appendChild(makeRow('PM',k,'PM',p));
       grid.appendChild(card);
     }
   }
 
+  async function loadStateAndPaint(){
+    const health = await getJSON(API+'/api/health').catch(()=>({ok:false}));
+    dbg('health', JSON.stringify(health));
+    const {start,end} = monthWindow(anchor);
+    windowStart=iso(start); windowEnd=iso(end);
+    setMonthLabel(anchor);
+    const data = await getJSON(`${API}/api/state?start=${windowStart}&end=${windowEnd}`);
+    const availUser = (data.availability && data.availability[currentUser]) || {};
+    paintCalendar(start,end,availUser);
+  }
+
+  // ====== BULK TOOLS ======
   function applyQuickFill(targetState){
     grid.querySelectorAll('.card').forEach(card=>{
+      const d=card.dataset.date;
       ['AM','PM'].forEach(half=>{
-        postJSON(API+'/api/availability',{
-          userId: currentUser, date: card.dataset.date, half, state: targetState
-        }).catch(e=>dbg('ERR bulk', e.message||e));
-        const btn = card.querySelector(`.row:nth-of-type(${half==='AM'?2:3}) .pill`);
-        btn.className = stateClass(targetState);
-        btn.textContent = stateLabel[targetState];
+        postJSON(API+'/api/availability',{userId:currentUser,date:d,half,state:targetState}).catch(()=>{});
       });
+      // reflect instantly
+      const am = card.querySelector('.row:nth-of-type(2) .pill'); am.className=stateClass(targetState); am.textContent=stateLabel[targetState];
+      const pm = card.querySelector('.row:nth-of-type(3) .pill'); pm.className=stateClass(targetState); pm.textContent=stateLabel[targetState];
     });
   }
-
   function applyWeekdayMask(){
+    const daysTxt = (document.getElementById('weekdayMask').value||'').trim();
+    const days = new Set(daysTxt ? daysTxt.split(/[,\s]+/).map(n=>parseInt(n,10)).filter(x=>x>=1&&x<=7) : [1,2,3,4,5,6,7]);
     const amState = document.getElementById('amMask').value;
     const pmState = document.getElementById('pmMask').value;
-    const maskTxt = (document.getElementById('weekdayMask').value||'').trim();
-    if(!amState && !pmState) return;
-    const days = new Set(maskTxt ? maskTxt.split(/[,\s]+/).map(x=>parseInt(x,10)).filter(x=>x>=1&&x<=7) : [1,2,3,4,5,6,7]);
     grid.querySelectorAll('.card').forEach(card=>{
-      const d = new Date(card.dataset.date+'T00:00:00');
-      const wd = ((d.getDay()+6)%7)+1; // 1..7
-      if(!days.has(wd)) return;
-      if(amState){
-        postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'AM',state:amState}).catch(e=>dbg('ERR mask',e.message));
-        const btn = card.querySelector('.row:nth-of-type(2) .pill'); btn.className=stateClass(amState); btn.textContent=stateLabel[amState];
-      }
-      if(pmState){
-        postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'PM',state:pmState}).catch(e=>dbg('ERR mask',e.message));
-        const btn = card.querySelector('.row:nth-of-type(3) .pill'); btn.className=stateClass(pmState); btn.textContent=stateLabel[pmState];
-      }
+      const d=new Date(card.dataset.date+'T00:00:00'); const wd=((d.getDay()+6)%7)+1; if(!days.has(wd)) return;
+      if(amState){ postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'AM',state:amState}).catch(()=>{}); const am=card.querySelector('.row:nth-of-type(2) .pill'); am.className=stateClass(amState); am.textContent=stateLabel[amState]; }
+      if(pmState){ postJSON(API+'/api/availability',{userId:currentUser,date:card.dataset.date,half:'PM',state:pmState}).catch(()=>{}); const pm=card.querySelector('.row:nth-of-type(3) .pill'); pm.className=stateClass(pmState); pm.textContent=stateLabel[pmState]; }
     });
   }
-
   function clearAllNotes(){
     grid.querySelectorAll('.card').forEach(card=>{
       ['AM','PM'].forEach(half=>{
+        postJSON(API+'/api/notes',{userId:currentUser,date:card.dataset.date,half,note:''}).catch(()=>{});
         const input = card.querySelector(half==='AM'?'.row:nth-of-type(2) .note':'.row:nth-of-type(3) .note');
         input.value='';
-        postJSON(API+'/api/notes',{userId:currentUser,date:card.dataset.date,half,note:''}).catch(()=>{});
       });
     });
   }
-
-  // wire bulk tool buttons
   document.getElementById('bulkTools').addEventListener('click', e=>{
-    const chip = e.target.closest('.chip');
-    if(!chip) return;
-    const q = chip.dataset.q;
-    if(q==='prefer' || q==='available' || q==='unset' || q==='no'){
-      applyQuickFill(q);
-    }
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    const q = chip.dataset.q; if(q) applyQuickFill(q);
   });
   document.getElementById('applyMask').addEventListener('click', applyWeekdayMask);
   document.getElementById('clearNotes').addEventListener('click', clearAllNotes);
 
-  // Nav + member change
+  // ====== NAV + MEMBER ======
   document.getElementById('prevBtn').addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()-1); loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
   document.getElementById('nextBtn').addEventListener('click', ()=>{ anchor.setMonth(anchor.getMonth()+1); loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
   memberSel.addEventListener('change', ()=>{ currentUser = memberSel.value; loadStateAndPaint().catch(e=>dbg('ERR',e.message)); });
 
-  // init
+  // ====== BOOT ======
   (async function boot(){
     try{
       dbg('booting…');
-      await loadUsers();
-      if(!currentUser){ dbg('No users found.'); return; }
+      await loadUsersWithFallback();
       await loadStateAndPaint();
-      dbg('Ready.');
+      dbg('ready.');
     }catch(e){
       dbg('ERR boot', e.message||e);
     }
   })();
 })();
 </script>
-</body>
-</html>
