@@ -6,100 +6,79 @@
 <title>ShiftCommander · Member</title>
 <style>
   :root{
-    --bg:#0f1419;--card:#121a23;--ink:#dfe7ef;--muted:#9eb0c3;
-    --chip:#1e2b38;--chip-b:#223343;--ok:#0e5a2a;--ok-b:#0f6a31;
-    --warn:#7a1616;--warn-b:#8b1a1a;--mid:#2b4a2b;--mid-b:#305530;
-    --unset:#2a3140;--unset-b:#333a4a;--ring:#2a3b4e;
-    --btn:#1c2633;--btn-b:#243041;--accent:#2f4056;
+    --bg:#0f1419;--ink:#e5edf6;--muted:#95a7ba;
+    --frame:#1a2430;--ring:#29384a;
+    --chip:#213043;--chip-b:#2a3a4e;
+    --ok:#0f5f2d;--ok-b:#136d35;--ok-t:#dff6e7;
+    --mid:#2e5430;--mid-b:#356338;
+    --unset:#2a3241;--unset-b:#343d4f;--unset-t:#c9d3df;
+    --no:#7a1b1b;--no-b:#8c1f1f;
+    --btn:#1b2633;--btn-b:#263243;
+    --panel:#0b1116;
   }
-  html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
-  h1{font-size:18px;margin:0 0 12px}
-  .tabs a{display:inline-block;margin-right:8px;padding:6px 10px;background:var(--btn);border:1px solid var(--btn-b);border-radius:8px;color:var(--ink);text-decoration:none}
-  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
+  .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0 10px 0 0}
+  .tabs a{display:inline-block;padding:6px 10px;border-radius:8px;background:var(--btn);border:1px solid var(--btn-b);color:var(--ink);text-decoration:none;margin-right:6px}
   .spacer{flex:1}
-  .navbtn{width:28px;height:28px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink)}
-  .monthlabel{font-weight:600;letter-spacing:.3px}
-  /* grid */
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:14px}
-  .dow{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px}
-  .card{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:10px;min-height:86px;display:flex;flex-direction:column;gap:8px}
-  .datehead{font-size:13px;color:var(--muted);font-weight:600}
-  .line{display:flex;align-items:center;gap:10px}
-  .label{width:28px;color:var(--muted);font-size:12px}
-  .toggle{min-width:110px;display:inline-flex;justify-content:center;align-items:center;height:30px;border-radius:16px;border:1px solid var(--chip-b);background:var(--chip);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;user-select:none}
-  .state-prefer{background:var(--ok);border-color:var(--ok-b)}
-  .state-available{background:var(--mid);border-color:var(--mid-b)}
-  .state-unset{background:var(--unset);border-color:var(--unset-b);color:#b9c7d6}
-  .state-no{background:var(--warn);border-color:var(--warn-b)}
-  .note{flex:1;min-width:140px;height:30px;border-radius:8px;border:1px solid var(--accent);background:#0c1218;color:var(--ink);padding:0 10px;font-size:13px}
-  .small{font-size:12px;color:var(--muted)}
-  .panel{margin-top:16px;padding:10px;background:#0c1218;border:1px dashed var(--accent);border-radius:10px}
+  .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);cursor:pointer}
+  .month{min-width:160px;text-align:center;font-weight:600}
+  .sel, .input{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:#0b1218;color:var(--ink);padding:0 10px}
   .btn{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);padding:0 10px;cursor:pointer}
-  .btn.warn{background:#3a1b1b;border-color:#532222}
-  .btn.ok{background:#193d29;border-color:#1f4d32}
-  .sel{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:#0c1218;color:var(--ink);padding:0 8px}
-  .console{margin-top:14px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px;color:#a6b7c8;background:#0a0f14;border:1px dashed var(--accent);border-radius:10px;padding:10px;white-space:pre-wrap}
-  .right{margin-left:auto}
+  .btn.warn{background:#341a1a;border-color:#4a2323}
+  /* grid */
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:10px 0 6px}
+  .dow div{font-size:12px;color:var(--muted);text-align:center}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .card{background:var(--frame);border:1px solid var(--ring);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:8px}
+  .date{font-size:13px;color:var(--muted);font-weight:600}
+  .half{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+  .label{font-size:12px;color:var(--muted);width:28px}
+  .toggle{justify-self:start;min-width:96px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:16px;border:1px solid var(--chip-b);background:var(--chip);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;user-select:none;padding:0 10px}
+  .state-prefer{background:var(--ok);border-color:var(--ok-b);color:var(--ok-t)}
+  .state-available{background:var(--mid);border-color:var(--mid-b)}
+  .state-unset{background:var(--unset);border-color:var(--unset-b);color:var(--unset-t)}
+  .state-no{background:var(--no);border-color:var(--no-b)}
+  .note{height:28px;border-radius:8px;border:1px solid var(--ring);background:#0b1216;color:var(--ink);padding:0 8px;font-size:13px}
+  .panel{margin-top:14px;padding:10px;background:var(--panel);border:1px dashed var(--ring);border-radius:10px}
   .muted{color:var(--muted)}
-  @media (max-width:900px){.toggle{min-width:96px}.note{min-width:120px}}
-  @media (max-width:700px){.grid{grid-template-columns:repeat(1,1fr)} .dow{display:none}}
+  .console{margin-top:10px;background:#091017;border:1px dashed var(--ring);border-radius:10px;font:12px ui-monospace,Consolas,Menlo,monospace;color:#a9b8c7;padding:8px;white-space:pre-wrap}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr}.half{grid-template-columns:1fr}.label{width:auto}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="row">
-    <h1 style="margin-right:10px">ShiftCommander <span class="muted">Member</span></h1>
+  <div class="row" style="margin-bottom:10px">
+    <h1>ShiftCommander <span class="muted">Member</span></h1>
     <div class="tabs">
       <a href="/member.html">Member</a>
       <a href="/supervisor.html">Supervisor</a>
       <a href="/wallboard.html">Wallboard</a>
     </div>
     <div class="spacer"></div>
+    <select id="memberSelect" class="sel" title="Member"></select>
     <button id="prev" class="navbtn" aria-label="Previous month">◀</button>
-    <div id="monthLabel" class="monthlabel" style="min-width:140px;text-align:center"></div>
+    <div id="monthLabel" class="month">…</div>
     <button id="next" class="navbtn" aria-label="Next month">▶</button>
   </div>
 
-  <!-- Weekday row labels -->
-  <div class="row" style="margin-top:8px;gap:12px">
-    <div class="dow" style="flex:1">Mon</div><div class="dow" style="flex:1">Tue</div><div class="dow" style="flex:1">Wed</div>
-    <div class="dow" style="flex:1">Thu</div><div class="dow" style="flex:1">Fri</div><div class="dow" style="flex:1">Sat</div><div class="dow" style="flex:1">Sun</div>
+  <div class="dow">
+    <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
   </div>
+  <div id="grid" class="grid"></div>
 
-  <div id="grid" class="grid" aria-live="polite"></div>
-
-  <!-- Preferences (bulk) restored -->
+  <!-- Simple, original bottom preferences -->
   <div class="panel">
-    <div class="small" style="margin-bottom:6px">Options · Quick Fill · Weekday masks · Clear tools</div>
-    <div class="row" style="gap:8px;margin-bottom:8px">
+    <div class="row" style="gap:8px;margin-bottom:6px">
+      <span class="muted">Options:</span>
       <button class="btn" data-bulk="prefer">All → Prefer</button>
       <button class="btn" data-bulk="available">All → Available</button>
       <button class="btn" data-bulk="unset">All → Unset</button>
       <button class="btn" data-bulk="no">All → Do Not</button>
-      <button class="btn warn right" id="clearNotes">Clear all notes</button>
-    </div>
-    <div class="row" style="gap:8px">
-      <span class="small">Weekday mask (Mon=1…Sun=7):</span>
-      <input id="mask" class="note" style="max-width:180px" placeholder="e.g. 1,2,3,4,5" />
-      <span class="small">AM state:</span>
-      <select id="maskAM" class="sel">
-        <option value="">(leave)</option>
-        <option value="prefer">Prefer</option>
-        <option value="available">Available</option>
-        <option value="unset">Unset</option>
-        <option value="no">Do Not</option>
-      </select>
-      <span class="small">PM state:</span>
-      <select id="maskPM" class="sel">
-        <option value="">(leave)</option>
-        <option value="prefer">Prefer</option>
-        <option value="available">Available</option>
-        <option value="unset">Unset</option>
-        <option value="no">Do Not</option>
-      </select>
-      <button class="btn ok" id="applyMask">Apply weekday mask</button>
-      <span class="small muted right">State order on click: Prefer → Available → Unset → Do Not → …</span>
+      <button class="btn warn" id="clearNotes">Clear all notes</button>
+      <span class="muted" style="margin-left:auto">Click cycles: Prefer → Available → Unset → Do Not → …</span>
     </div>
   </div>
 
@@ -108,219 +87,199 @@
 
 <script>
 (function(){
-  // --- CONFIG ---
+  // ---------- CONFIG ----------
   const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  // You can set this from auth later; for now keep your test user:
-  const USER_ID = 'uq2w4or';
+  const DEFAULT_USER = 'uq2w4or'; // fallback if /api/users not available
+  const stateOrder = ['prefer','available','unset','no'];
 
-  // --- STATE ---
-  let anchor = new Date(); // month anchor
-  anchor.setDate(1);
-  let availability = {};   // availability[userId][date] = { AM:'state', PM:'state', notes? }
-  const order = ['prefer','available','unset','no'];
+  // ---------- STATE ----------
+  let userId = DEFAULT_USER;
+  let anchor = new Date(); anchor.setDate(1);
+  let availability = {}; // availability[userId][date] = { AM:'x', PM:'y', AM_note?, PM_note? }
 
-  // --- UTIL ---
-  const fmt = (d)=> d.toISOString().slice(0,10);
+  // ---------- UTIL ----------
+  const pad = n => (n<10?'0':'')+n;
+  const fmt = d => d.toISOString().slice(0,10);
   const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-  const pad = (v)=> v<10 ? '0'+v : ''+v;
-  const monthLabel = (d)=> d.toLocaleString(undefined,{month:'long', year:'numeric'});
-  function log(msg){ const c=document.getElementById('console'); c.textContent += (c.textContent?'\n':'')+msg; c.scrollTop=c.scrollHeight; }
+  const monthLabel = d => d.toLocaleString(undefined,{month:'long', year:'numeric'});
+  function startOfCalendar(d){ const x=new Date(d); x.setDate(1); const w=(x.getDay()+6)%7; return addDays(x,-w); }
+  function endOfCalendar(d){ const x=new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); const w=(x.getDay()+6)%7; return addDays(x,6-w); }
+  function log(s){ const c=document.getElementById('console'); c.textContent += (c.textContent?'\n':'')+s; c.scrollTop=c.scrollHeight; }
+  function labelFor(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
 
-  // --- API ---
+  // ---------- API ----------
   async function api(path, opts={}){
-    const res = await fetch(API_BASE+path, {
-      headers:{'Content-Type':'application/json'},
-      ...opts
-    });
+    const res = await fetch(API_BASE+path,{headers:{'Content-Type':'application/json'}, ...opts});
     if(!res.ok) throw new Error('HTTP '+res.status+' '+path);
     if(res.status===204) return null;
     return res.json();
   }
+  async function getUsers(){
+    try{
+      const j = await api('/api/users'); // expected: [{id:'uq2w4or', name:'1003 AJ'}, ...]
+      return Array.isArray(j)? j : (j.users||[]);
+    }catch(_){ return []; }
+  }
   async function loadWindow(){
     const start = startOfCalendar(anchor);
-    const end   = addDays(endOfCalendar(anchor), 1); // exclusive
-    const qs = '?start='+fmt(start)+'&end='+fmt(addDays(end,-1));
-    const data = await api('/api/state'+qs);
-    availability = data.availability || {};
-    return {start,end};
+    const end   = endOfCalendar(anchor);
+    const qs = `?start=${fmt(start)}&end=${fmt(end)}`;
+    const j = await api('/api/state'+qs);
+    availability = j.availability || {};
   }
-  async function saveHalf(dateStr, half, newState, noteVal){
-    const body = { userId: USER_ID, date: dateStr, half, state: newState };
-    if(typeof noteVal === 'string') body.note = noteVal;
+  async function saveHalf(dateStr, half, newState, note){
+    const body = { userId, date:dateStr, half, state:newState };
+    if(typeof note==='string') body.note = note;
     await api('/api/availability', { method:'POST', body: JSON.stringify(body) });
   }
 
-  // --- CALENDAR RANGE (Mon–Sun rows) ---
-  function startOfCalendar(d){
-    const x = new Date(d);
-    x.setDate(1);
-    const dow = (x.getDay()+6)%7; // Mon=0 … Sun=6
-    return addDays(x, -dow);
-  }
-  function endOfCalendar(d){
-    const x = new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); // last day of month
-    const dow = (x.getDay()+6)%7; // Mon=0
-    return addDays(x, 6-dow);
-  }
-
-  // --- RENDER ---
+  // ---------- RENDER ----------
   function paint(){
     document.getElementById('monthLabel').textContent = monthLabel(anchor);
-    const grid = document.getElementById('grid');
-    grid.innerHTML = '';
-
+    const grid = document.getElementById('grid'); grid.innerHTML = '';
     const start = startOfCalendar(anchor);
     const end   = endOfCalendar(anchor);
+
     for(let d=new Date(start); d<=end; d=addDays(d,1)){
-      const dateStr = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-      const day = document.createElement('div'); day.className='card';
+      const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const card = document.createElement('div'); card.className='card';
 
       const head = document.createElement('div');
-      head.className='datehead';
+      head.className='date';
       head.textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
-      day.appendChild(head);
+      card.appendChild(head);
 
-      // AM line (toggle + note)
-      day.appendChild(lineFor(dateStr,'AM'));
-      // PM line (toggle + note)
-      day.appendChild(lineFor(dateStr,'PM'));
+      card.appendChild(halfRow(dateStr,'AM'));
+      card.appendChild(halfRow(dateStr,'PM'));
 
-      grid.appendChild(day);
+      grid.appendChild(card);
     }
   }
 
-  function lineFor(dateStr, half){
-    const line = document.createElement('div'); line.className='line';
-    const label = document.createElement('div'); label.className='label'; label.textContent = half;
-    const btn = document.createElement('div'); btn.className='toggle'; btn.setAttribute('role','button'); btn.dataset.date=dateStr; btn.dataset.half=half;
+  function halfRow(dateStr, half){
+    const row = document.createElement('div'); row.className='half';
 
-    function stateOf(){
-      const u = availability[USER_ID]||{};
-      const day = u[dateStr]||{};
-      return (day[half]||'unset');
-    }
-    function noteOf(){
-      const u = availability[USER_ID]||{};
-      const day = u[dateStr]||{};
-      // server stores note per half via same endpoint
-      return (day[half+'_note'] || day.note || '');
-    }
+    const label = document.createElement('div'); label.className='label'; label.textContent = half;
+    const btn   = document.createElement('div'); btn.className='toggle'; btn.setAttribute('role','button');
+    btn.dataset.date = dateStr; btn.dataset.half = half;
+
+    const note  = document.createElement('input'); note.className='note'; note.placeholder='Optional note to supervisor.';
+
+    const curState = () => (availability?.[userId]?.[dateStr]?.[half] || 'unset');
+    const curNote  = () => (availability?.[userId]?.[dateStr]?.[half+'_note'] || '');
+
     function applyLook(s){
       btn.classList.remove('state-prefer','state-available','state-unset','state-no');
       btn.classList.add('state-'+s);
-      btn.textContent = (s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset');
+      btn.textContent = labelFor(s);
     }
+    applyLook(curState());
+    note.value = curNote();
 
-    applyLook(stateOf());
-
-    btn.addEventListener('click', async () => {
-      // cycle Prefer → Available → Unset → Do Not → …
-      const cur = stateOf();
-      const nxt = order[(order.indexOf(cur)+1)%order.length];
-      applyLook(nxt);
+    btn.addEventListener('click', async ()=>{
+      const s = curState();
+      const next = stateOrder[(stateOrder.indexOf(s)+1)%stateOrder.length];
+      applyLook(next);
       try{
-        await saveHalf(btn.dataset.date, btn.dataset.half, nxt, note.value.trim());
-        // reflect local
-        availability[USER_ID] ||= {};
-        availability[USER_ID][btn.dataset.date] ||= {};
-        availability[USER_ID][btn.dataset.date][btn.dataset.half] = nxt;
-        log(`saved ${btn.dataset.date} ${btn.dataset.half} = ${nxt}`);
-      }catch(e){ log('ERR save state '+e.message); applyLook(cur); }
+        await saveHalf(dateStr, half, next, note.value.trim());
+        availability[userId] ||= {}; availability[userId][dateStr] ||= {};
+        availability[userId][dateStr][half] = next;
+        log(`saved ${dateStr} ${half} = ${next}`);
+      }catch(e){
+        log('ERR save state '+e.message);
+        applyLook(s);
+      }
     });
 
-    const note = document.createElement('input');
-    note.className='note';
-    note.placeholder='Optional note to supervisor.';
-    note.value = noteOf();
-    note.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'){ ev.target.blur(); }});
-    note.addEventListener('blur', async () => {
+    note.addEventListener('keydown', ev=>{ if(ev.key==='Enter') note.blur(); });
+    note.addEventListener('blur', async ()=>{
       try{
-        await saveHalf(btn.dataset.date, btn.dataset.half, stateOf(), note.value.trim());
-        availability[USER_ID] ||= {};
-        availability[USER_ID][btn.dataset.date] ||= {};
-        availability[USER_ID][btn.dataset.date][btn.dataset.half+'_note'] = note.value.trim();
-        log(`note saved ${btn.dataset.date} ${btn.dataset.half}`);
+        await saveHalf(dateStr, half, curState(), note.value.trim());
+        availability[userId] ||= {}; availability[userId][dateStr] ||= {};
+        availability[userId][dateStr][half+'_note'] = note.value.trim();
+        log(`note saved ${dateStr} ${half}`);
       }catch(e){ log('ERR save note '+e.message); }
     });
 
-    line.appendChild(label);
-    line.appendChild(btn);
-    line.appendChild(note);
-    return line;
+    row.appendChild(label);
+    row.appendChild(btn);
+    row.appendChild(note);
+    return row;
   }
 
-  // --- BULK TOOLS ---
-  function bulkSet(state){
+  // ---------- SIMPLE BULK ----------
+  async function bulk(state){
     const grid = document.getElementById('grid');
     const toggles = grid.querySelectorAll('.toggle');
-    toggles.forEach(async el=>{
-      const date = el.dataset.date;
-      const half = el.dataset.half;
+    for(const el of toggles){
+      const date = el.dataset.date, half = el.dataset.half;
       try{
         await saveHalf(date, half, state);
-        availability[USER_ID] ||= {};
-        availability[USER_ID][date] ||= {};
-        availability[USER_ID][date][half] = state;
-        el.classList.remove('state-prefer','state-available','state-unset','state-no');
-        el.classList.add('state-'+state);
-        el.textContent = (state==='prefer'?'Prefer':state==='available'?'Available':state==='no'?'Do Not':'Unset');
+        availability[userId] ||= {}; availability[userId][date] ||= {};
+        availability[userId][date][half] = state;
+        el.className = 'toggle state-'+state; el.textContent = labelFor(state);
       }catch(e){ log('ERR bulk '+e.message); }
-    });
+    }
   }
-  function applyWeekdayMask(){
-    const mask = document.getElementById('mask').value.trim();
-    const am = document.getElementById('maskAM').value;
-    const pm = document.getElementById('maskPM').value;
-    if(!mask && !am && !pm) return;
-    const set = new Set(mask.split(',').map(s=>parseInt(s,10)).filter(n=>n>=1&&n<=7));
-    const grid = document.getElementById('grid');
-    const cards = Array.from(grid.children);
-    cards.forEach(card=>{
-      const head = card.querySelector('.datehead').textContent; // e.g., "Mon, Oct 27"
-      const dow = new Date(head).getDay(); // 0..6 Sun..Sat (we need Mon..Sun=1..7)
-      const idx = ((dow+6)%7)+1;
-      if(set.size===0 || set.has(idx)){
-        if(am){ const btn=card.querySelector('.line:first-child .toggle'); if(btn) btn.click = btn.click; if(btn) saveHalf(btn.dataset.date,'AM',am).then(()=>{btn.className='toggle state-'+am;btn.textContent=labelFor(am);}); }
-        if(pm){ const btn=card.querySelector('.line:last-child .toggle'); if(btn) saveHalf(btn.dataset.date,'PM',pm).then(()=>{btn.className='toggle state-'+pm;btn.textContent=labelFor(pm);}); }
-      }
-    });
-  }
-  function labelFor(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
   async function clearAllNotes(){
-    const ins = document.querySelectorAll('.note');
-    for(const i of ins){
+    const inputs = document.querySelectorAll('.note');
+    for(const i of inputs){
+      const btn = i.previousSibling;
+      const date = btn.dataset.date, half = btn.dataset.half;
       i.value='';
-      const date = i.previousSibling.dataset.date;
-      const half = i.previousSibling.dataset.half;
-      try{ await saveHalf(date,half,(availability[USER_ID]?.[date]?.[half]||'unset'),''); }
-      catch(e){ log('ERR clear notes '+e.message); }
+      try{
+        await saveHalf(date, half, (availability?.[userId]?.[date]?.[half] || 'unset'), '');
+        availability[userId][date][half+'_note']='';
+      }catch(e){ log('ERR clear notes '+e.message); }
     }
   }
 
-  // --- WIRE UI ---
-  document.getElementById('prev').onclick = ()=>{ anchor.setMonth(anchor.getMonth()-1); boot(); };
-  document.getElementById('next').onclick = ()=>{ anchor.setMonth(anchor.getMonth()+1); boot(); };
-  document.querySelectorAll('[data-bulk]').forEach(b=> b.onclick = ()=> bulkSet(b.dataset.bulk));
-  document.getElementById('applyMask').onclick = applyWeekdayMask;
-  document.getElementById('clearNotes').onclick = clearAllNotes;
-
-  // --- BOOT ---
+  // ---------- BOOT ----------
   async function boot(){
     log('booting…');
-    document.getElementById('grid').innerHTML='';
-    document.getElementById('monthLabel').textContent = '…';
     try{
-      const health = await api('/api/health');
-      log('health '+JSON.stringify(health));
+      const health = await api('/api/health'); log('health '+JSON.stringify(health));
+    }catch(e){ log('ERR health '+e.message); }
+
+    // load members
+    const sel = document.getElementById('memberSelect'); sel.innerHTML='';
+    const members = await getUsers();
+    if(members.length){
+      for(const m of members){
+        const opt = document.createElement('option');
+        opt.value = m.id || m.user_id || DEFAULT_USER;
+        opt.textContent = m.name || m.display || opt.value;
+        sel.appendChild(opt);
+      }
+      userId = sel.value;
+    }else{
+      const opt = document.createElement('option');
+      opt.value = DEFAULT_USER; opt.textContent='1003 AJ (fallback)';
+      sel.appendChild(opt); userId = DEFAULT_USER;
+    }
+    sel.onchange = async ()=>{ userId = sel.value; await reload(); };
+
+    await reload();
+  }
+
+  async function reload(){
+    try{
       await loadWindow();
+      document.getElementById('monthLabel').textContent = monthLabel(anchor);
       paint();
-      log('ready.');
+      log('ready '+userId+' '+monthLabel(anchor));
     }catch(e){
-      log('ERR '+e.message);
-      // draw empty grid so the page never looks “broken”
-      paint();
+      log('ERR load '+e.message);
+      paint(); // still render skeleton
     }
   }
+
+  // nav & bulk wiring
+  document.getElementById('prev').onclick = ()=>{ anchor.setMonth(anchor.getMonth()-1); reload(); };
+  document.getElementById('next').onclick = ()=>{ anchor.setMonth(anchor.getMonth()+1); reload(); };
+  document.querySelectorAll('[data-bulk]').forEach(b=> b.onclick = ()=> bulk(b.dataset.bulk));
+  document.getElementById('clearNotes').onclick = clearAllNotes;
+
   boot();
 })();
 </script>
