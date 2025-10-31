@@ -1,273 +1,401 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ShiftCommander · Member</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShiftCommander Member</title>
 <style>
   :root{
-    --bg:#0c1116; --ink:#e8eef6; --muted:#99a7b5;
-    --frame:#141c24; --ring:#253243; --panel:#0a1218;
-    --btn:#162230; --btn-b:#223246;
-    --prefer:#0f5f2d; --prefer-b:#137738; --prefer-t:#e8f7ef;
-    --avail:#2f5a32; --avail-b:#3a6f3d;
-    --unset:#283244; --unset-b:#39455b; --unset-t:#cbd5e1;
-    --no:#782020;   --no-b:#8f2929;
+    --bg:#0f1418;--panel:#161c21;--ink:#e8f0f6;--muted:#90a3b0;--card:#0f151a;
+    --chip:#1f2a33;--chip-dot:#2a3742;--ok:#0c6;--warn:#fa0;--bad:#c33;
+    --pref:#0b7a29;--avail:#16617f;--unset:#46525b;--no:#7a1a1a;
+    --chip-ink:#d9ecf7;--b:#24313a
   }
-  html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
-  .wrap{max-width:1200px;margin:16px auto;padding:0 10px}
-  h1{margin:0 8px 0 0;font-size:18px}
-  .tabs a{display:inline-block;margin-right:6px;padding:6px 10px;border-radius:8px;background:var(--btn);border:1px solid var(--btn-b);color:var(--ink);text-decoration:none}
-  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .spacer{flex:1}
-  .month{min-width:160px;text-align:center;font-weight:700}
-  .sel,.btn,.nav{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);padding:0 10px}
-  .nav{width:30px;padding:0}
-  /* calendar shell keeps 7 columns; on phones it scrolls horizontally (keeps calendar feel) */
-  .cal-shell{margin-top:10px;border:1px solid var(--ring);border-radius:12px;background:var(--panel);padding:8px;overflow-x:auto}
-  .dow,.grid{display:grid;grid-template-columns:repeat(7, max-content);column-gap:6px}
-  .dow{margin:0 0 6px 0}
-  .dow div{width:126px;text-align:center;color:var(--muted);font-size:12px}
-  /* ultra compact day card: 126px wide, two rows (AM, PM) with button + note each */
-  .card{width:126px;background:var(--frame);border:1px solid var(--ring);border-radius:10px;padding:6px;display:grid;grid-template-rows:auto auto auto;row-gap:6px}
-  .date{font-size:12px;color:var(--muted);font-weight:700;text-align:center}
-  .half{display:grid;grid-template-columns:1fr;row-gap:4px}
-  .toggle{height:28px;border-radius:16px;display:flex;align-items:center;justify-content:center;
-          background:#1c2633;border:1px solid #273448;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
-  .state-prefer{background:var(--prefer);border-color:var(--prefer-b);color:var(--prefer-t)}
-  .state-available{background:var(--avail);border-color:var(--avail-b)}
-  .state-unset{background:var(--unset);border-color:var(--unset-b);color:var(--unset-t)}
-  .state-no{background:var(--no);border-color:var(--no-b)}
-  .note{height:26px;border-radius:8px;border:1px solid var(--ring);background:#0b141a;color:var(--ink);
-        padding:0 8px;font-size:12px;width:100%}
-  .panel{margin-top:10px;padding:8px;background:var(--panel);border:1px dashed var(--ring);border-radius:10px}
-  .btn.small{height:26px;padding:0 8px}
-  .muted{color:var(--muted)}
-  .console{margin-top:10px;background:#091018;border:1px dashed var(--ring);border-radius:10px;font:12px ui-monospace,Consolas,Menlo,monospace;color:#a9b8c7;padding:8px;white-space:pre-wrap}
-  /* “today” hint */
-  .today{box-shadow:0 0 0 2px #3a7bd933 inset}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:#9bd}
+  .wrap{max-width:1100px;margin:auto;padding:16px}
+  header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  header h1{font-size:18px;margin:0 10px 0 0}
+  .tabs a{background:var(--chip);padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  select,button{background:var(--chip);color:var(--ink);border:1px solid var(--b);border-radius:8px;padding:6px 10px}
+  button.icon{width:32px;height:32px;display:grid;place-items:center}
+  .month-title{font-weight:700;margin:0 6px}
+  /* CALENDAR GRID */
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:10px 0 6px}
+  .dow span{color:var(--muted);text-align:center;font-size:12px}
+  .day{background:var(--panel);border:1px solid var(--b);border-radius:12px;min-height:92px;padding:8px;display:flex;flex-direction:column}
+  .day .dhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;color:#c8d3db;font-size:12px}
+  .small{font-size:11px;color:var(--muted)}
+  .chip{display:inline-grid;grid-auto-flow:column;gap:6px;align-items:center;background:var(--chip);border:1px solid var(--b);border-radius:20px;padding:6px 10px;cursor:pointer;user-select:none}
+  .chip .dot{width:10px;height:10px;border-radius:50%;background:var(--chip-dot)}
+  .chip.pref{background:rgba(11,122,41,.18);border-color:#0b7a2944}
+  .chip.avail{background:rgba(22,97,127,.18);border-color:#16617f44}
+  .chip.unset{background:rgba(70,82,91,.18);border-color:#46525b44}
+  .chip.no{background:rgba(122,26,26,.18);border-color:#7a1a1a44}
+  .chip.pref .dot{background:#0b7a29}
+  .chip.avail .dot{background:#16617f}
+  .chip.unset .dot{background:#46525b}
+  .chip.no .dot{background:#7a1a1a}
+  .note{margin:6px 0 2px}
+  .note input{
+    width:100%;background:#0d1216;border:1px solid var(--b);color:var(--ink);
+    padding:6px 8px;border-radius:8px;font-size:13px
+  }
+  .legend{color:var(--muted);font-size:12px;margin-top:8px}
+  /* BOTTOM OPTIONS */
+  .options{margin:20px 0 8px;padding:10px;background:var(--panel);border:1px solid var(--b);border-radius:12px}
+  .opts-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .debug{white-space:pre-wrap;background:#0b0f12;border:1px dashed #26323b;color:#a8b7c3;border-radius:10px;padding:10px;margin-top:14px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px}
+  @media (max-width:740px){
+    .grid,.dow{gap:6px}
+    .day{padding:6px;min-height:84px}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="row">
-    <h1>ShiftCommander <span class="muted">Member</span></h1>
+  <header>
+    <h1>ShiftCommander <span style="color:#98b8c7">Member</span></h1>
     <div class="tabs">
-      <a href="/member.html">Member</a>
-      <a href="/supervisor.html">Supervisor</a>
-      <a href="/wallboard.html">Wallboard</a>
+      <a href="member.html">Member</a>
+      <a href="supervisor.html">Supervisor</a>
+      <a href="wallboard.html">Wallboard</a>
     </div>
-    <div class="spacer"></div>
-    <select id="memberSelect" class="sel" title="Member"></select>
-    <button id="prev" class="nav" aria-label="Prev">◀</button>
-    <div id="monthLabel" class="month">…</div>
-    <button id="next" class="nav" aria-label="Next">▶</button>
+  </header>
+
+  <div class="row" id="topbar">
+    <label class="small">Member</label>
+    <select id="memberSelect"></select>
+    <button class="icon" id="prevMonth" title="Prev">&#9664;</button>
+    <div class="month-title" id="monthTitle">Month YYYY</div>
+    <button class="icon" id="nextMonth" title="Next">&#9654;</button>
   </div>
 
-  <div class="cal-shell">
-    <div class="dow">
-      <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+  <div class="dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+  <div id="cal" class="grid"></div>
+
+  <!-- Options at the bottom -->
+  <div class="options">
+    <div class="small" style="margin-bottom:6px">Options · Quick Fill, Weekday mask, Clear tools</div>
+    <div class="opts-row" style="margin-bottom:8px">
+      <button id="fillPrefer">All → Prefer</button>
+      <button id="fillAvail">All → Available</button>
+      <button id="fillUnset">All → Unset</button>
+      <button id="fillNo">All → Do Not</button>
+      <button id="clearNotes">Clear all notes</button>
     </div>
-    <div id="grid" class="grid"></div>
+    <div class="opts-row">
+      <span class="small">Weekday mask (Mon=1…Sun=7):</span>
+      <input id="maskDays" placeholder="e.g. 1,2,3,4,5" style="width:150px;background:#0d1216;border:1px solid var(--b);border-radius:8px;color:var(--ink);padding:6px 8px">
+      <span class="small">AM state:</span>
+      <select id="maskAm">
+        <option value="">(leave)</option>
+        <option value="prefer">Prefer</option>
+        <option value="available">Available</option>
+        <option value="unset">Unset</option>
+        <option value="no">Do Not</option>
+      </select>
+      <span class="small">PM state:</span>
+      <select id="maskPm">
+        <option value="">(leave)</option>
+        <option value="prefer">Prefer</option>
+        <option value="available">Available</option>
+        <option value="unset">Unset</option>
+        <option value="no">Do Not</option>
+      </select>
+      <button id="applyMask">Apply weekday mask</button>
+    </div>
+    <div class="legend">State order cycles on click: Prefer → Available → Unset → Do Not → …</div>
   </div>
 
-  <div class="panel">
-    <div class="row" style="gap:6px;flex-wrap:wrap">
-      <span class="muted">Quick fill:</span>
-      <button class="btn small" data-bulk="prefer">All → Prefer</button>
-      <button class="btn small" data-bulk="available">All → Available</button>
-      <button class="btn small" data-bulk="unset">All → Unset</button>
-      <button class="btn small" data-bulk="no">All → Do Not</button>
-      <button class="btn small" id="clearNotes">Clear all notes</button>
-      <span class="muted" style="margin-left:auto">Cycle: Prefer → Available → Unset → Do Not → …</span>
-    </div>
-  </div>
-
-  <div id="console" class="console">booting…</div>
+  <div id="debug" class="debug">booting…</div>
 </div>
 
 <script>
-(function(){
-  // ===== CONFIG =====
-  const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const CSV_FALLBACK_PATH = '/members_fixed.csv'; // id,name
-  const DEFAULT_USER = 'uq2w4or';
-  const stateCycle = ['prefer','available','unset','no'];
+const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+const dbg = (m)=>{ const d=document.getElementById('debug'); d.textContent += '\n'+m; console.log(m); };
 
-  // ===== STATE =====
-  let userId = DEFAULT_USER;
-  let anchor = new Date(); anchor.setDate(1); // current month
-  let availability = {};
-  const todayStr = new Date().toISOString().slice(0,10);
-
-  // ===== UTIL =====
-  const pad = n => (n<10?'0':'')+n;
-  const fmt = d => d.toISOString().slice(0,10);
-  const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-  const startOfCal = d => { const x=new Date(d); x.setDate(1); const w=(x.getDay()+6)%7; return addDays(x,-w); };
-  const endOfCal   = d => { const x=new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); const w=(x.getDay()+6)%7; return addDays(x,6-w); };
-  function log(s){ const c=document.getElementById('console'); c.textContent+=(c.textContent?'\n':'')+s; c.scrollTop=c.scrollHeight; }
-  const label = s => s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset';
-
-  // ===== API =====
-  async function api(path,opts={}) {
-    const res = await fetch(API_BASE+path, {headers:{'Content-Type':'application/json'}, ...opts});
-    if(!res.ok) throw new Error('HTTP '+res.status+' '+path);
-    return res.status===204? null : res.json();
+// ---------- MEMBERS ----------
+async function fetchJson(url){
+  const r = await fetch(url,{mode:'cors',cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status+' '+url);
+  return r.json();
+}
+function parseCsv(text){
+  const t = text.replace(/^\uFEFF/,'').trim();
+  const lines = t.split(/\r?\n/).filter(Boolean);
+  if(!lines.length) throw new Error('CSV empty');
+  const head = lines[0].split(',').map(s=>s.trim());
+  const idI=head.indexOf('id'), nameI=head.indexOf('name');
+  if(idI<0 || nameI<0) throw new Error('CSV header must be "id,name"');
+  const out=[];
+  for(let i=1;i<lines.length;i++){
+    const cols = lines[i].split(',').map(s=>s.trim());
+    const id = cols[idI], name=cols[nameI];
+    if(id && name) out.push({id,name});
   }
-  async function getUsers() {
-    // try JSON API
-    try {
-      const j = await api('/api/users');
-      const arr = Array.isArray(j)? j : (j.users||[]);
-      if (arr.length) return arr.map(u => ({id:u.id||u.user_id||u.uid, name:u.name||u.display||u.full_name||String(u.id)})).filter(x=>x.id);
-    } catch(_) {}
-    // try CSV fallback
-    try {
-      const r = await fetch(CSV_FALLBACK_PATH, {cache:'no-cache'});
-      if(!r.ok) throw 0;
-      const text = await r.text();
-      const out = [];
-      for (const line of text.split(/\r?\n/)) {
-        const t = line.trim(); if(!t || t.startsWith('#') || t.toLowerCase().startsWith('id,')) continue;
-        const [id,name] = t.split(','); if(id) out.push({id:id.trim(), name:(name||id).trim()});
+  if(!out.length) throw new Error('CSV parsed but no rows');
+  return out;
+}
+async function fetchMembers(){
+  try{
+    const api = await fetchJson(API_BASE+'/api/users?cb='+Date.now());
+    if(Array.isArray(api) && api.length){
+      dbg('Loaded members from API: '+api.length);
+      return api.map(x=>({id:String(x.id),name:String(x.name)}));
+    }
+  }catch(e){ dbg('API users failed: '+e.message); }
+  try{
+    const res = await fetch(location.origin+'/members_fixed.csv?cb='+Date.now(),{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    const rows = parseCsv(text);
+    dbg('Loaded members from CSV: '+rows.length);
+    return rows;
+  }catch(e){ dbg('CSV members failed: '+e.message); }
+  dbg('FALLBACK members used');
+  return [{id:'uq2w4or',name:'1003 AJ (fallback)'}];
+}
+
+// ---------- STATE IO ----------
+function iso(d){return d.toISOString().slice(0,10);}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function cycleState(s){
+  const order=['prefer','available','unset','no'];
+  const i = order.indexOf(s); return order[(i+1)%order.length];
+}
+async function saveCell(userId,date,half,state,note){
+  try{
+    const body={userId,date,half,state};
+    if(typeof note==='string') body.note=note;
+    const r = await fetch(API_BASE+'/api/availability',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    if(!j.ok) throw new Error('api not ok');
+    return true;
+  }catch(e){ dbg('ERR save '+date+' '+half+': '+e.message); return false; }
+}
+async function loadWindow(start,end){
+  const url = API_BASE+'/api/state?start='+start+'&end='+end+'&cb='+Date.now();
+  const r = await fetch(url,{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+// ---------- RENDER ----------
+const monthTitle = document.getElementById('monthTitle');
+const cal = document.getElementById('cal');
+const selMember = document.getElementById('memberSelect');
+
+let currentMonth = new Date(); currentMonth.setDate(1);
+let members = [];
+let cacheState = {}; // { userId: { 'YYYY-MM-DD': { AM:{state,note}, PM:{state,note} } } }
+
+function monthSpan(d){
+  const first = new Date(d); first.setDate(1);
+  const last = new Date(first); last.setMonth(last.getMonth()+1); last.setDate(0);
+  // grid start on Sunday
+  const start = new Date(first); start.setDate(first.getDate()-first.getDay());
+  const end = new Date(last); end.setDate(last.getDate()+(6-last.getDay()));
+  return {first,last,start,end};
+}
+function stateClass(s){ return s==='prefer'?'pref':s==='available'?'avail':s==='no'?'no':'unset'; }
+function label(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
+
+function paint(){
+  const {first,last,start,end} = monthSpan(currentMonth);
+  monthTitle.textContent = first.toLocaleString(undefined,{month:'long',year:'numeric'});
+  cal.innerHTML='';
+  const uid = selMember.value;
+
+  // build 6 weeks grid
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const idate = iso(d);
+    const day = document.createElement('div'); day.className='day';
+    const head = document.createElement('div'); head.className='dhead';
+    head.innerHTML = `<div>${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="small">${d.toLocaleString(undefined,{month:'short',day:'numeric'})}</div>`;
+    day.appendChild(head);
+
+    const rowAM = document.createElement('div');
+    const rowPM = document.createElement('div');
+    // AM first (your correction)
+    rowAM.appendChild(buildChip(uid,idate,'AM'));
+    rowAM.appendChild(buildNote(uid,idate,'AM'));
+    rowPM.appendChild(buildChip(uid,idate,'PM'));
+    rowPM.appendChild(buildNote(uid,idate,'PM'));
+    day.appendChild(rowAM);
+    day.appendChild(rowPM);
+
+    if(d.getMonth()!==first.getMonth()){ day.style.opacity=.45; }
+
+    cal.appendChild(day);
+  }
+}
+
+function getCell(uid,idate,half){
+  return (((cacheState[uid]||{})[idate]||{})[half]) || {state:'unset',note:''};
+}
+function setCell(uid,idate,half,data){
+  cacheState[uid] ??= {};
+  cacheState[uid][idate] ??= {};
+  cacheState[uid][idate][half] = data;
+}
+
+function buildChip(uid,idate,half){
+  const cell = getCell(uid,idate,half);
+  const btn = document.createElement('div');
+  btn.className='chip '+stateClass(cell.state);
+  btn.innerHTML = `<span class="dot"></span><span>${half}</span><span class="small">${label(cell.state)}</span>`;
+  btn.onclick = async ()=>{
+    const cur = getCell(uid,idate,half);
+    const next = cycleState(cur.state);
+    // optimistic UI
+    cur.state = next;
+    setCell(uid,idate,half,cur);
+    btn.className='chip '+stateClass(next);
+    btn.querySelector('.small').textContent = label(next);
+    const ok = await saveCell(uid,idate,half,next,cur.note);
+    if(!ok){ // revert
+      cur.state = cycleState(next); // go back one
+      setCell(uid,idate,half,cur);
+      btn.className='chip '+stateClass(cur.state);
+      btn.querySelector('.small').textContent = label(cur.state);
+    }
+  };
+  return btn;
+}
+function buildNote(uid,idate,half){
+  const cell = getCell(uid,idate,half);
+  const wrap = document.createElement('div'); wrap.className='note';
+  const input = document.createElement('input');
+  input.placeholder = 'Optional note to supervisor.';
+  input.value = cell.note || '';
+  input.onblur = input.onkeydown = async (ev)=>{
+    if(ev.type==='keydown' && ev.key!=='Enter') return;
+    const cur = getCell(uid,idate,half);
+    const val = input.value.trim();
+    cur.note = val;
+    setCell(uid,idate,half,cur);
+    const ok = await saveCell(uid,idate,half,cur.state,val);
+    if(!ok){ dbg('ERR note save '+idate+' '+half); }
+  };
+  wrap.appendChild(input);
+  return wrap;
+}
+
+// ---------- LOAD + BOOT ----------
+async function boot(){
+  document.getElementById('debug').textContent='booting…';
+  members = await fetchMembers();
+  selMember.innerHTML='';
+  for(const m of members){
+    const o=document.createElement('option');
+    o.value=m.id; o.textContent=m.name;
+    selMember.appendChild(o);
+  }
+  // keep last choice via hash ?memberId
+  const want = new URLSearchParams(location.search).get('memberId');
+  if(want && members.some(m=>m.id===want)) selMember.value=want;
+
+  await refreshState();
+  wire();
+}
+function wire(){
+  document.getElementById('prevMonth').onclick=()=>{ currentMonth.setMonth(currentMonth.getMonth()-1); refreshState(); };
+  document.getElementById('nextMonth').onclick=()=>{ currentMonth.setMonth(currentMonth.getMonth()+1); refreshState(); };
+  selMember.onchange=()=>refreshState();
+
+  // quick fill
+  document.getElementById('fillPrefer').onclick=()=>bulkAll('prefer');
+  document.getElementById('fillAvail').onclick=()=>bulkAll('available');
+  document.getElementById('fillUnset').onclick=()=>bulkAll('unset');
+  document.getElementById('fillNo').onclick=()=>bulkAll('no');
+  document.getElementById('clearNotes').onclick=()=>bulkNotes('');
+  document.getElementById('applyMask').onclick=applyMask;
+}
+async function refreshState(){
+  const {start,end} = monthSpan(currentMonth);
+  const uid = selMember.value || (members[0]&&members[0].id);
+  const s = iso(start), e = iso(end);
+  try{
+    const data = await loadWindow(s,e);
+    // normalize into cacheState
+    cacheState[uid] = {};
+    const avail = (data.availability && data.availability[uid]) || {};
+    Object.keys(avail).forEach(date=>{
+      const v = avail[date] || {};
+      cacheState[uid][date] = {
+        AM: { state:(v.AM&&v.AM.state)||'unset', note:(v.AM&&v.AM.note)||'' },
+        PM: { state:(v.PM&&v.PM.state)||'unset', note:(v.PM&&v.PM.note)||'' }
+      };
+    });
+    dbg(`state OK ${s}..${e}`);
+  }catch(e){
+    dbg('ERR state load: '+e.message);
+  }
+  paint();
+}
+
+// ---------- BULK TOOLS ----------
+async function bulkAll(state){
+  const {start,end} = monthSpan(currentMonth);
+  const uid = selMember.value;
+  let d = new Date(start);
+  while(d<=end){
+    const idate=iso(d);
+    for(const half of ['AM','PM']){
+      const cur=getCell(uid,idate,half); cur.state=state; setCell(uid,idate,half,cur);
+      saveCell(uid,idate,half,state,cur.note);
+    }
+    d=addDays(d,1);
+  }
+  paint();
+}
+async function bulkNotes(val){
+  const {start,end} = monthSpan(currentMonth);
+  const uid = selMember.value;
+  let d = new Date(start);
+  while(d<=end){
+    const idate=iso(d);
+    for(const half of ['AM','PM']){
+      const cur=getCell(uid,idate,half); cur.note=val; setCell(uid,idate,half,cur);
+      saveCell(uid,idate,half,cur.state,val);
+    }
+    d=addDays(d,1);
+  }
+  paint();
+}
+async function applyMask(){
+  const mask = (document.getElementById('maskDays').value||'').split(',').map(s=>parseInt(s.trim(),10)).filter(n=>n>=1&&n<=7);
+  const am = document.getElementById('maskAm').value;
+  const pm = document.getElementById('maskPm').value;
+  if(!mask.length || (!am && !pm)) return;
+  const {start,end} = monthSpan(currentMonth);
+  const uid = selMember.value;
+  let d=new Date(start);
+  while(d<=end){
+    const wd = (d.getDay()+7)%7; // Sun=0 → 0..6
+    const mday = wd===0?7:wd;    // 1..7 Mon..Sun
+    if(mask.includes(mday)){
+      const idate=iso(d);
+      if(am){
+        const c=getCell(uid,idate,'AM'); c.state=am; setCell(uid,idate,'AM',c); saveCell(uid,idate,'AM',am,c.note);
       }
-      if(out.length) return out;
-    } catch(_) {}
-    return [{id:DEFAULT_USER, name:'1003 AJ (fallback)'}];
-  }
-  async function loadWindow() {
-    const start = startOfCal(anchor), end = endOfCal(anchor);
-    const j = await api(`/api/state?start=${fmt(start)}&end=${fmt(end)}`);
-    availability = j.availability || {};
-  }
-  async function saveHalf(dateStr, half, newState, note){
-    const body = { userId, date:dateStr, half, state:newState };
-    if (typeof note === 'string') body.note = note;
-    await api('/api/availability',{ method:'POST', body: JSON.stringify(body) });
-  }
-
-  // ===== RENDER =====
-  function paint(){
-    document.getElementById('monthLabel').textContent =
-      anchor.toLocaleString(undefined,{month:'long',year:'numeric'});
-    const grid = document.getElementById('grid'); grid.innerHTML='';
-
-    const start = startOfCal(anchor), end = endOfCal(anchor);
-    for (let d=new Date(start); d<=end; d=addDays(d,1)) {
-      const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-
-      const card = document.createElement('div'); card.className='card';
-      if (dateStr===todayStr) card.classList.add('today');
-
-      const head = document.createElement('div'); head.className='date';
-      head.textContent = d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-      card.appendChild(head);
-
-      card.appendChild(halfBlock(dateStr,'AM'));
-      card.appendChild(halfBlock(dateStr,'PM'));
-
-      grid.appendChild(card);
+      if(pm){
+        const c=getCell(uid,idate,'PM'); c.state=pm; setCell(uid,idate,'PM',c); saveCell(uid,idate,'PM',pm,c.note);
+      }
     }
+    d=addDays(d,1);
   }
+  paint();
+}
 
-  function halfBlock(dateStr, half){
-    const wrap = document.createElement('div'); wrap.className='half';
-    const tgl = document.createElement('div'); tgl.className='toggle'; tgl.dataset.date=dateStr; tgl.dataset.half=half;
-    const note = document.createElement('input'); note.className='note'; note.placeholder='Optional note';
-
-    const curState = () => (availability?.[userId]?.[dateStr]?.[half] || 'unset');
-    const curNote  = () => (availability?.[userId]?.[dateStr]?.[half+'_note'] || '');
-
-    function setLook(s){
-      tgl.classList.remove('state-prefer','state-available','state-unset','state-no');
-      tgl.classList.add('state-'+s); tgl.textContent = label(s);
-    }
-    setLook(curState()); note.value = curNote();
-
-    tgl.addEventListener('click', async ()=>{
-      const prev = curState();
-      const next = stateCycle[(stateCycle.indexOf(prev)+1)%stateCycle.length];
-      setLook(next);
-      try{
-        await saveHalf(dateStr,half,next,note.value.trim());
-        availability[userId] ||= {}; availability[userId][dateStr] ||= {};
-        availability[userId][dateStr][half] = next;
-        log(`saved ${dateStr} ${half} = ${next}`);
-      }catch(e){ setLook(prev); log('ERR save state '+e.message); }
-    });
-
-    note.addEventListener('keydown', e=>{ if(e.key==='Enter') note.blur(); });
-    note.addEventListener('blur', async ()=>{
-      try{
-        await saveHalf(dateStr,half,curState(),note.value.trim());
-        availability[userId] ||= {}; availability[userId][dateStr] ||= {};
-        availability[userId][dateStr][half+'_note'] = note.value.trim();
-        log(`note saved ${dateStr} ${half}`);
-      }catch(e){ log('ERR save note '+e.message); }
-    });
-
-    wrap.appendChild(tgl);
-    wrap.appendChild(note);
-    return wrap;
-  }
-
-  // ===== BULK =====
-  async function bulk(state){
-    const els = document.querySelectorAll('.toggle');
-    for(const el of els){
-      const date = el.dataset.date, half = el.dataset.half;
-      try{
-        await saveHalf(date,half,state);
-        availability[userId] ||= {}; availability[userId][date] ||= {};
-        availability[userId][date][half] = state;
-        el.className='toggle state-'+state; el.textContent=label(state);
-      }catch(e){ log('ERR bulk '+e.message); }
-    }
-  }
-  async function clearAllNotes(){
-    const inputs = document.querySelectorAll('.note');
-    for(const i of inputs){
-      const btn = i.previousSibling;
-      const date = btn.dataset.date, half = btn.dataset.half;
-      const s = availability?.[userId]?.[date]?.[half] || 'unset';
-      i.value='';
-      try{
-        await saveHalf(date,half,s,'');
-        availability[userId][date][half+'_note']='';
-      }catch(e){ log('ERR clear notes '+e.message); }
-    }
-  }
-
-  // ===== BOOT =====
-  async function boot(){
-    log('booting…');
-    try{ const h = await api('/api/health'); log('health '+JSON.stringify(h)); }catch(e){ log('ERR health '+e.message); }
-
-    // members combo (API → CSV → fallback)
-    const sel = document.getElementById('memberSelect'); sel.innerHTML='';
-    const members = await getUsers();
-    for(const m of members){
-      const o=document.createElement('option'); o.value=m.id; o.textContent=m.name||m.id; sel.appendChild(o);
-    }
-    userId = sel.value || DEFAULT_USER;
-    sel.onchange = async ()=>{ userId = sel.value; await reload(); };
-
-    await reload();
-  }
-  async function reload(){
-    try{ await loadWindow(); paint(); log('ready '+userId); }
-    catch(e){ paint(); log('ERR load '+e.message); }
-  }
-
-  // wire controls
-  document.querySelectorAll('[data-bulk]').forEach(b=> b.onclick=()=>bulk(b.dataset.bulk));
-  document.getElementById('clearNotes').onclick = clearAllNotes;
-  document.getElementById('prev').onclick = ()=>{ anchor.setMonth(anchor.getMonth()-1); reload(); };
-  document.getElementById('next').onclick = ()=>{ anchor.setMonth(anchor.getMonth()+1); reload(); };
-
-  boot();
-})();
+boot();
 </script>
 </body>
 </html>
