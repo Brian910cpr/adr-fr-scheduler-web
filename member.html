@@ -1,401 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ShiftCommander Member</title>
-<style>
-  :root{
-    --bg:#0f1418;--panel:#161c21;--ink:#e8f0f6;--muted:#90a3b0;--card:#0f151a;
-    --chip:#1f2a33;--chip-dot:#2a3742;--ok:#0c6;--warn:#fa0;--bad:#c33;
-    --pref:#0b7a29;--avail:#16617f;--unset:#46525b;--no:#7a1a1a;
-    --chip-ink:#d9ecf7;--b:#24313a
-  }
-  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  a{color:#9bd}
-  .wrap{max-width:1100px;margin:auto;padding:16px}
-  header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-  header h1{font-size:18px;margin:0 10px 0 0}
-  .tabs a{background:var(--chip);padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  select,button{background:var(--chip);color:var(--ink);border:1px solid var(--b);border-radius:8px;padding:6px 10px}
-  button.icon{width:32px;height:32px;display:grid;place-items:center}
-  .month-title{font-weight:700;margin:0 6px}
-  /* CALENDAR GRID */
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:10px 0 6px}
-  .dow span{color:var(--muted);text-align:center;font-size:12px}
-  .day{background:var(--panel);border:1px solid var(--b);border-radius:12px;min-height:92px;padding:8px;display:flex;flex-direction:column}
-  .day .dhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;color:#c8d3db;font-size:12px}
-  .small{font-size:11px;color:var(--muted)}
-  .chip{display:inline-grid;grid-auto-flow:column;gap:6px;align-items:center;background:var(--chip);border:1px solid var(--b);border-radius:20px;padding:6px 10px;cursor:pointer;user-select:none}
-  .chip .dot{width:10px;height:10px;border-radius:50%;background:var(--chip-dot)}
-  .chip.pref{background:rgba(11,122,41,.18);border-color:#0b7a2944}
-  .chip.avail{background:rgba(22,97,127,.18);border-color:#16617f44}
-  .chip.unset{background:rgba(70,82,91,.18);border-color:#46525b44}
-  .chip.no{background:rgba(122,26,26,.18);border-color:#7a1a1a44}
-  .chip.pref .dot{background:#0b7a29}
-  .chip.avail .dot{background:#16617f}
-  .chip.unset .dot{background:#46525b}
-  .chip.no .dot{background:#7a1a1a}
-  .note{margin:6px 0 2px}
-  .note input{
-    width:100%;background:#0d1216;border:1px solid var(--b);color:var(--ink);
-    padding:6px 8px;border-radius:8px;font-size:13px
-  }
-  .legend{color:var(--muted);font-size:12px;margin-top:8px}
-  /* BOTTOM OPTIONS */
-  .options{margin:20px 0 8px;padding:10px;background:var(--panel);border:1px solid var(--b);border-radius:12px}
-  .opts-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  .debug{white-space:pre-wrap;background:#0b0f12;border:1px dashed #26323b;color:#a8b7c3;border-radius:10px;padding:10px;margin-top:14px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px}
-  @media (max-width:740px){
-    .grid,.dow{gap:6px}
-    .day{padding:6px;min-height:84px}
-  }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <h1>ShiftCommander <span style="color:#98b8c7">Member</span></h1>
-    <div class="tabs">
-      <a href="member.html">Member</a>
-      <a href="supervisor.html">Supervisor</a>
-      <a href="wallboard.html">Wallboard</a>
-    </div>
-  </header>
-
-  <div class="row" id="topbar">
-    <label class="small">Member</label>
-    <select id="memberSelect"></select>
-    <button class="icon" id="prevMonth" title="Prev">&#9664;</button>
-    <div class="month-title" id="monthTitle">Month YYYY</div>
-    <button class="icon" id="nextMonth" title="Next">&#9654;</button>
-  </div>
-
-  <div class="dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
-  <div id="cal" class="grid"></div>
-
-  <!-- Options at the bottom -->
-  <div class="options">
-    <div class="small" style="margin-bottom:6px">Options · Quick Fill, Weekday mask, Clear tools</div>
-    <div class="opts-row" style="margin-bottom:8px">
-      <button id="fillPrefer">All → Prefer</button>
-      <button id="fillAvail">All → Available</button>
-      <button id="fillUnset">All → Unset</button>
-      <button id="fillNo">All → Do Not</button>
-      <button id="clearNotes">Clear all notes</button>
-    </div>
-    <div class="opts-row">
-      <span class="small">Weekday mask (Mon=1…Sun=7):</span>
-      <input id="maskDays" placeholder="e.g. 1,2,3,4,5" style="width:150px;background:#0d1216;border:1px solid var(--b);border-radius:8px;color:var(--ink);padding:6px 8px">
-      <span class="small">AM state:</span>
-      <select id="maskAm">
-        <option value="">(leave)</option>
-        <option value="prefer">Prefer</option>
-        <option value="available">Available</option>
-        <option value="unset">Unset</option>
-        <option value="no">Do Not</option>
-      </select>
-      <span class="small">PM state:</span>
-      <select id="maskPm">
-        <option value="">(leave)</option>
-        <option value="prefer">Prefer</option>
-        <option value="available">Available</option>
-        <option value="unset">Unset</option>
-        <option value="no">Do Not</option>
-      </select>
-      <button id="applyMask">Apply weekday mask</button>
-    </div>
-    <div class="legend">State order cycles on click: Prefer → Available → Unset → Do Not → …</div>
-  </div>
-
-  <div id="debug" class="debug">booting…</div>
-</div>
-
 <script>
-const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-const dbg = (m)=>{ const d=document.getElementById('debug'); d.textContent += '\n'+m; console.log(m); };
+// --- REPLACE THESE TWO FUNCTIONS ONLY ---
 
-// ---------- MEMBERS ----------
-async function fetchJson(url){
-  const r = await fetch(url,{mode:'cors',cache:'no-store'});
-  if(!r.ok) throw new Error('HTTP '+r.status+' '+url);
-  return r.json();
-}
-function parseCsv(text){
-  const t = text.replace(/^\uFEFF/,'').trim();
-  const lines = t.split(/\r?\n/).filter(Boolean);
-  if(!lines.length) throw new Error('CSV empty');
-  const head = lines[0].split(',').map(s=>s.trim());
-  const idI=head.indexOf('id'), nameI=head.indexOf('name');
-  if(idI<0 || nameI<0) throw new Error('CSV header must be "id,name"');
-  const out=[];
-  for(let i=1;i<lines.length;i++){
-    const cols = lines[i].split(',').map(s=>s.trim());
-    const id = cols[idI], name=cols[nameI];
-    if(id && name) out.push({id,name});
-  }
-  if(!out.length) throw new Error('CSV parsed but no rows');
-  return out;
-}
-async function fetchMembers(){
-  try{
-    const api = await fetchJson(API_BASE+'/api/users?cb='+Date.now());
-    if(Array.isArray(api) && api.length){
-      dbg('Loaded members from API: '+api.length);
-      return api.map(x=>({id:String(x.id),name:String(x.name)}));
-    }
-  }catch(e){ dbg('API users failed: '+e.message); }
-  try{
-    const res = await fetch(location.origin+'/members_fixed.csv?cb='+Date.now(),{cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    const rows = parseCsv(text);
-    dbg('Loaded members from CSV: '+rows.length);
-    return rows;
-  }catch(e){ dbg('CSV members failed: '+e.message); }
-  dbg('FALLBACK members used');
-  return [{id:'uq2w4or',name:'1003 AJ (fallback)'}];
-}
-
-// ---------- STATE IO ----------
-function iso(d){return d.toISOString().slice(0,10);}
-function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
-function cycleState(s){
-  const order=['prefer','available','unset','no'];
-  const i = order.indexOf(s); return order[(i+1)%order.length];
-}
-async function saveCell(userId,date,half,state,note){
-  try{
-    const body={userId,date,half,state};
-    if(typeof note==='string') body.note=note;
-    const r = await fetch(API_BASE+'/api/availability',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const j = await r.json();
-    if(!j.ok) throw new Error('api not ok');
-    return true;
-  }catch(e){ dbg('ERR save '+date+' '+half+': '+e.message); return false; }
-}
-async function loadWindow(start,end){
-  const url = API_BASE+'/api/state?start='+start+'&end='+end+'&cb='+Date.now();
-  const r = await fetch(url,{cache:'no-store'});
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return r.json();
-}
-
-// ---------- RENDER ----------
-const monthTitle = document.getElementById('monthTitle');
-const cal = document.getElementById('cal');
-const selMember = document.getElementById('memberSelect');
-
-let currentMonth = new Date(); currentMonth.setDate(1);
-let members = [];
-let cacheState = {}; // { userId: { 'YYYY-MM-DD': { AM:{state,note}, PM:{state,note} } } }
-
+// 1) Only the shown month; no spillover days.
+//    The 1st of the month will be positioned to its weekday column.
 function monthSpan(d){
   const first = new Date(d); first.setDate(1);
-  const last = new Date(first); last.setMonth(last.getMonth()+1); last.setDate(0);
-  // grid start on Sunday
-  const start = new Date(first); start.setDate(first.getDate()-first.getDay());
-  const end = new Date(last); end.setDate(last.getDate()+(6-last.getDay()));
-  return {first,last,start,end};
+  const last  = new Date(first); last.setMonth(last.getMonth()+1); last.setDate(0);
+  // We DO NOT expand to the previous Sunday / next Saturday anymore.
+  // Rows will break naturally because we force gridColumnStart on day 1.
+  return { first, last };
 }
-function stateClass(s){ return s==='prefer'?'pref':s==='available'?'avail':s==='no'?'no':'unset'; }
-function label(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
 
+// 2) Painter that forces a row break at each month start.
+//    AM above PM; notes under their half; toggles unchanged.
 function paint(){
-  const {first,last,start,end} = monthSpan(currentMonth);
+  const { first, last } = monthSpan(currentMonth);
   monthTitle.textContent = first.toLocaleString(undefined,{month:'long',year:'numeric'});
-  cal.innerHTML='';
+  cal.innerHTML = '';
+
   const uid = selMember.value;
 
-  // build 6 weeks grid
-  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-    const idate = iso(d);
-    const day = document.createElement('div'); day.className='day';
-    const head = document.createElement('div'); head.className='dhead';
-    head.innerHTML = `<div>${d.toLocaleString(undefined,{weekday:'short'})}</div><div class="small">${d.toLocaleString(undefined,{month:'short',day:'numeric'})}</div>`;
+  // Ensure the grid always has 7 columns (Sun..Sat); rows auto-grow.
+  cal.style.display = 'grid';
+  cal.style.gridTemplateColumns = 'repeat(7, 1fr)';
+  cal.style.gap = getComputedStyle(cal).gap || '10px';
+
+  // Add DOW header (remove any existing one in the DOM if you had it elsewhere)
+  // (Optional – if you already render DOW separately, comment this out)
+  // const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // dow.forEach(lbl => {
+  //   const h = document.createElement('div');
+  //   h.textContent = lbl;
+  //   h.style.textAlign = 'center';
+  //   h.style.color = 'var(--muted)';
+  //   h.style.fontSize = '12px';
+  //   h.style.fontWeight = '600';
+  //   cal.appendChild(h);
+  // });
+
+  // Draw every day of THIS month only
+  for (let d = new Date(first); d <= last; d.setDate(d.getDate()+1)) {
+    const idate = d.toISOString().slice(0,10);
+
+    const day = document.createElement('div');
+    day.className = 'day';
+
+    // Force new row at the 1st of the month:
+    if (d.getDate() === 1) {
+      // grid columns are 1..7; Sunday=0 → 1, Monday=1 → 2, etc.
+      day.style.gridColumnStart = (d.getDay() + 1).toString();
+    }
+
+    // header
+    const head = document.createElement('div');
+    head.className = 'dhead';
+    head.innerHTML = `<div>${d.toLocaleString(undefined,{weekday:'short'})}</div>
+                      <div class="small">${d.toLocaleString(undefined,{month:'short',day:'numeric'})}</div>`;
     day.appendChild(head);
 
+    // AM (toggle + note)
     const rowAM = document.createElement('div');
-    const rowPM = document.createElement('div');
-    // AM first (your correction)
-    rowAM.appendChild(buildChip(uid,idate,'AM'));
-    rowAM.appendChild(buildNote(uid,idate,'AM'));
-    rowPM.appendChild(buildChip(uid,idate,'PM'));
-    rowPM.appendChild(buildNote(uid,idate,'PM'));
+    rowAM.appendChild(buildChip(uid, idate, 'AM'));
+    rowAM.appendChild(buildNote(uid, idate, 'AM'));
     day.appendChild(rowAM);
-    day.appendChild(rowPM);
 
-    if(d.getMonth()!==first.getMonth()){ day.style.opacity=.45; }
+    // PM (toggle + note)
+    const rowPM = document.createElement('div');
+    rowPM.appendChild(buildChip(uid, idate, 'PM'));
+    rowPM.appendChild(buildNote(uid, idate, 'PM'));
+    day.appendChild(rowPM);
 
     cal.appendChild(day);
   }
 }
-
-function getCell(uid,idate,half){
-  return (((cacheState[uid]||{})[idate]||{})[half]) || {state:'unset',note:''};
-}
-function setCell(uid,idate,half,data){
-  cacheState[uid] ??= {};
-  cacheState[uid][idate] ??= {};
-  cacheState[uid][idate][half] = data;
-}
-
-function buildChip(uid,idate,half){
-  const cell = getCell(uid,idate,half);
-  const btn = document.createElement('div');
-  btn.className='chip '+stateClass(cell.state);
-  btn.innerHTML = `<span class="dot"></span><span>${half}</span><span class="small">${label(cell.state)}</span>`;
-  btn.onclick = async ()=>{
-    const cur = getCell(uid,idate,half);
-    const next = cycleState(cur.state);
-    // optimistic UI
-    cur.state = next;
-    setCell(uid,idate,half,cur);
-    btn.className='chip '+stateClass(next);
-    btn.querySelector('.small').textContent = label(next);
-    const ok = await saveCell(uid,idate,half,next,cur.note);
-    if(!ok){ // revert
-      cur.state = cycleState(next); // go back one
-      setCell(uid,idate,half,cur);
-      btn.className='chip '+stateClass(cur.state);
-      btn.querySelector('.small').textContent = label(cur.state);
-    }
-  };
-  return btn;
-}
-function buildNote(uid,idate,half){
-  const cell = getCell(uid,idate,half);
-  const wrap = document.createElement('div'); wrap.className='note';
-  const input = document.createElement('input');
-  input.placeholder = 'Optional note to supervisor.';
-  input.value = cell.note || '';
-  input.onblur = input.onkeydown = async (ev)=>{
-    if(ev.type==='keydown' && ev.key!=='Enter') return;
-    const cur = getCell(uid,idate,half);
-    const val = input.value.trim();
-    cur.note = val;
-    setCell(uid,idate,half,cur);
-    const ok = await saveCell(uid,idate,half,cur.state,val);
-    if(!ok){ dbg('ERR note save '+idate+' '+half); }
-  };
-  wrap.appendChild(input);
-  return wrap;
-}
-
-// ---------- LOAD + BOOT ----------
-async function boot(){
-  document.getElementById('debug').textContent='booting…';
-  members = await fetchMembers();
-  selMember.innerHTML='';
-  for(const m of members){
-    const o=document.createElement('option');
-    o.value=m.id; o.textContent=m.name;
-    selMember.appendChild(o);
-  }
-  // keep last choice via hash ?memberId
-  const want = new URLSearchParams(location.search).get('memberId');
-  if(want && members.some(m=>m.id===want)) selMember.value=want;
-
-  await refreshState();
-  wire();
-}
-function wire(){
-  document.getElementById('prevMonth').onclick=()=>{ currentMonth.setMonth(currentMonth.getMonth()-1); refreshState(); };
-  document.getElementById('nextMonth').onclick=()=>{ currentMonth.setMonth(currentMonth.getMonth()+1); refreshState(); };
-  selMember.onchange=()=>refreshState();
-
-  // quick fill
-  document.getElementById('fillPrefer').onclick=()=>bulkAll('prefer');
-  document.getElementById('fillAvail').onclick=()=>bulkAll('available');
-  document.getElementById('fillUnset').onclick=()=>bulkAll('unset');
-  document.getElementById('fillNo').onclick=()=>bulkAll('no');
-  document.getElementById('clearNotes').onclick=()=>bulkNotes('');
-  document.getElementById('applyMask').onclick=applyMask;
-}
-async function refreshState(){
-  const {start,end} = monthSpan(currentMonth);
-  const uid = selMember.value || (members[0]&&members[0].id);
-  const s = iso(start), e = iso(end);
-  try{
-    const data = await loadWindow(s,e);
-    // normalize into cacheState
-    cacheState[uid] = {};
-    const avail = (data.availability && data.availability[uid]) || {};
-    Object.keys(avail).forEach(date=>{
-      const v = avail[date] || {};
-      cacheState[uid][date] = {
-        AM: { state:(v.AM&&v.AM.state)||'unset', note:(v.AM&&v.AM.note)||'' },
-        PM: { state:(v.PM&&v.PM.state)||'unset', note:(v.PM&&v.PM.note)||'' }
-      };
-    });
-    dbg(`state OK ${s}..${e}`);
-  }catch(e){
-    dbg('ERR state load: '+e.message);
-  }
-  paint();
-}
-
-// ---------- BULK TOOLS ----------
-async function bulkAll(state){
-  const {start,end} = monthSpan(currentMonth);
-  const uid = selMember.value;
-  let d = new Date(start);
-  while(d<=end){
-    const idate=iso(d);
-    for(const half of ['AM','PM']){
-      const cur=getCell(uid,idate,half); cur.state=state; setCell(uid,idate,half,cur);
-      saveCell(uid,idate,half,state,cur.note);
-    }
-    d=addDays(d,1);
-  }
-  paint();
-}
-async function bulkNotes(val){
-  const {start,end} = monthSpan(currentMonth);
-  const uid = selMember.value;
-  let d = new Date(start);
-  while(d<=end){
-    const idate=iso(d);
-    for(const half of ['AM','PM']){
-      const cur=getCell(uid,idate,half); cur.note=val; setCell(uid,idate,half,cur);
-      saveCell(uid,idate,half,cur.state,val);
-    }
-    d=addDays(d,1);
-  }
-  paint();
-}
-async function applyMask(){
-  const mask = (document.getElementById('maskDays').value||'').split(',').map(s=>parseInt(s.trim(),10)).filter(n=>n>=1&&n<=7);
-  const am = document.getElementById('maskAm').value;
-  const pm = document.getElementById('maskPm').value;
-  if(!mask.length || (!am && !pm)) return;
-  const {start,end} = monthSpan(currentMonth);
-  const uid = selMember.value;
-  let d=new Date(start);
-  while(d<=end){
-    const wd = (d.getDay()+7)%7; // Sun=0 → 0..6
-    const mday = wd===0?7:wd;    // 1..7 Mon..Sun
-    if(mask.includes(mday)){
-      const idate=iso(d);
-      if(am){
-        const c=getCell(uid,idate,'AM'); c.state=am; setCell(uid,idate,'AM',c); saveCell(uid,idate,'AM',am,c.note);
-      }
-      if(pm){
-        const c=getCell(uid,idate,'PM'); c.state=pm; setCell(uid,idate,'PM',c); saveCell(uid,idate,'PM',pm,c.note);
-      }
-    }
-    d=addDays(d,1);
-  }
-  paint();
-}
-
-boot();
 </script>
-</body>
-</html>
