@@ -1,56 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>ShiftCommander · Member</title>
 <style>
   :root{
-    --bg:#0f1419;--ink:#e5edf6;--muted:#95a7ba;
-    --frame:#1a2430;--ring:#29384a;
-    --chip:#213043;--chip-b:#2a3a4e;
-    --ok:#0f5f2d;--ok-b:#136d35;--ok-t:#dff6e7;
-    --mid:#2e5430;--mid-b:#356338;
-    --unset:#2a3241;--unset-b:#343d4f;--unset-t:#c9d3df;
-    --no:#7a1b1b;--no-b:#8c1f1f;
-    --btn:#1b2633;--btn-b:#263243;
-    --panel:#0b1116;
+    --bg:#0e1318; --ink:#e4ecf5; --muted:#93a2b3;
+    --frame:#161f28; --ring:#253344; --panel:#0a1116;
+    --chip:#1f2c3b; --chip-b:#2a394c;
+    --ok:#0f5f2d; --ok-b:#146f36; --ok-t:#e8f7ef;
+    --mid:#2e5430; --mid-b:#37683a;
+    --unset:#2a3241; --unset-b:#354055; --unset-t:#cbd5e1;
+    --no:#7a1b1b; --no-b:#902424;
+    --btn:#14202b; --btn-b:#223142;
   }
   html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
-  .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
+  .wrap{max-width:1200px;margin:18px auto;padding:0 10px}
+  /* header */
   .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   h1{font-size:18px;margin:0 10px 0 0}
   .tabs a{display:inline-block;padding:6px 10px;border-radius:8px;background:var(--btn);border:1px solid var(--btn-b);color:var(--ink);text-decoration:none;margin-right:6px}
   .spacer{flex:1}
   .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);cursor:pointer}
-  .month{min-width:160px;text-align:center;font-weight:600}
-  .sel, .input{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:#0b1218;color:var(--ink);padding:0 10px}
-  .btn{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);padding:0 10px;cursor:pointer}
-  .btn.warn{background:#341a1a;border-color:#4a2323}
-  /* grid */
-  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:10px 0 6px}
+  .month{min-width:160px;text-align:center;font-weight:700}
+  .sel,.btn{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:#0b1218;color:var(--ink);padding:0 10px}
+  .btn{background:var(--btn);cursor:pointer}
+  .btn.warn{background:#351a1a;border-color:#4a2525}
+  /* calendar grid */
+  .dow{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:6px;margin:10px 0 4px}
   .dow div{font-size:12px;color:var(--muted);text-align:center}
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .card{background:var(--frame);border:1px solid var(--ring);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:8px}
-  .date{font-size:13px;color:var(--muted);font-weight:600}
-  .half{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
-  .label{font-size:12px;color:var(--muted);width:28px}
-  .toggle{justify-self:start;min-width:96px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:16px;border:1px solid var(--chip-b);background:var(--chip);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;user-select:none;padding:0 10px}
+  .grid{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:6px}
+  .card{background:var(--frame);border:1px solid var(--ring);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;min-height:90px}
+  .date{font-size:12px;color:var(--muted);font-weight:700}
+  .half{display:grid;grid-template-columns:auto minmax(86px,auto) 1fr;gap:6px;align-items:center}
+  .label{font-size:11px;color:var(--muted);width:26px}
+  .toggle{justify-self:start;min-width:86px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:16px;border:1px solid var(--chip-b);background:var(--chip);color:var(--ink);font-weight:700;font-size:12px;cursor:pointer;user-select:none;padding:0 10px}
   .state-prefer{background:var(--ok);border-color:var(--ok-b);color:var(--ok-t)}
   .state-available{background:var(--mid);border-color:var(--mid-b)}
   .state-unset{background:var(--unset);border-color:var(--unset-b);color:var(--unset-t)}
   .state-no{background:var(--no);border-color:var(--no-b)}
-  .note{height:28px;border-radius:8px;border:1px solid var(--ring);background:#0b1216;color:var(--ink);padding:0 8px;font-size:13px}
-  .panel{margin-top:14px;padding:10px;background:var(--panel);border:1px dashed var(--ring);border-radius:10px}
+  /* short notes (about ~55% of a narrow card) */
+  .note{height:26px;border-radius:8px;border:1px solid var(--ring);background:#0b1216;color:var(--ink);padding:0 8px;font-size:12px;max-width:160px}
+  /* footer options */
+  .panel{margin-top:10px;padding:8px;background:var(--panel);border:1px dashed var(--ring);border-radius:10px}
   .muted{color:var(--muted)}
   .console{margin-top:10px;background:#091017;border:1px dashed var(--ring);border-radius:10px;font:12px ui-monospace,Consolas,Menlo,monospace;color:#a9b8c7;padding:8px;white-space:pre-wrap}
-  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-  @media (max-width:600px){.grid{grid-template-columns:1fr}.half{grid-template-columns:1fr}.label{width:auto}}
+  @media (max-width:920px){
+    .grid,.dow{grid-template-columns:repeat(4,minmax(110px,1fr))}
+  }
+  @media (max-width:640px){
+    .grid,.dow{grid-template-columns:repeat(2,minmax(110px,1fr))}
+    .half{grid-template-columns:min-content 1fr;grid-auto-rows:26px}
+    .note{grid-column:1 / span 2}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="row" style="margin-bottom:10px">
+  <div class="row" style="margin-bottom:8px">
     <h1>ShiftCommander <span class="muted">Member</span></h1>
     <div class="tabs">
       <a href="/member.html">Member</a>
@@ -69,16 +77,15 @@
   </div>
   <div id="grid" class="grid"></div>
 
-  <!-- Simple, original bottom preferences -->
   <div class="panel">
-    <div class="row" style="gap:8px;margin-bottom:6px">
+    <div class="row" style="gap:6px;margin-bottom:4px">
       <span class="muted">Options:</span>
       <button class="btn" data-bulk="prefer">All → Prefer</button>
       <button class="btn" data-bulk="available">All → Available</button>
       <button class="btn" data-bulk="unset">All → Unset</button>
       <button class="btn" data-bulk="no">All → Do Not</button>
       <button class="btn warn" id="clearNotes">Clear all notes</button>
-      <span class="muted" style="margin-left:auto">Click cycles: Prefer → Available → Unset → Do Not → …</span>
+      <span class="muted" style="margin-left:auto">Cycle: Prefer → Available → Unset → Do Not → …</span>
     </div>
   </div>
 
@@ -88,67 +95,64 @@
 <script>
 (function(){
   // ---------- CONFIG ----------
-  const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-  const DEFAULT_USER = 'uq2w4or'; // fallback if /api/users not available
+  const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev'; // change if needed
+  const DEFAULT_USER = 'uq2w4or';
   const stateOrder = ['prefer','available','unset','no'];
 
   // ---------- STATE ----------
   let userId = DEFAULT_USER;
   let anchor = new Date(); anchor.setDate(1);
-  let availability = {}; // availability[userId][date] = { AM:'x', PM:'y', AM_note?, PM_note? }
+  let availability = {}; // availability[userId][date] = { AM:'x', PM:'y', AM_note, PM_note }
 
   // ---------- UTIL ----------
   const pad = n => (n<10?'0':'')+n;
   const fmt = d => d.toISOString().slice(0,10);
   const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-  const monthLabel = d => d.toLocaleString(undefined,{month:'long', year:'numeric'});
+  const monthLabel = d => d.toLocaleString(undefined,{month:'long',year:'numeric'});
   function startOfCalendar(d){ const x=new Date(d); x.setDate(1); const w=(x.getDay()+6)%7; return addDays(x,-w); }
   function endOfCalendar(d){ const x=new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); const w=(x.getDay()+6)%7; return addDays(x,6-w); }
-  function log(s){ const c=document.getElementById('console'); c.textContent += (c.textContent?'\n':'')+s; c.scrollTop=c.scrollHeight; }
+  function log(s){ const c=document.getElementById('console'); c.textContent+=(c.textContent?'\n':'')+s; c.scrollTop=c.scrollHeight; }
   function labelFor(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
 
   // ---------- API ----------
   async function api(path, opts={}){
-    const res = await fetch(API_BASE+path,{headers:{'Content-Type':'application/json'}, ...opts});
+    const res = await fetch(API_BASE+path, {headers:{'Content-Type':'application/json'}, ...opts});
     if(!res.ok) throw new Error('HTTP '+res.status+' '+path);
     if(res.status===204) return null;
     return res.json();
   }
   async function getUsers(){
     try{
-      const j = await api('/api/users'); // expected: [{id:'uq2w4or', name:'1003 AJ'}, ...]
+      const j = await api('/api/users'); // expects [{id,name},...] or {users:[...]}
       return Array.isArray(j)? j : (j.users||[]);
     }catch(_){ return []; }
   }
   async function loadWindow(){
-    const start = startOfCalendar(anchor);
-    const end   = endOfCalendar(anchor);
-    const qs = `?start=${fmt(start)}&end=${fmt(end)}`;
-    const j = await api('/api/state'+qs);
+    const start = startOfCalendar(anchor), end = endOfCalendar(anchor);
+    const j = await api(`/api/state?start=${fmt(start)}&end=${fmt(end)}`);
     availability = j.availability || {};
   }
   async function saveHalf(dateStr, half, newState, note){
     const body = { userId, date:dateStr, half, state:newState };
-    if(typeof note==='string') body.note = note;
-    await api('/api/availability', { method:'POST', body: JSON.stringify(body) });
+    if(typeof note === 'string') body.note = note;
+    await api('/api/availability',{ method:'POST', body: JSON.stringify(body) });
   }
 
   // ---------- RENDER ----------
   function paint(){
     document.getElementById('monthLabel').textContent = monthLabel(anchor);
     const grid = document.getElementById('grid'); grid.innerHTML = '';
-    const start = startOfCalendar(anchor);
-    const end   = endOfCalendar(anchor);
+    const start = startOfCalendar(anchor), end = endOfCalendar(anchor);
 
     for(let d=new Date(start); d<=end; d=addDays(d,1)){
       const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       const card = document.createElement('div'); card.className='card';
 
-      const head = document.createElement('div');
-      head.className='date';
-      head.textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+      const head = document.createElement('div'); head.className='date';
+      head.textContent = d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
       card.appendChild(head);
 
+      // AM first, then PM
       card.appendChild(halfRow(dateStr,'AM'));
       card.appendChild(halfRow(dateStr,'PM'));
 
@@ -163,18 +167,16 @@
     const btn   = document.createElement('div'); btn.className='toggle'; btn.setAttribute('role','button');
     btn.dataset.date = dateStr; btn.dataset.half = half;
 
-    const note  = document.createElement('input'); note.className='note'; note.placeholder='Optional note to supervisor.';
+    const note  = document.createElement('input'); note.className='note'; note.placeholder='Note';
 
     const curState = () => (availability?.[userId]?.[dateStr]?.[half] || 'unset');
     const curNote  = () => (availability?.[userId]?.[dateStr]?.[half+'_note'] || '');
 
     function applyLook(s){
       btn.classList.remove('state-prefer','state-available','state-unset','state-no');
-      btn.classList.add('state-'+s);
-      btn.textContent = labelFor(s);
+      btn.classList.add('state-'+s); btn.textContent = labelFor(s);
     }
-    applyLook(curState());
-    note.value = curNote();
+    applyLook(curState()); note.value = curNote();
 
     btn.addEventListener('click', async ()=>{
       const s = curState();
@@ -185,10 +187,7 @@
         availability[userId] ||= {}; availability[userId][dateStr] ||= {};
         availability[userId][dateStr][half] = next;
         log(`saved ${dateStr} ${half} = ${next}`);
-      }catch(e){
-        log('ERR save state '+e.message);
-        applyLook(s);
-      }
+      }catch(e){ log('ERR save state '+e.message); applyLook(s); }
     });
 
     note.addEventListener('keydown', ev=>{ if(ev.key==='Enter') note.blur(); });
@@ -209,8 +208,7 @@
 
   // ---------- SIMPLE BULK ----------
   async function bulk(state){
-    const grid = document.getElementById('grid');
-    const toggles = grid.querySelectorAll('.toggle');
+    const toggles = document.querySelectorAll('.toggle');
     for(const el of toggles){
       const date = el.dataset.date, half = el.dataset.half;
       try{
@@ -226,9 +224,10 @@
     for(const i of inputs){
       const btn = i.previousSibling;
       const date = btn.dataset.date, half = btn.dataset.half;
+      const s = availability?.[userId]?.[date]?.[half] || 'unset';
       i.value='';
       try{
-        await saveHalf(date, half, (availability?.[userId]?.[date]?.[half] || 'unset'), '');
+        await saveHalf(date, half, s, '');
         availability[userId][date][half+'_note']='';
       }catch(e){ log('ERR clear notes '+e.message); }
     }
@@ -238,24 +237,22 @@
   async function boot(){
     log('booting…');
     try{
-      const health = await api('/api/health'); log('health '+JSON.stringify(health));
+      const h = await api('/api/health'); log('health '+JSON.stringify(h));
     }catch(e){ log('ERR health '+e.message); }
 
-    // load members
     const sel = document.getElementById('memberSelect'); sel.innerHTML='';
     const members = await getUsers();
     if(members.length){
       for(const m of members){
-        const opt = document.createElement('option');
-        opt.value = m.id || m.user_id || DEFAULT_USER;
-        opt.textContent = m.name || m.display || opt.value;
+        const opt=document.createElement('option');
+        opt.value=m.id||m.user_id||DEFAULT_USER; opt.textContent=m.name||m.display||opt.value;
         sel.appendChild(opt);
       }
       userId = sel.value;
     }else{
-      const opt = document.createElement('option');
-      opt.value = DEFAULT_USER; opt.textContent='1003 AJ (fallback)';
-      sel.appendChild(opt); userId = DEFAULT_USER;
+      const opt=document.createElement('option');
+      opt.value=DEFAULT_USER; opt.textContent='1003 AJ (fallback)';
+      sel.appendChild(opt); userId=DEFAULT_USER;
     }
     sel.onchange = async ()=>{ userId = sel.value; await reload(); };
 
@@ -265,13 +262,9 @@
   async function reload(){
     try{
       await loadWindow();
-      document.getElementById('monthLabel').textContent = monthLabel(anchor);
       paint();
       log('ready '+userId+' '+monthLabel(anchor));
-    }catch(e){
-      log('ERR load '+e.message);
-      paint(); // still render skeleton
-    }
+    }catch(e){ log('ERR load '+e.message); paint(); }
   }
 
   // nav & bulk wiring
