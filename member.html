@@ -2,392 +2,285 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>ShiftCommander · Member</title>
 <style>
   :root{
-    --bg:#0f1418; --card:#141a20; --card2:#0f161c; --ink:#dfe7ee; --mut:#9fb0bf;
-    --ok:#1f8f48; --ok-ink:#e7ffe7; --warn:#b65c00; --warn-ink:#fff7ea;
-    --no:#7f1d1d; --no-ink:#ffdddd; --ring:#253244; --chip:#1c2835; --chip-ink:#cfe2ff;
-    --accent:#2b90d9;
+    --bg:#0e141b; --panel:#131c24; --ink:#e8eff6; --muted:#8aa3b6;
+    --chip:#1d2a36; --chip-br:#2a3a49; --ok:#1f7a3f; --ok2:#1a6132;
+    --warn:#7a1f1f; --warn2:#5b1717; --mid:#1f4f7a; --mid2:#163956;
+    --unset:#2b3440; --unset2:#212a33; --ring:#3b5164; --accent:#c6e48b;
   }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  a{color:var(--chip-ink);text-decoration:none}
-  .wrap{max-width:1100px;margin:0 auto;padding:14px}
-  header{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-  header h1{font-size:18px;margin:0 6px 0 0}
-  .tab{background:var(--chip);color:var(--ink);border:1px solid var(--ring);padding:6px 10px;border-radius:8px}
-  .tab.active{outline:2px solid var(--accent)}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  select,button,.btn{background:var(--chip);color:var(--ink);border:1px solid var(--ring);padding:6px 10px;border-radius:8px}
-  button:disabled{opacity:.5;cursor:not-allowed}
+  html,body{height:100%;background:var(--bg);color:var(--ink);margin:0;font:14px/1.3 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  .tabs{display:flex;gap:8px;margin-bottom:8px}
+  .tab{background:var(--chip);border:1px solid var(--chip-br);padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none}
+  .hdr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .hdr .group{display:flex;align-items:center;gap:8px}
+  select,button{background:var(--chip);border:1px solid var(--ring);color:var(--ink);border-radius:8px;padding:6px 8px}
+  button.icon{width:30px;height:30px;border-radius:8px}
+  .status{font-size:12px;color:var(--muted);margin-top:8px}
 
-  /* Calendar grid (7 cols) */
-  .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:8px 0 6px}
-  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-  .dow{color:var(--mut);text-align:center;font-weight:600}
-  .card{background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:108px}
-  .datecap{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-weight:600}
-  .line{display:flex;flex-direction:column;gap:6px}
-  .lbl{font-size:12px;color:var(--mut);margin-bottom:2px}
+  /* Calendar wrapper */
+  .cal{margin-top:12px}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:6px}
+  .dow div{color:var(--muted);text-align:center;font-weight:600}
 
-  /* Toggle pill */
-  .pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid var(--ring);height:32px;padding:0 14px;min-width:100px;background:#1a2430;cursor:pointer;user-select:none}
-  .pill[data-state="prefer"]{background:var(--ok);color:var(--ok-ink)}
-  .pill[data-state="available"]{background:#1d3f73;color:#e5f1ff}
-  .pill[data-state="unset"]{background:#1a2430;color:#b8c4cf}
-  .pill[data-state="no"]{background:var(--no);color:var(--no-ink)}
-  .pill.saving{opacity:.7;pointer-events:none}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .day{background:var(--panel);border:1px solid var(--chip-br);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:118px}
+  .day .dhead{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+  .slot{display:flex;flex-direction:column;gap:4px}
+  .slot label{font-size:12px;color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;justify-content:center;min-height:32px;border-radius:18px;border:1px solid var(--ring);padding:4px 10px;
+        background:var(--unset);color:#c9d7e1;cursor:pointer;user-select:none}
+  .pill[data-state="prefer"]{background:var(--ok);border-color:#2a9d52}
+  .pill[data-state="available"]{background:var(--mid);border-color:#2c6fa5}
+  .pill[data-state="unset"]{background:var(--unset)}
+  .pill[data-state="no"]{background:var(--warn);border-color:#a43636}
+  .note{width:100%;border-radius:10px;border:1px solid var(--chip-br);background:var(--chip);color:var(--ink);padding:6px 8px;font-size:12px}
+  .note::placeholder{color:#99a9b6}
+  .mini{font-size:11px;color:var(--muted)}
+  .legend{margin-top:10px;color:var(--muted);font-size:12px}
 
-  /* Note field (compact) */
-  .note{width:100%;background:var(--card2);border:1px solid var(--ring);color:var(--ink);
-        border-radius:10px;padding:6px 8px;height:30px}
-  .note.saving{opacity:.7}
-
-  /* Footer options (bottom) */
-  .options{margin-top:14px;background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:10px}
-  .opts-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .tiny{font-size:12px;color:var(--mut)}
-  .nav{margin-left:auto;display:flex;gap:6px}
-
-  /* Responsive: phone portrait */
-  @media (max-width:730px){
+  /* Responsive: fit on phones (portrait) */
+  @media (max-width:820px){
     .wrap{padding:10px}
-    .cal-head,.cal{gap:6px}
-    .card{padding:8px;min-height:96px}
-    .pill{min-width:90px;height:30px;padding:0 12px}
+    .grid,.dow{gap:6px}
+    .day{min-height:110px;padding:6px;border-radius:10px}
+    .pill{min-height:28px;padding:2px 8px}
+    .note{padding:4px 6px}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>ShiftCommander <span style="color:var(--mut)">Member</span></h1>
-    <a class="tab active" href="./member.html">Member</a>
+  <div class="tabs">
+    <a class="tab" href="./member.html">Member</a>
     <a class="tab" href="./supervisor.html">Supervisor</a>
     <a class="tab" href="./wallboard.html">Wallboard</a>
-  </header>
+  </div>
 
-  <div class="row" style="margin-bottom:8px">
-    <div class="row" style="gap:6px">
-      <label>Member</label>
+  <div class="hdr">
+    <div class="group">
+      <span>Member</span>
       <select id="memberSel"></select>
     </div>
-    <div class="nav">
-      <button id="prevBtn" title="Previous month">◀</button>
-      <div id="monthTitle" style="min-width:120px;text-align:center;padding:6px 8px;border:1px solid var(--ring);border-radius:8px;background:var(--chip);font-weight:600">Month YYYY</div>
-      <button id="nextBtn" title="Next month">▶</button>
+    <div class="group" style="margin-left:auto">
+      <button class="icon" id="prevBtn" title="Prev month">◀</button>
+      <div id="monthLabel" style="min-width:140px;text-align:center;font-weight:700"></div>
+      <button class="icon" id="nextBtn" title="Next month">▶</button>
     </div>
   </div>
 
-  <div class="cal-head" id="dowHead"></div>
-  <div class="cal" id="calGrid" aria-live="polite"></div>
+  <div class="legend mini">Tap a pill to cycle: Prefer → Available → Unset → Do Not. Notes save as you type (blur).</div>
 
-  <!-- Bottom options – your old spot -->
-  <section class="options">
-    <div class="opts-row" style="margin-bottom:6px">
-      <strong>Options</strong><span class="tiny"> · Quick fill · Weekday masks · Clear tools (applies to shown month)</span>
-    </div>
-    <div class="opts-row" style="margin-bottom:8px">
-      <button class="btn" data-bulk="prefer">All → Prefer</button>
-      <button class="btn" data-bulk="available">All → Available</button>
-      <button class="btn" data-bulk="unset">All → Unset</button>
-      <button class="btn" data-bulk="no">All → Do Not</button>
-      <button class="btn" id="clearNotes">Clear all notes</button>
-    </div>
-    <div class="opts-row">
-      <span class="tiny">Weekday mask (Mon=1..Sun=7):</span>
-      <input id="maskDays" placeholder="e.g. 1,2,3,4,5" class="note" style="max-width:200px">
-      <span class="tiny">AM state:</span>
-      <select id="maskAm">
-        <option value="">(leave)</option>
-        <option value="prefer">Prefer</option>
-        <option value="available">Available</option>
-        <option value="unset">Unset</option>
-        <option value="no">Do Not</option>
-      </select>
-      <span class="tiny">PM state:</span>
-      <select id="maskPm">
-        <option value="">(leave)</option>
-        <option value="prefer">Prefer</option>
-        <option value="available">Available</option>
-        <option value="unset">Unset</option>
-        <option value="no">Do Not</option>
-      </select>
-      <button class="btn" id="applyMask">Apply mask</button>
-      <span class="tiny" style="margin-left:auto">State cycle on click: Prefer → Available → Unset → Do Not → …</span>
-    </div>
-  </section>
+  <div class="cal">
+    <div class="dow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+    <div id="grid" class="grid"></div>
+  </div>
 
-  <pre id="log" class="note" style="margin-top:10px;height:90px;overflow:auto;background:transparent;border:1px dashed var(--ring)"></pre>
+  <div id="status" class="status">booting…</div>
 </div>
 
 <script>
-/* ========= CONFIG ========= */
+/* ================== CONFIG ================== */
 const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
-const MEMBERS_URL = '/members_fixed.csv'; // site root
-const STATE_ORDER = ['prefer','available','unset','no'];
+const MEMBERS_CSV_URL = '/data/members_fixed.csv'; // must exist; no baked-in fallbacks
+const STATE_ORDER = ['prefer','available','unset','no']; // cycle order (AM/PM)
 
-/* ========= UTILS ========= */
-const $ = s => document.querySelector(s);
-const el = (t,cls) => Object.assign(document.createElement(t), cls?{className:cls}:{});
-const fmtMonthTitle = (y,m) => new Date(y,m,1).toLocaleString(undefined,{month:'long', year:'numeric'});
-const ymd = d => d.toISOString().slice(0,10);
-function log(...a){ const pre=$('#log'); pre.textContent += a.join(' ')+'\n'; pre.scrollTop=pre.scrollHeight;}
+const ui = {
+  memberSel: document.getElementById('memberSel'),
+  monthLabel: document.getElementById('monthLabel'),
+  grid: document.getElementById('grid'),
+  prev: document.getElementById('prevBtn'),
+  next: document.getElementById('nextBtn'),
+  status: document.getElementById('status'),
+};
 
-/* ========= MEMBERS (CSV at root) ========= */
+let members = [];          // [{id:'1003', name:'AJ'}...]
+let currentUserId = null;  // '1003' etc
+let viewDate = new Date(); // current month anchor
+let cachedState = {};      // availability + notes loaded window
+
+/* ================== HELPERS ================== */
+const fmt = (d)=>d.toISOString().slice(0,10);
+function ymRange(date){
+  const y = date.getFullYear(), m = date.getMonth();
+  // month start (Sunday-based grid)
+  const first = new Date(y,m,1);
+  const gridStart = new Date(first); gridStart.setDate(first.getDate()-first.getDay());
+  // month end
+  const last = new Date(y,m+1,0);
+  const gridEnd = new Date(last); gridEnd.setDate(last.getDate()+(6-last.getDay()));
+  return {monthStart:first, monthEnd:last, gridStart, gridEnd};
+}
+function setStatus(s){ ui.status.textContent = s; }
+
+/* ================== MEMBERS ================== */
 async function loadMembers(){
-  try{
-    const r = await fetch(MEMBERS_URL, {cache:'no-store'});
-    if(!r.ok) throw 0;
-    const txt = await r.text();
-    // very small CSV: id,code,display
-    const rows = txt.trim().split(/\r?\n/).slice(1).map(l=>l.split(','));
-    const members = rows.map(r=>({id:r[0], code:r[1], name:r[2]}));
-    if(members.length) return members;
-    throw 0;
-  }catch{
-    // Safe fallback: your known user
-    return [{id:'uq2w4or', code:'1003 AJ', name:'1003 AJ'}];
+  setStatus('loading members…');
+  const res = await fetch(MEMBERS_CSV_URL, {cache:'no-store'});
+  if(!res.ok){ throw new Error(`Members CSV not found (${res.status})`); }
+  const text = await res.text();
+  // CSV: id,name (headers allowed)
+  members = text.trim().split(/\r?\n/).map((line,i)=>{
+    const [a,b] = line.split(',').map(s=>s?.trim());
+    if(i===0 && a?.toLowerCase()==='id') return null; // header skip
+    if(!a || !b) return null;
+    return { id:a, name:b };
+  }).filter(Boolean);
+
+  // Populate select
+  ui.memberSel.innerHTML = '';
+  for(const m of members){
+    const opt = document.createElement('option');
+    opt.value = m.id; opt.textContent = `${m.id} ${m.name}`;
+    ui.memberSel.appendChild(opt);
   }
+  // pick saved or first
+  const saved = sessionStorage.getItem('sc_member');
+  if(saved && members.some(m=>m.id===saved)) currentUserId = saved;
+  else currentUserId = members[0]?.id || null;
+  if(!currentUserId) throw new Error('No members in CSV.');
+  ui.memberSel.value = currentUserId;
+  sessionStorage.setItem('sc_member', currentUserId);
 }
 
-/* ========= CALENDAR LAYOUT (true 7xN) ========= */
-function monthMatrix(year, month){
-  // returns array of Date or null (placeholders) in Sunday-first rows
-  const first = new Date(year, month, 1);
-  const startCol = first.getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const cells = [];
-  for(let i=0;i<startCol;i++) cells.push(null);
-  for(let d=1; d<=daysInMonth; d++) cells.push(new Date(year, month, d));
-  while(cells.length % 7) cells.push(null);
-  return cells;
-}
-
-/* ========= API ========= */
+/* ================== API ================== */
 async function apiHealth(){
-  const r = await fetch(API_BASE+'/api/health',{cache:'no-store'});
-  return r.ok ? r.json() : {ok:false};
+  const r = await fetch(`${API_BASE}/api/health`); return r.json();
 }
 async function apiState(start,end){
-  const u = new URL(API_BASE+'/api/state');
-  u.searchParams.set('start',start);
-  u.searchParams.set('end',end);
-  const r = await fetch(u);
-  if(!r.ok) throw new Error('state HTTP '+r.status);
-  return r.json();
+  const r = await fetch(`${API_BASE}/api/state?start=${start}&end=${end}`); return r.json();
 }
-async function apiSet({userId,date,half,state,note}){
-  const body = {userId,date,half,state};
-  if(typeof note==='string') body.note = note;
-  const r = await fetch(API_BASE+'/api/availability',{
+async function apiSaveAvail({userId,date,half,state}){
+  const r = await fetch(`${API_BASE}/api/availability`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
+    body:JSON.stringify({userId,date,half,state})
   });
-  if(!r.ok) throw new Error('save HTTP '+r.status);
+  if(!r.ok) throw new Error(`save ${date}/${half} -> ${state} failed`);
+  return r.json();
+}
+async function apiSaveNote({userId,date,half,note}){
+  const r = await fetch(`${API_BASE}/api/notes`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({userId,date,half,note})
+  });
+  if(!r.ok) throw new Error(`note save failed`);
   return r.json();
 }
 
-/* ========= RENDER ========= */
-let curYear, curMonth, members=[], curUser;
+/* ============== RENDER ============== */
+function paintMonth(){
+  const {monthStart,monthEnd,gridStart,gridEnd} = ymRange(viewDate);
+  ui.monthLabel.textContent = monthStart.toLocaleString(undefined,{month:'long',year:'numeric'});
+  ui.grid.innerHTML = '';
+  const days = [];
+  for(let d=new Date(gridStart); d<=gridEnd; d.setDate(d.getDate()+1)){
+    days.push(new Date(d));
+  }
 
-function stateLabel(s){
-  if(s==='prefer') return 'Prefer';
-  if(s==='available') return 'Available';
-  if(s==='no') return 'Do Not';
-  return 'Unset';
+  for(const d of days){
+    const key = fmt(d);
+    const isOther = (d.getMonth()!==viewDate.getMonth());
+    const box = document.createElement('div');
+    box.className = 'day';
+    if(isOther) box.style.opacity = 0.45;
+
+    const head = document.createElement('div');
+    head.className = 'dhead';
+    head.innerHTML = `<div>${d.toLocaleString(undefined,{weekday:'short'})}</div>
+                      <div>${d.toLocaleString(undefined,{month:'short',day:'numeric'})}</div>`;
+    box.appendChild(head);
+
+    // AM/PM slots
+    box.appendChild(makeSlot(key,'AM'));
+    box.appendChild(makeSlot(key,'PM'));
+    ui.grid.appendChild(box);
+  }
 }
-function nextState(s){
-  const i = STATE_ORDER.indexOf(s);
+function stateFor(userId,date,half){
+  return cachedState?.availability?.[userId]?.[date]?.[half] || 'unset';
+}
+function noteFor(userId,date,half){
+  return (cachedState?.notes?.[date]?.[half]?.[userId]) || '';
+}
+function cycleState(cur){
+  const i = STATE_ORDER.indexOf(cur);
   return STATE_ORDER[(i+1) % STATE_ORDER.length];
 }
+function makeSlot(date,half){
+  const wrap = document.createElement('div'); wrap.className='slot';
 
-function paintCalendarWindow() {
-  $('#dowHead').innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-    .map(d=>`<div class="dow">${d}</div>`).join('');
-}
+  const lbl = document.createElement('label'); lbl.textContent = half;
+  wrap.appendChild(lbl);
 
-async function paint(){
-  $('#calGrid').innerHTML = '';
-  $('#monthTitle').textContent = fmtMonthTitle(curYear,curMonth);
-  paintCalendarWindow();
-
-  const mat = monthMatrix(curYear,curMonth);
-
-  // compute state window for API
-  const first = new Date(curYear,curMonth,1);
-  const last  = new Date(curYear,curMonth+1,0);
-  const start = ymd(new Date(first.getFullYear(),first.getMonth(), first.getDate()-7)); // pad
-  const end   = ymd(new Date(last.getFullYear(), last.getMonth(), last.getDate()+7));
-
-  // load state
-  let data = {availability:{}, notes:{}};
-  try{
-    const h = await apiHealth();
-    if(h?.ok){ log('health OK', JSON.stringify(h)); }
-    const st = await apiState(start,end);
-    data = st || data;
-    log('state OK', start+'..'+end);
-  }catch(e){
-    log('ERR', e.message||e);
-  }
-
-  const gid = $('#calGrid');
-
-  for(const d of mat){
-    const card = el('div','card');
-    if(!d){ gid.appendChild(card); continue; }
-
-    const dayYMD = ymd(d);
-    const label = d.toLocaleString(undefined,{weekday:'short'})+', '+d.toLocaleString(undefined,{month:'short', day:'numeric'});
-
-    card.appendChild(Object.assign(el('div','datecap'),{innerHTML:`<div>${label}</div>`}));
-
-    // pull current states
-    const avUser = (data.availability?.[curUser]?.[dayYMD]) || {};
-    const curAM = (avUser.AM || 'unset');
-    const curPM = (avUser.PM || 'unset');
-    const noteAM = (data.notes?.[curUser]?.[dayYMD]?.AM) || '';
-    const notePM = (data.notes?.[curUser]?.[dayYMD]?.PM) || '';
-
-    // AM line (toggle + note)
-    const amLine = el('div','line');
-    const amPill = el('div','pill'); amPill.dataset.state = curAM; amPill.textContent = stateLabel(curAM);
-    const amNote = el('input','note'); amNote.placeholder='Optional note to supervisor.'; amNote.value = noteAM;
-    amLine.appendChild(Object.assign(el('div','lbl'),{textContent:'AM'}));
-    amLine.appendChild(amPill);
-    amLine.appendChild(amNote);
-    card.appendChild(amLine);
-
-    // PM line
-    const pmLine = el('div','line');
-    const pmPill = el('div','pill'); pmPill.dataset.state = curPM; pmPill.textContent = stateLabel(curPM);
-    const pmNote = el('input','note'); pmNote.placeholder='Optional note to supervisor.'; pmNote.value = notePM;
-    pmLine.appendChild(Object.assign(el('div','lbl'),{textContent:'PM'}));
-    pmLine.appendChild(pmPill);
-    pmLine.appendChild(pmNote);
-    card.appendChild(pmLine);
-
-    // handlers
-    amPill.addEventListener('click', async ()=>{
-      const ns = nextState(amPill.dataset.state);
-      amPill.dataset.state = ns; amPill.textContent = stateLabel(ns); amPill.classList.add('saving');
-      try{
-        await apiSet({userId:curUser,date:dayYMD,half:'AM',state:ns});
-      }catch(e){ log('ERR save AM', dayYMD, e.message||e); }
-      amPill.classList.remove('saving');
-    });
-    pmPill.addEventListener('click', async ()=>{
-      const ns = nextState(pmPill.dataset.state);
-      pmPill.dataset.state = ns; pmPill.textContent = stateLabel(ns); pmPill.classList.add('saving');
-      try{
-        await apiSet({userId:curUser,date:dayYMD,half:'PM',state:ns});
-      }catch(e){ log('ERR save PM', dayYMD, e.message||e); }
-      pmPill.classList.remove('saving');
-    });
-
-    let amTimer=null, pmTimer=null;
-    amNote.addEventListener('input', ()=>{
-      clearTimeout(amTimer);
-      amNote.classList.add('saving');
-      amTimer = setTimeout(async ()=>{
-        try{ await apiSet({userId:curUser,date:dayYMD,half:'AM',state:amPill.dataset.state,note:amNote.value}); }
-        catch(e){ log('ERR note AM', dayYMD, e.message||e); }
-        amNote.classList.remove('saving');
-      }, 450);
-    });
-    pmNote.addEventListener('input', ()=>{
-      clearTimeout(pmTimer);
-      pmNote.classList.add('saving');
-      pmTimer = setTimeout(async ()=>{
-        try{ await apiSet({userId:curUser,date:dayYMD,half:'PM',state:pmPill.dataset.state,note:pmNote.value}); }
-        catch(e){ log('ERR note PM', dayYMD, e.message||e); }
-        pmNote.classList.remove('saving');
-      }, 450);
-    });
-
-    gid.appendChild(card);
-  }
-}
-
-/* ========= BULK (bottom) ========= */
-function iterVisibleDays(){
-  const first = new Date(curYear,curMonth,1);
-  const last  = new Date(curYear,curMonth+1,0);
-  const out=[];
-  for(let d=1; d<=last.getDate(); d++){
-    out.push( ymd(new Date(curYear,curMonth,d)) );
-  }
-  return out;
-}
-async function bulkSetAll(target){
-  const days = iterVisibleDays();
-  for(const dt of days){
-    for(const half of ['AM','PM']){
-      try{ await apiSet({userId:curUser,date:dt,half,state:target}); }
-      catch(e){ log('ERR bulk', dt, half, e.message||e); }
-    }
-  }
-  paint();
-}
-async function bulkClearNotes(){
-  const days = iterVisibleDays();
-  for(const dt of days){
-    for(const half of ['AM','PM']){
-      try{ await apiSet({userId:curUser,date:dt,half,state:'unset',note:''}); } // keep state, note empty
-      catch(e){ log('ERR clear note', dt, half, e.message||e); }
-    }
-  }
-  paint();
-}
-async function applyWeekdayMask(){
-  const mask = $('#maskDays').value.split(',').map(s=>parseInt(s.trim(),10)).filter(Boolean);
-  const am = $('#maskAm').value || null;
-  const pm = $('#maskPm').value || null;
-  if(!mask.length || (!am && !pm)) return;
-
-  const days = iterVisibleDays();
-  for(const dt of days){
-    const w = new Date(dt).getDay(); // 0..6 Sun..Sat
-    const mon1sun7 = w===0?7:w; // 1..7
-    if(!mask.includes(mon1sun7)) continue;
-    if(am){ try{ await apiSet({userId:curUser,date:dt,half:'AM',state:am}); }catch(e){ log('ERR mask AM', dt, e.message||e); } }
-    if(pm){ try{ await apiSet({userId:curUser,date:dt,half:'PM',state:pm}); }catch(e){ log('ERR mask PM', dt, e.message||e); } }
-  }
-  paint();
-}
-
-/* ========= BOOT ========= */
-(async function boot(){
-  log('booting…');
-  const now = new Date();
-  curYear = now.getFullYear();
-  curMonth = now.getMonth();
-
-  members = await loadMembers();
-  const sel = $('#memberSel');
-  sel.innerHTML = members.map(m => `<option value="${m.id}">${m.code || m.name}</option>`).join('');
-  const last = localStorage.getItem('sc_member');
-  if(last && members.some(m=>m.id===last)) sel.value = last;
-  curUser = sel.value || members[0].id;
-  sel.addEventListener('change', ()=>{ curUser = sel.value; localStorage.setItem('sc_member',curUser); paint(); });
-
-  $('#prevBtn').addEventListener('click', ()=>{ curMonth--; if(curMonth<0){curMonth=11;curYear--} paint(); });
-  $('#nextBtn').addEventListener('click', ()=>{ curMonth++; if(curMonth>11){curMonth=0;curYear++} paint(); });
-
-  document.querySelectorAll('[data-bulk]').forEach(btn=>{
-    btn.addEventListener('click', ()=>bulkSetAll(btn.dataset.bulk));
+  const pill = document.createElement('div');
+  pill.className='pill'; pill.dataset.state = stateFor(currentUserId,date,half);
+  pill.textContent = labelFor(pill.dataset.state);
+  pill.addEventListener('click', async ()=>{
+    try{
+      const next = cycleState(pill.dataset.state);
+      pill.dataset.state = next; pill.textContent = labelFor(next);
+      await apiSaveAvail({userId:currentUserId,date,half,state:next});
+    }catch(e){ setStatus('ERR save state'); console.error(e); }
   });
-  $('#clearNotes').addEventListener('click', bulkClearNotes);
-  $('#applyMask').addEventListener('click', applyWeekdayMask);
+  wrap.appendChild(pill);
 
-  await paint();
-  log('ready.');
-})();
+  const n = document.createElement('input');
+  n.className='note'; n.placeholder='Optional note to supervisor.';
+  n.value = noteFor(currentUserId,date,half);
+  n.addEventListener('change', async ()=>{
+    try{
+      await apiSaveNote({userId:currentUserId,date,half,note:n.value||''});
+    }catch(e){ setStatus('ERR save note'); console.error(e); }
+  });
+  wrap.appendChild(n);
+
+  return wrap;
+}
+function labelFor(s){
+  switch(s){
+    case 'prefer': return 'Prefer';
+    case 'available': return 'Available';
+    case 'no': return 'Do Not';
+    default: return 'Unset';
+  }
+}
+
+/* ============== BOOT ============== */
+async function boot(){
+  try{
+    await loadMembers();
+    const h = await apiHealth(); setStatus(`health ok: v${h.version || '?'}, db:${h.db?"up":"down"}`);
+    await refreshStateAndPaint();
+  }catch(e){
+    console.error(e);
+    setStatus(`BOOT ERROR: ${e.message}`);
+  }
+}
+async function refreshStateAndPaint(){
+  const {gridStart,gridEnd} = ymRange(viewDate);
+  const start = fmt(gridStart), end = fmt(gridEnd);
+  setStatus(`loading state ${start}..${end}…`);
+  const j = await apiState(start,end);
+  cachedState = j || {};
+  paintMonth();
+  setStatus('Ready.');
+}
+
+/* Events */
+ui.prev.addEventListener('click', ()=>{ viewDate.setMonth(viewDate.getMonth()-1); refreshStateAndPaint(); });
+ui.next.addEventListener('click', ()=>{ viewDate.setMonth(viewDate.getMonth()+1); refreshStateAndPaint(); });
+ui.memberSel.addEventListener('change', ()=>{
+  currentUserId = ui.memberSel.value; sessionStorage.setItem('sc_member', currentUserId);
+  paintMonth();
+});
+
+/* go */
+boot();
 </script>
 </body>
 </html>
