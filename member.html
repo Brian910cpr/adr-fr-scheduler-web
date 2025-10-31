@@ -6,59 +6,51 @@
 <title>ShiftCommander · Member</title>
 <style>
   :root{
-    --bg:#0e1318; --ink:#e4ecf5; --muted:#93a2b3;
-    --frame:#161f28; --ring:#253344; --panel:#0a1116;
-    --chip:#1f2c3b; --chip-b:#2a394c;
-    --ok:#0f5f2d; --ok-b:#146f36; --ok-t:#e8f7ef;
-    --mid:#2e5430; --mid-b:#37683a;
-    --unset:#2a3241; --unset-b:#354055; --unset-t:#cbd5e1;
-    --no:#7a1b1b; --no-b:#902424;
-    --btn:#14202b; --btn-b:#223142;
+    --bg:#0c1116; --ink:#e8eef6; --muted:#99a7b5;
+    --frame:#141c24; --ring:#253243; --panel:#0a1218;
+    --btn:#162230; --btn-b:#223246;
+    --prefer:#0f5f2d; --prefer-b:#137738; --prefer-t:#e8f7ef;
+    --avail:#2f5a32; --avail-b:#3a6f3d;
+    --unset:#283244; --unset-b:#39455b; --unset-t:#cbd5e1;
+    --no:#782020;   --no-b:#8f2929;
   }
   html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
-  .wrap{max-width:1200px;margin:18px auto;padding:0 10px}
-  /* header */
+  .wrap{max-width:1200px;margin:16px auto;padding:0 10px}
+  h1{margin:0 8px 0 0;font-size:18px}
+  .tabs a{display:inline-block;margin-right:6px;padding:6px 10px;border-radius:8px;background:var(--btn);border:1px solid var(--btn-b);color:var(--ink);text-decoration:none}
   .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  h1{font-size:18px;margin:0 10px 0 0}
-  .tabs a{display:inline-block;padding:6px 10px;border-radius:8px;background:var(--btn);border:1px solid var(--btn-b);color:var(--ink);text-decoration:none;margin-right:6px}
   .spacer{flex:1}
-  .navbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);cursor:pointer}
   .month{min-width:160px;text-align:center;font-weight:700}
-  .sel,.btn{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:#0b1218;color:var(--ink);padding:0 10px}
-  .btn{background:var(--btn);cursor:pointer}
-  .btn.warn{background:#351a1a;border-color:#4a2525}
-  /* calendar grid */
-  .dow{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:6px;margin:10px 0 4px}
-  .dow div{font-size:12px;color:var(--muted);text-align:center}
-  .grid{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:6px}
-  .card{background:var(--frame);border:1px solid var(--ring);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;min-height:90px}
-  .date{font-size:12px;color:var(--muted);font-weight:700}
-  .half{display:grid;grid-template-columns:auto minmax(86px,auto) 1fr;gap:6px;align-items:center}
-  .label{font-size:11px;color:var(--muted);width:26px}
-  .toggle{justify-self:start;min-width:86px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:16px;border:1px solid var(--chip-b);background:var(--chip);color:var(--ink);font-weight:700;font-size:12px;cursor:pointer;user-select:none;padding:0 10px}
-  .state-prefer{background:var(--ok);border-color:var(--ok-b);color:var(--ok-t)}
-  .state-available{background:var(--mid);border-color:var(--mid-b)}
+  .sel,.btn,.nav{height:30px;border-radius:8px;border:1px solid var(--btn-b);background:var(--btn);color:var(--ink);padding:0 10px}
+  .nav{width:30px;padding:0}
+  /* calendar shell keeps 7 columns; on phones it scrolls horizontally (keeps calendar feel) */
+  .cal-shell{margin-top:10px;border:1px solid var(--ring);border-radius:12px;background:var(--panel);padding:8px;overflow-x:auto}
+  .dow,.grid{display:grid;grid-template-columns:repeat(7, max-content);column-gap:6px}
+  .dow{margin:0 0 6px 0}
+  .dow div{width:126px;text-align:center;color:var(--muted);font-size:12px}
+  /* ultra compact day card: 126px wide, two rows (AM, PM) with button + note each */
+  .card{width:126px;background:var(--frame);border:1px solid var(--ring);border-radius:10px;padding:6px;display:grid;grid-template-rows:auto auto auto;row-gap:6px}
+  .date{font-size:12px;color:var(--muted);font-weight:700;text-align:center}
+  .half{display:grid;grid-template-columns:1fr;row-gap:4px}
+  .toggle{height:28px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+          background:#1c2633;border:1px solid #273448;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
+  .state-prefer{background:var(--prefer);border-color:var(--prefer-b);color:var(--prefer-t)}
+  .state-available{background:var(--avail);border-color:var(--avail-b)}
   .state-unset{background:var(--unset);border-color:var(--unset-b);color:var(--unset-t)}
   .state-no{background:var(--no);border-color:var(--no-b)}
-  /* short notes (about ~55% of a narrow card) */
-  .note{height:26px;border-radius:8px;border:1px solid var(--ring);background:#0b1216;color:var(--ink);padding:0 8px;font-size:12px;max-width:160px}
-  /* footer options */
+  .note{height:26px;border-radius:8px;border:1px solid var(--ring);background:#0b141a;color:var(--ink);
+        padding:0 8px;font-size:12px;width:100%}
   .panel{margin-top:10px;padding:8px;background:var(--panel);border:1px dashed var(--ring);border-radius:10px}
+  .btn.small{height:26px;padding:0 8px}
   .muted{color:var(--muted)}
-  .console{margin-top:10px;background:#091017;border:1px dashed var(--ring);border-radius:10px;font:12px ui-monospace,Consolas,Menlo,monospace;color:#a9b8c7;padding:8px;white-space:pre-wrap}
-  @media (max-width:920px){
-    .grid,.dow{grid-template-columns:repeat(4,minmax(110px,1fr))}
-  }
-  @media (max-width:640px){
-    .grid,.dow{grid-template-columns:repeat(2,minmax(110px,1fr))}
-    .half{grid-template-columns:min-content 1fr;grid-auto-rows:26px}
-    .note{grid-column:1 / span 2}
-  }
+  .console{margin-top:10px;background:#091018;border:1px dashed var(--ring);border-radius:10px;font:12px ui-monospace,Consolas,Menlo,monospace;color:#a9b8c7;padding:8px;white-space:pre-wrap}
+  /* “today” hint */
+  .today{box-shadow:0 0 0 2px #3a7bd933 inset}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="row" style="margin-bottom:8px">
+  <div class="row">
     <h1>ShiftCommander <span class="muted">Member</span></h1>
     <div class="tabs">
       <a href="/member.html">Member</a>
@@ -67,24 +59,26 @@
     </div>
     <div class="spacer"></div>
     <select id="memberSelect" class="sel" title="Member"></select>
-    <button id="prev" class="navbtn" aria-label="Previous month">◀</button>
+    <button id="prev" class="nav" aria-label="Prev">◀</button>
     <div id="monthLabel" class="month">…</div>
-    <button id="next" class="navbtn" aria-label="Next month">▶</button>
+    <button id="next" class="nav" aria-label="Next">▶</button>
   </div>
 
-  <div class="dow">
-    <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+  <div class="cal-shell">
+    <div class="dow">
+      <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+    </div>
+    <div id="grid" class="grid"></div>
   </div>
-  <div id="grid" class="grid"></div>
 
   <div class="panel">
-    <div class="row" style="gap:6px;margin-bottom:4px">
-      <span class="muted">Options:</span>
-      <button class="btn" data-bulk="prefer">All → Prefer</button>
-      <button class="btn" data-bulk="available">All → Available</button>
-      <button class="btn" data-bulk="unset">All → Unset</button>
-      <button class="btn" data-bulk="no">All → Do Not</button>
-      <button class="btn warn" id="clearNotes">Clear all notes</button>
+    <div class="row" style="gap:6px;flex-wrap:wrap">
+      <span class="muted">Quick fill:</span>
+      <button class="btn small" data-bulk="prefer">All → Prefer</button>
+      <button class="btn small" data-bulk="available">All → Available</button>
+      <button class="btn small" data-bulk="unset">All → Unset</button>
+      <button class="btn small" data-bulk="no">All → Do Not</button>
+      <button class="btn small" id="clearNotes">Clear all notes</button>
       <span class="muted" style="margin-left:auto">Cycle: Prefer → Available → Unset → Do Not → …</span>
     </div>
   </div>
@@ -94,128 +88,140 @@
 
 <script>
 (function(){
-  // ---------- CONFIG ----------
-  const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev'; // change if needed
+  // ===== CONFIG =====
+  const API_BASE = 'https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const CSV_FALLBACK_PATH = '/members_fixed.csv'; // id,name
   const DEFAULT_USER = 'uq2w4or';
-  const stateOrder = ['prefer','available','unset','no'];
+  const stateCycle = ['prefer','available','unset','no'];
 
-  // ---------- STATE ----------
+  // ===== STATE =====
   let userId = DEFAULT_USER;
-  let anchor = new Date(); anchor.setDate(1);
-  let availability = {}; // availability[userId][date] = { AM:'x', PM:'y', AM_note, PM_note }
+  let anchor = new Date(); anchor.setDate(1); // current month
+  let availability = {};
+  const todayStr = new Date().toISOString().slice(0,10);
 
-  // ---------- UTIL ----------
+  // ===== UTIL =====
   const pad = n => (n<10?'0':'')+n;
   const fmt = d => d.toISOString().slice(0,10);
   const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-  const monthLabel = d => d.toLocaleString(undefined,{month:'long',year:'numeric'});
-  function startOfCalendar(d){ const x=new Date(d); x.setDate(1); const w=(x.getDay()+6)%7; return addDays(x,-w); }
-  function endOfCalendar(d){ const x=new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); const w=(x.getDay()+6)%7; return addDays(x,6-w); }
+  const startOfCal = d => { const x=new Date(d); x.setDate(1); const w=(x.getDay()+6)%7; return addDays(x,-w); };
+  const endOfCal   = d => { const x=new Date(d); x.setMonth(x.getMonth()+1); x.setDate(0); const w=(x.getDay()+6)%7; return addDays(x,6-w); };
   function log(s){ const c=document.getElementById('console'); c.textContent+=(c.textContent?'\n':'')+s; c.scrollTop=c.scrollHeight; }
-  function labelFor(s){ return s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset'; }
+  const label = s => s==='prefer'?'Prefer':s==='available'?'Available':s==='no'?'Do Not':'Unset';
 
-  // ---------- API ----------
-  async function api(path, opts={}){
+  // ===== API =====
+  async function api(path,opts={}) {
     const res = await fetch(API_BASE+path, {headers:{'Content-Type':'application/json'}, ...opts});
     if(!res.ok) throw new Error('HTTP '+res.status+' '+path);
-    if(res.status===204) return null;
-    return res.json();
+    return res.status===204? null : res.json();
   }
-  async function getUsers(){
-    try{
-      const j = await api('/api/users'); // expects [{id,name},...] or {users:[...]}
-      return Array.isArray(j)? j : (j.users||[]);
-    }catch(_){ return []; }
+  async function getUsers() {
+    // try JSON API
+    try {
+      const j = await api('/api/users');
+      const arr = Array.isArray(j)? j : (j.users||[]);
+      if (arr.length) return arr.map(u => ({id:u.id||u.user_id||u.uid, name:u.name||u.display||u.full_name||String(u.id)})).filter(x=>x.id);
+    } catch(_) {}
+    // try CSV fallback
+    try {
+      const r = await fetch(CSV_FALLBACK_PATH, {cache:'no-cache'});
+      if(!r.ok) throw 0;
+      const text = await r.text();
+      const out = [];
+      for (const line of text.split(/\r?\n/)) {
+        const t = line.trim(); if(!t || t.startsWith('#') || t.toLowerCase().startsWith('id,')) continue;
+        const [id,name] = t.split(','); if(id) out.push({id:id.trim(), name:(name||id).trim()});
+      }
+      if(out.length) return out;
+    } catch(_) {}
+    return [{id:DEFAULT_USER, name:'1003 AJ (fallback)'}];
   }
-  async function loadWindow(){
-    const start = startOfCalendar(anchor), end = endOfCalendar(anchor);
+  async function loadWindow() {
+    const start = startOfCal(anchor), end = endOfCal(anchor);
     const j = await api(`/api/state?start=${fmt(start)}&end=${fmt(end)}`);
     availability = j.availability || {};
   }
   async function saveHalf(dateStr, half, newState, note){
     const body = { userId, date:dateStr, half, state:newState };
-    if(typeof note === 'string') body.note = note;
+    if (typeof note === 'string') body.note = note;
     await api('/api/availability',{ method:'POST', body: JSON.stringify(body) });
   }
 
-  // ---------- RENDER ----------
+  // ===== RENDER =====
   function paint(){
-    document.getElementById('monthLabel').textContent = monthLabel(anchor);
-    const grid = document.getElementById('grid'); grid.innerHTML = '';
-    const start = startOfCalendar(anchor), end = endOfCalendar(anchor);
+    document.getElementById('monthLabel').textContent =
+      anchor.toLocaleString(undefined,{month:'long',year:'numeric'});
+    const grid = document.getElementById('grid'); grid.innerHTML='';
 
-    for(let d=new Date(start); d<=end; d=addDays(d,1)){
+    const start = startOfCal(anchor), end = endOfCal(anchor);
+    for (let d=new Date(start); d<=end; d=addDays(d,1)) {
       const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
       const card = document.createElement('div'); card.className='card';
+      if (dateStr===todayStr) card.classList.add('today');
 
       const head = document.createElement('div'); head.className='date';
       head.textContent = d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
       card.appendChild(head);
 
-      // AM first, then PM
-      card.appendChild(halfRow(dateStr,'AM'));
-      card.appendChild(halfRow(dateStr,'PM'));
+      card.appendChild(halfBlock(dateStr,'AM'));
+      card.appendChild(halfBlock(dateStr,'PM'));
 
       grid.appendChild(card);
     }
   }
 
-  function halfRow(dateStr, half){
-    const row = document.createElement('div'); row.className='half';
-
-    const label = document.createElement('div'); label.className='label'; label.textContent = half;
-    const btn   = document.createElement('div'); btn.className='toggle'; btn.setAttribute('role','button');
-    btn.dataset.date = dateStr; btn.dataset.half = half;
-
-    const note  = document.createElement('input'); note.className='note'; note.placeholder='Note';
+  function halfBlock(dateStr, half){
+    const wrap = document.createElement('div'); wrap.className='half';
+    const tgl = document.createElement('div'); tgl.className='toggle'; tgl.dataset.date=dateStr; tgl.dataset.half=half;
+    const note = document.createElement('input'); note.className='note'; note.placeholder='Optional note';
 
     const curState = () => (availability?.[userId]?.[dateStr]?.[half] || 'unset');
     const curNote  = () => (availability?.[userId]?.[dateStr]?.[half+'_note'] || '');
 
-    function applyLook(s){
-      btn.classList.remove('state-prefer','state-available','state-unset','state-no');
-      btn.classList.add('state-'+s); btn.textContent = labelFor(s);
+    function setLook(s){
+      tgl.classList.remove('state-prefer','state-available','state-unset','state-no');
+      tgl.classList.add('state-'+s); tgl.textContent = label(s);
     }
-    applyLook(curState()); note.value = curNote();
+    setLook(curState()); note.value = curNote();
 
-    btn.addEventListener('click', async ()=>{
-      const s = curState();
-      const next = stateOrder[(stateOrder.indexOf(s)+1)%stateOrder.length];
-      applyLook(next);
+    tgl.addEventListener('click', async ()=>{
+      const prev = curState();
+      const next = stateCycle[(stateCycle.indexOf(prev)+1)%stateCycle.length];
+      setLook(next);
       try{
-        await saveHalf(dateStr, half, next, note.value.trim());
+        await saveHalf(dateStr,half,next,note.value.trim());
         availability[userId] ||= {}; availability[userId][dateStr] ||= {};
         availability[userId][dateStr][half] = next;
         log(`saved ${dateStr} ${half} = ${next}`);
-      }catch(e){ log('ERR save state '+e.message); applyLook(s); }
+      }catch(e){ setLook(prev); log('ERR save state '+e.message); }
     });
 
-    note.addEventListener('keydown', ev=>{ if(ev.key==='Enter') note.blur(); });
+    note.addEventListener('keydown', e=>{ if(e.key==='Enter') note.blur(); });
     note.addEventListener('blur', async ()=>{
       try{
-        await saveHalf(dateStr, half, curState(), note.value.trim());
+        await saveHalf(dateStr,half,curState(),note.value.trim());
         availability[userId] ||= {}; availability[userId][dateStr] ||= {};
         availability[userId][dateStr][half+'_note'] = note.value.trim();
         log(`note saved ${dateStr} ${half}`);
       }catch(e){ log('ERR save note '+e.message); }
     });
 
-    row.appendChild(label);
-    row.appendChild(btn);
-    row.appendChild(note);
-    return row;
+    wrap.appendChild(tgl);
+    wrap.appendChild(note);
+    return wrap;
   }
 
-  // ---------- SIMPLE BULK ----------
+  // ===== BULK =====
   async function bulk(state){
-    const toggles = document.querySelectorAll('.toggle');
-    for(const el of toggles){
+    const els = document.querySelectorAll('.toggle');
+    for(const el of els){
       const date = el.dataset.date, half = el.dataset.half;
       try{
-        await saveHalf(date, half, state);
+        await saveHalf(date,half,state);
         availability[userId] ||= {}; availability[userId][date] ||= {};
         availability[userId][date][half] = state;
-        el.className = 'toggle state-'+state; el.textContent = labelFor(state);
+        el.className='toggle state-'+state; el.textContent=label(state);
       }catch(e){ log('ERR bulk '+e.message); }
     }
   }
@@ -227,51 +233,38 @@
       const s = availability?.[userId]?.[date]?.[half] || 'unset';
       i.value='';
       try{
-        await saveHalf(date, half, s, '');
+        await saveHalf(date,half,s,'');
         availability[userId][date][half+'_note']='';
       }catch(e){ log('ERR clear notes '+e.message); }
     }
   }
 
-  // ---------- BOOT ----------
+  // ===== BOOT =====
   async function boot(){
     log('booting…');
-    try{
-      const h = await api('/api/health'); log('health '+JSON.stringify(h));
-    }catch(e){ log('ERR health '+e.message); }
+    try{ const h = await api('/api/health'); log('health '+JSON.stringify(h)); }catch(e){ log('ERR health '+e.message); }
 
+    // members combo (API → CSV → fallback)
     const sel = document.getElementById('memberSelect'); sel.innerHTML='';
     const members = await getUsers();
-    if(members.length){
-      for(const m of members){
-        const opt=document.createElement('option');
-        opt.value=m.id||m.user_id||DEFAULT_USER; opt.textContent=m.name||m.display||opt.value;
-        sel.appendChild(opt);
-      }
-      userId = sel.value;
-    }else{
-      const opt=document.createElement('option');
-      opt.value=DEFAULT_USER; opt.textContent='1003 AJ (fallback)';
-      sel.appendChild(opt); userId=DEFAULT_USER;
+    for(const m of members){
+      const o=document.createElement('option'); o.value=m.id; o.textContent=m.name||m.id; sel.appendChild(o);
     }
+    userId = sel.value || DEFAULT_USER;
     sel.onchange = async ()=>{ userId = sel.value; await reload(); };
 
     await reload();
   }
-
   async function reload(){
-    try{
-      await loadWindow();
-      paint();
-      log('ready '+userId+' '+monthLabel(anchor));
-    }catch(e){ log('ERR load '+e.message); paint(); }
+    try{ await loadWindow(); paint(); log('ready '+userId); }
+    catch(e){ paint(); log('ERR load '+e.message); }
   }
 
-  // nav & bulk wiring
+  // wire controls
+  document.querySelectorAll('[data-bulk]').forEach(b=> b.onclick=()=>bulk(b.dataset.bulk));
+  document.getElementById('clearNotes').onclick = clearAllNotes;
   document.getElementById('prev').onclick = ()=>{ anchor.setMonth(anchor.getMonth()-1); reload(); };
   document.getElementById('next').onclick = ()=>{ anchor.setMonth(anchor.getMonth()+1); reload(); };
-  document.querySelectorAll('[data-bulk]').forEach(b=> b.onclick = ()=> bulk(b.dataset.bulk));
-  document.getElementById('clearNotes').onclick = clearAllNotes;
 
   boot();
 })();
