@@ -1,0 +1,16 @@
+name,role,member_no,can_drive,notes,inactive,typeIII
+Gordon,ALS,1001,,,,0
+Lynnsey,EMT,1002,120,,,0
+AJ,EMT,1003,120;121;131,,,1
+Nikki,ALS,1004,120;121;131,,,1
+Shane,EMT,1005,120;121;131,,,1
+Brian,EMT,1006,120;121;131,,,1
+Cliff,Driver,1008,120,,,0
+Steve,ALS,1009,120;121;131,,,1
+Anna,ALS,1010,120;121;131,,,1
+Nick,ALS,1011,120;121;131,,,1
+Roger,Driver,1007,120;121;131,,,1
+Lisa,ALS,1012,120;121;131,,,1
+Nora,EMT,1013,120,,,0
+Brett,EMT,1014,120,,,0
+Sherman,Driver,1015,120,,,0

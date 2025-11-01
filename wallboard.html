@@ -1,81 +1,105 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>ADR-FR Wallboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShiftCommander • Wallboard</title>
 <style>
-body { margin:0; font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  background:#0b1220; color:#e6edf3; }
-h1 { padding:16px; margin:0; background:#121a2b; border-bottom:1px solid #24304c; }
-#info { padding:10px 16px; color:#a3afd1; font-size:14px; }
-pre { background:#121a2b; color:#86d18f; margin:16px; padding:16px; border-radius:8px;
-  overflow:auto; white-space:pre-wrap; word-break:break-all; }
-table { border-collapse:collapse; width:100%; color:#e6edf3; margin:16px 0; }
-th,td { border:1px solid #24304c; padding:6px 10px; text-align:center; }
-th { background:#121a2b; position:sticky; top:0; }
-.locked { background:#131a2a; color:#888; }
-.today { background:#20325a; }
-.green { background:#1b4734; }
-.amber { background:#4a3c1e; }
-.red { background:#3a1616; }
+  :root{ --bg:#0b1220; --panel:#111a2b; --panel2:#0f1726; --ink:#e5ecff; --muted:#99a6c7; --ring:#233657; --need:#f59e0b; --radius:16px; }
+  html,body{background:var(--bg); color:var(--ink); font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; margin:0}
+  .wrap{max-width:1200px; margin:24px auto; padding:0 16px}
+  .toolbar{display:flex; gap:8px; align-items:center; margin-bottom:12px}
+  .btn{background:var(--panel2); border:1px solid var(--ring); color:var(--ink); padding:6px 10px; border-radius:10px; cursor:pointer}
+  .week{display:grid; grid-template-columns:repeat(7,1fr); gap:12px}
+  .card{background:var(--panel); border:1px solid var(--ring); border-radius:var(--radius); padding:12px}
+  .hdr{font-weight:700; margin-bottom:8px}
+  .slot{margin-top:8px; background:var(--panel2); border:1px dashed var(--ring); border-radius:12px; padding:12px}
+  .slot h4{margin:0 0 8px; font-size:13px; color:#b9c5e6}
+  .names{display:flex; gap:8px; flex-wrap:wrap; min-height:26px}
+  .tag{background:#203052; border:1px solid #2b436b; padding:4px 10px; border-radius:999px; font-size:13px}
+  .need{background:var(--need); color:#1b1b1b; border-color:#d97706; font-weight:800}
+  .debug{margin-top:14px; padding:10px; background:#0a1020; border:1px solid #1a2946; border-radius:12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; white-space:pre-wrap; color:#bcd2ff}
+  @media (max-width:1000px){ .week{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:600px){ .week{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-<h1>ADR-FR Wallboard</h1>
-<div id="info">Loading…</div>
-<div id="board"></div>
+<div class="wrap">
+  <div class="toolbar">
+    <button id="prev" class="btn">◀</button>
+    <div id="label" style="min-width:220px;text-align:center"></div>
+    <button id="next" class="btn">▶</button>
+  </div>
+
+  <div id="grid" class="week"></div>
+  <div id="debug" class="debug">Booting…</div>
+</div>
 
 <script>
-async function loadBoard() {
-  const url = '/api/wallboard?month=' + new Date().toISOString().slice(0,7)
-  const res = await fetch(url)
-  if (!res.ok) {
-    document.getElementById('info').textContent = 'Failed to load wallboard (' + res.status + ')'
-    return
+(() => {
+  const API='https://adr-fr-scheduler-api.brian-9ac.workers.dev';
+  const debug=(...a)=>{ const el=document.getElementById('debug'); el.textContent+='\n'+a.join(' '); el.scrollTop=el.scrollHeight; };
+
+  // start on current Monday
+  const today = new Date();
+  let start = new Date(today); start.setDate(start.getDate() - ((start.getDay()+6)%7));
+
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function fmt(d){ return d.toISOString().slice(0,10); }
+  function label(a,b){
+    return a.toLocaleString(undefined,{month:'long', day:'numeric'}) + ' – ' +
+           b.toLocaleString(undefined,{month:'long', day:'numeric'});
   }
-  const data = await res.json()
-  renderBoard(data)
-}
 
-function renderBoard(d) {
-  const info = document.getElementById('info')
-  info.textContent = 'Today: ' + d.today + ' | Cutoff: ' + d.cutoff + ' | ' + d.trucks.length + ' units'
+  async function loadWeek(s){
+    const e = addDays(s, 6);
+    const r = await fetch(`${API}/api/state?start=${fmt(s)}&end=${fmt(e)}`);
+    if(!r.ok) throw new Error('state '+r.status);
+    return await r.json();
+  }
 
-  const table = document.createElement('table')
-  const head = document.createElement('tr')
-  head.innerHTML = '<th>Date</th>' + d.trucks.map(t => '<th>' + t + ' Day</th><th>' + t + ' Night</th>').join('')
-  table.appendChild(head)
+  function paint(s, data){
+    const e = addDays(s,6);
+    document.getElementById('label').textContent = label(s,e);
 
-  for (let i=1; i<=d.days; i++) {
-    const date = d.month + '-' + String(i).padStart(2,'0')
-    const tr = document.createElement('tr')
-    if (date < d.cutoff) tr.classList.add('locked')
-    if (date === d.today) tr.classList.add('today')
-    const day = document.createElement('td')
-    day.textContent = date
-    tr.appendChild(day)
-    for (const t of d.trucks) {
-      const dayKey = `${date}|${t}|Day`
-      const nightKey = `${date}|${t}|Night`
-      const dayVal = d.assignments[dayKey]?.member_name ?? '—'
-      const nightVal = d.assignments[nightKey]?.member_name ?? '—'
-      const td1 = document.createElement('td')
-      const td2 = document.createElement('td')
-      td1.textContent = dayVal
-      td2.textContent = nightVal
-      tr.appendChild(td1)
-      tr.appendChild(td2)
+    const grid=document.getElementById('grid'); grid.innerHTML='';
+    for(let i=0;i<7;i++){
+      const d = addDays(s,i);
+      const ymd=fmt(d);
+
+      const card=document.createElement('div'); card.className='card';
+      card.innerHTML = `<div class="hdr">${d.toLocaleString(undefined,{weekday:'short'})}<br><span style="font-size:28px;font-weight:800">${d.getDate()}</span></div>`;
+
+      ['AM','PM'].forEach(half=>{
+        const slot=document.createElement('div'); slot.className='slot';
+        slot.innerHTML = `<h4>${half}</h4>`;
+        const names=document.createElement('div'); names.className='names';
+        const sft = data?.shifts?.[ymd]?.[half] || {assignees:[],status:'unassigned'};
+        if(sft.assignees?.length){
+          sft.assignees.forEach(n=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=n; names.appendChild(span); });
+        } else {
+          const span=document.createElement('span'); span.className='tag need'; span.textContent='Needs ALS & EMT';
+          names.appendChild(span);
+        }
+        slot.appendChild(names);
+        card.appendChild(slot);
+      });
+
+      grid.appendChild(card);
     }
-    table.appendChild(tr)
   }
 
-  const board = document.getElementById('board')
-  board.innerHTML = ''
-  board.appendChild(table)
-}
+  async function refresh(){
+    const j = await loadWeek(start);
+    paint(start, j);
+    debug('Loaded week', fmt(start), '→', fmt(addDays(start,6)), 'paint OK');
+  }
 
-loadBoard()
+  document.getElementById('prev').onclick=()=>{ start=addDays(start,-7); refresh().catch(e=>debug(e.message)); };
+  document.getElementById('next').onclick=()=>{ start=addDays(start, 7); refresh().catch(e=>debug(e.message)); };
+
+  refresh().catch(e=>debug('Boot ERR', e.message));
+})();
 </script>
 </body>
 </html>
